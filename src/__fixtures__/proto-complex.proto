@@ -1,0 +1,388 @@
+syntax = "proto3";
+
+package rideshare.platform;
+
+// Well-known types — defined inline since we cannot resolve external imports.
+// In production proto files these would be:
+//   import "google/protobuf/timestamp.proto";
+//   import "google/protobuf/duration.proto";
+//   import "google/protobuf/field_mask.proto";
+
+// A point in time represented as seconds and nanoseconds since the Unix epoch.
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// A signed, fixed-length span of time represented as seconds and nanoseconds.
+message Duration {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// A set of field paths used to specify a subset of fields for partial updates.
+message FieldMask {
+  repeated string paths = 1;
+}
+
+// Current status of a ride through its lifecycle.
+enum RideStatus {
+  reserved 5, 6;
+  reserved "RIDE_STATUS_POOLED";
+  RIDE_STATUS_UNSPECIFIED = 0;
+  RIDE_STATUS_REQUESTED = 1;
+  RIDE_STATUS_DRIVER_ASSIGNED = 2;
+  RIDE_STATUS_IN_PROGRESS = 3;
+  RIDE_STATUS_COMPLETED = 4;
+  RIDE_STATUS_CANCELLED = 7;
+}
+
+// Accepted payment methods.
+enum PaymentMethod {
+  reserved 4;
+  reserved "PAYMENT_METHOD_BITCOIN";
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_CREDIT_CARD = 1;
+  PAYMENT_METHOD_DEBIT_CARD = 2;
+  PAYMENT_METHOD_DIGITAL_WALLET = 3;
+  PAYMENT_METHOD_CASH = 5;
+}
+
+// Types of vehicles available on the platform.
+enum VehicleType {
+  reserved 6 to 10;
+  VEHICLE_TYPE_UNSPECIFIED = 0;
+  VEHICLE_TYPE_SEDAN = 1;
+  VEHICLE_TYPE_SUV = 2;
+  VEHICLE_TYPE_LUXURY = 3;
+  VEHICLE_TYPE_VAN = 4;
+  VEHICLE_TYPE_ELECTRIC = 5;
+  VEHICLE_TYPE_MOTORCYCLE = 11;
+}
+
+// Categories for push and in-app notifications.
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_RIDE_UPDATE = 1;
+  NOTIFICATION_TYPE_PAYMENT = 2;
+  NOTIFICATION_TYPE_PROMOTION = 3;
+}
+
+// Current availability state of a driver.
+enum DriverStatus {
+  DRIVER_STATUS_UNSPECIFIED = 0;
+  DRIVER_STATUS_AVAILABLE = 1;
+  DRIVER_STATUS_ON_RIDE = 2;
+  DRIVER_STATUS_OFFLINE = 3;
+}
+
+// A geographic coordinate with optional altitude and accuracy.
+message Location {
+  // Latitude in decimal degrees. Range: [-90, 90].
+  double latitude = 1;
+  // Longitude in decimal degrees. Range: [-180, 180].
+  double longitude = 2;
+  optional double altitude_meters = 3;
+  optional float accuracy_meters = 4;
+}
+
+// A single point along a route with timing information.
+message Waypoint {
+  Location location = 1;
+  optional string label = 2;
+  optional Timestamp eta = 3;
+}
+
+// An ordered sequence of waypoints from origin to destination.
+message Route {
+  Waypoint origin = 1;
+  Waypoint destination = 2;
+  repeated Waypoint intermediate_stops = 3;
+  double distance_meters = 4;
+  Duration estimated_duration = 5;
+  string encoded_polyline = 6;
+}
+
+// A ride request and its full lifecycle data.
+message Ride {
+  string ride_id = 1;
+  string rider_id = 2;
+  optional string driver_id = 3;
+  RideStatus status = 4;
+  VehicleType requested_vehicle_type = 5;
+  Route route = 6;
+  Timestamp requested_at = 7;
+  optional Timestamp completed_at = 8;
+  RideFare fare = 9;
+  optional RideRating rating = 10;
+  map<string, string> metadata = 11;
+  repeated RideEvent events = 12;
+
+  // Fare breakdown for a completed or estimated ride.
+  message RideFare {
+    int64 total_amount = 1;
+    string currency_code = 2;
+    int64 base_fare = 3;
+    int64 distance_charge = 4;
+    int64 time_charge = 5;
+    optional int64 tip_amount = 6;
+
+    // Itemised surcharge (e.g. airport fee, late-night surcharge).
+    message Surcharge {
+      string name = 1;
+      int64 amount = 2;
+      string description = 3;
+    }
+
+    repeated Surcharge surcharges = 7;
+  }
+
+  // Post-ride rating left by the rider or driver.
+  message RideRating {
+    int32 stars = 1;
+    optional string comment = 2;
+    Timestamp rated_at = 3;
+  }
+
+  // A timestamped lifecycle event within a ride.
+  message RideEvent {
+    RideStatus status = 1;
+    Timestamp occurred_at = 2;
+    optional Location location = 3;
+  }
+}
+
+// A driver profile with current status and vehicle details.
+message Driver {
+  string driver_id = 1;
+  string display_name = 2;
+  string phone_number = 3;
+  DriverStatus status = 4;
+  float average_rating = 5;
+  Location current_location = 6;
+  Vehicle vehicle = 7;
+  Timestamp registered_at = 8;
+  map<string, string> metadata = 9;
+}
+
+// Registered vehicle information.
+message Vehicle {
+  string vehicle_id = 1;
+  VehicleType type = 2;
+  string make = 3;
+  string model = 4;
+  int32 year = 5;
+  string license_plate = 6;
+  map<string, string> features = 7;
+}
+
+// A financial transaction linked to a ride.
+message Payment {
+  string payment_id = 1;
+  string ride_id = 2;
+  PaymentMethod method = 3;
+  int64 amount = 4;
+  string currency_code = 5;
+  Timestamp created_at = 6;
+  map<string, string> metadata = 7;
+
+  // Polymorphic payment instrument details.
+  oneof instrument {
+    CardDetails card = 8;
+    WalletDetails wallet = 9;
+  }
+
+  // Credit/debit card payment details.
+  message CardDetails {
+    string last_four = 1;
+    string brand = 2;
+    int32 exp_month = 3;
+    int32 exp_year = 4;
+  }
+
+  // Digital wallet payment details.
+  message WalletDetails {
+    string provider = 1;
+    string wallet_id = 2;
+  }
+}
+
+// A notification to be delivered to a user.
+message Notification {
+  string notification_id = 1;
+  string recipient_id = 2;
+  NotificationType type = 3;
+  string title = 4;
+  string body = 5;
+  Timestamp created_at = 6;
+  map<string, string> data = 7;
+
+  // Delivery channel for a notification.
+  oneof channel {
+    PushConfig push = 8;
+    SmsConfig sms = 9;
+  }
+
+  message PushConfig {
+    string device_token = 1;
+    string platform = 2;
+  }
+
+  message SmsConfig {
+    string phone_number = 1;
+  }
+}
+
+// RideService manages the full ride lifecycle from request through
+// completion, including real-time tracking and fare estimation.
+service RideService {
+  // Requests a new ride. Returns the created ride with REQUESTED status.
+  rpc RequestRide (RequestRideRequest) returns (Ride);
+  // Retrieves the current state of a ride.
+  rpc GetRide (GetRideRequest) returns (Ride);
+  // Returns an estimated fare for a proposed route without creating a ride.
+  rpc EstimateFare (EstimateFareRequest) returns (EstimateFareResponse);
+  // Streams real-time location and status updates for an active ride.
+  rpc TrackRide (TrackRideRequest) returns (stream RideUpdate);
+}
+
+// DriverService manages driver profiles, availability, and real-time
+// location reporting.
+service DriverService {
+  // Retrieves the full driver profile including vehicle details.
+  rpc GetDriver (GetDriverRequest) returns (Driver);
+  // Updates driver profile fields. Supports partial updates via field mask.
+  rpc UpdateDriver (UpdateDriverRequest) returns (Driver);
+  // Accepts a continuous stream of GPS coordinates from the driver app.
+  rpc ReportLocation (stream LocationReport) returns (LocationAcknowledgement);
+}
+
+// PaymentService handles charging and refunds for completed rides.
+service PaymentService {
+  // Processes payment for a completed ride.
+  rpc ProcessPayment (ProcessPaymentRequest) returns (Payment);
+  // Issues a full or partial refund for a charged ride.
+  rpc RefundPayment (RefundPaymentRequest) returns (Payment);
+}
+
+// NotificationService delivers real-time and asynchronous notifications
+// to riders and drivers across multiple channels.
+service NotificationService {
+  // Sends a single notification to a specific user.
+  rpc SendNotification (SendNotificationRequest) returns (Notification);
+  // Opens a server-side stream of notifications for a user.
+  rpc SubscribeNotifications (SubscribeNotificationsRequest) returns (stream Notification);
+  // Streams acknowledgements from client, server responds with confirmations.
+  rpc AcknowledgeNotifications (stream AcknowledgeRequest) returns (stream AcknowledgeResponse);
+}
+
+// Request / response messages.
+
+message RequestRideRequest {
+  string rider_id = 1;
+  Location pickup = 2;
+  Location dropoff = 3;
+  VehicleType vehicle_type = 4;
+  optional PaymentMethod payment_method = 5;
+  map<string, string> metadata = 6;
+}
+
+message GetRideRequest {
+  string ride_id = 1;
+}
+
+message EstimateFareRequest {
+  Location pickup = 1;
+  Location dropoff = 2;
+  VehicleType vehicle_type = 3;
+}
+
+message EstimateFareResponse {
+  int64 estimated_min_amount = 1;
+  int64 estimated_max_amount = 2;
+  string currency_code = 3;
+  Duration estimated_duration = 4;
+  double estimated_distance_meters = 5;
+}
+
+message TrackRideRequest {
+  string ride_id = 1;
+}
+
+// A real-time update pushed during ride tracking.
+message RideUpdate {
+  string ride_id = 1;
+  RideStatus status = 2;
+  Location driver_location = 3;
+  Timestamp timestamp = 4;
+  optional Duration eta_to_destination = 5;
+}
+
+message GetDriverRequest {
+  string driver_id = 1;
+}
+
+message UpdateDriverRequest {
+  string driver_id = 1;
+  optional string display_name = 2;
+  optional string phone_number = 3;
+  // Fields to update. If empty, all provided fields are applied.
+  FieldMask update_mask = 4;
+}
+
+// GPS location report streamed from a driver's device.
+message LocationReport {
+  string driver_id = 1;
+  Location location = 2;
+  Timestamp timestamp = 3;
+  optional double speed_mps = 4;
+}
+
+// Server acknowledgement after a location stream ends.
+message LocationAcknowledgement {
+  int32 reports_received = 1;
+  Location last_known_location = 2;
+}
+
+message ProcessPaymentRequest {
+  string ride_id = 1;
+  PaymentMethod method = 2;
+  oneof instrument {
+    Payment.CardDetails card = 3;
+    Payment.WalletDetails wallet = 4;
+  }
+  optional int64 tip_amount = 5;
+}
+
+message RefundPaymentRequest {
+  string payment_id = 1;
+  optional int64 refund_amount = 2;
+  string reason = 3;
+}
+
+message SendNotificationRequest {
+  string recipient_id = 1;
+  NotificationType type = 2;
+  string title = 3;
+  string body = 4;
+  map<string, string> data = 5;
+  oneof channel {
+    Notification.PushConfig push = 6;
+    Notification.SmsConfig sms = 7;
+  }
+}
+
+message SubscribeNotificationsRequest {
+  string user_id = 1;
+  repeated NotificationType type_filter = 2;
+}
+
+message AcknowledgeRequest {
+  string notification_id = 1;
+  Timestamp acknowledged_at = 2;
+}
+
+message AcknowledgeResponse {
+  string notification_id = 1;
+  bool success = 2;
+}

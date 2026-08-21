@@ -1,0 +1,777 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "E-Commerce Platform API",
+    "description": "A full-featured e-commerce API for product catalog, order processing, customer accounts, and inventory.",
+    "version": "3.4.0",
+    "contact": { "name": "Platform Engineering", "email": "api@shopwave.example.com", "url": "https://developer.shopwave.example.com" },
+    "license": { "name": "Proprietary", "url": "https://shopwave.example.com/terms" },
+    "termsOfService": "https://shopwave.example.com/tos",
+    "x-logo": {
+      "url": "https://shopwave.example.com/assets/logo.svg",
+      "backgroundColor": "#1A1A2E",
+      "altText": "ShopWave logo",
+      "href": "https://shopwave.example.com"
+    }
+  },
+  "externalDocs": { "description": "Full developer documentation", "url": "https://developer.shopwave.example.com/docs" },
+  "servers": [
+    {
+      "url": "https://{region}.api.shopwave.example.com/{version}",
+      "description": "Production",
+      "variables": {
+        "region": { "default": "us-east", "enum": ["us-east", "us-west", "eu-west", "ap-southeast"], "description": "Data center region." },
+        "version": { "default": "v3", "enum": ["v3", "v2"], "description": "API version." }
+      }
+    },
+    { "url": "https://sandbox.shopwave.example.com/v3", "description": "Sandbox (no real charges)" }
+  ],
+  "tags": [
+    { "name": "products", "description": "Browse, search, and manage the product catalog.", "x-displayName": "Products", "externalDocs": { "description": "Product catalog guide", "url": "https://developer.shopwave.example.com/docs/products" } },
+    { "name": "orders", "description": "Place, track, and manage customer orders.", "x-displayName": "Orders" },
+    { "name": "customers", "description": "Customer account management and profiles.", "x-displayName": "Customers" },
+    { "name": "inventory", "description": "Warehouse inventory levels and stock adjustments.", "x-displayName": "Inventory", "externalDocs": { "description": "Inventory guide", "url": "https://developer.shopwave.example.com/docs/inventory" } }
+  ],
+  "x-tagGroups": [
+    { "name": "Storefront", "tags": ["products", "orders", "customers"] },
+    { "name": "Back Office", "tags": ["inventory"] }
+  ],
+  "paths": {
+    "/products": {
+      "get": {
+        "operationId": "listProducts",
+        "summary": "List products",
+        "description": "Returns a paginated, filterable list of products.",
+        "tags": ["products"],
+        "parameters": [
+          { "name": "category", "in": "query", "description": "Filter by category slug.", "schema": { "type": "string" } },
+          { "name": "min_price", "in": "query", "description": "Minimum price in cents.", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "max_price", "in": "query", "description": "Maximum price in cents.", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["price_asc", "price_desc", "name_asc", "created_desc"], "default": "created_desc" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated product list.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductListResponse" } } },
+            "headers": {
+              "X-Total-Count": { "description": "Total matching products.", "schema": { "type": "integer" } },
+              "X-Request-Id": { "$ref": "#/components/headers/X-Request-Id" }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "security": [{ "apiKey": [] }, { "oauth2": ["catalog:read"] }],
+        "x-codeSamples": [
+          { "lang": "cURL", "source": "curl -X GET 'https://us-east.api.shopwave.example.com/v3/products?category=electronics&limit=10' \\\n  -H 'X-API-Key: sk_live_abc123'" },
+          { "lang": "JavaScript", "label": "Node.js SDK", "source": "import ShopWave from '@shopwave/sdk';\n\nconst client = new ShopWave({ apiKey: 'sk_live_abc123' });\nconst products = await client.products.list({ category: 'electronics', limit: 10 });\nconsole.log(products.data);" }
+        ]
+      },
+      "post": {
+        "operationId": "createProduct",
+        "summary": "Create a product",
+        "description": "Adds a new product to the catalog. Created in `draft` status by default.",
+        "tags": ["products"],
+        "x-badges": [{ "name": "Rate Limited", "color": "orange" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductCreate" },
+              "examples": {
+                "simple": {
+                  "summary": "Simple product",
+                  "value": { "name": "Wireless Mouse", "sku": "WM-2024-BLK", "price": 2999, "currency": "USD", "category": "electronics" }
+                },
+                "withVariants": {
+                  "summary": "Product with variants",
+                  "value": {
+                    "name": "Cotton T-Shirt",
+                    "sku": "TS-COTTON-BASE",
+                    "price": 1999,
+                    "currency": "USD",
+                    "category": "apparel",
+                    "variants": [
+                      { "sku": "TS-COTTON-S-BLK", "attributes": { "size": "S", "color": "Black" }, "price_override": null },
+                      { "sku": "TS-COTTON-L-WHT", "attributes": { "size": "L", "color": "White" }, "price_override": 2199 }
+                    ],
+                    "images": [{ "url": "https://cdn.shopwave.example.com/images/ts-cotton-blk.jpg", "alt": "Black cotton t-shirt", "is_primary": true }]
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "sku", "price", "currency"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "sku": { "type": "string" },
+                  "price": { "type": "integer" },
+                  "currency": { "type": "string" },
+                  "category": { "type": "string" },
+                  "image": { "type": "string", "format": "binary", "description": "Primary product image upload." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } },
+            "headers": {
+              "Location": { "description": "URL of the new product.", "schema": { "type": "string", "format": "uri" } },
+              "X-Request-Id": { "$ref": "#/components/headers/X-Request-Id" }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "description": "A product with this SKU already exists.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        },
+        "security": [{ "oauth2": ["catalog:write"] }]
+      }
+    },
+    "/products/{productId}": {
+      "get": {
+        "operationId": "getProduct",
+        "summary": "Get a product",
+        "tags": ["products"],
+        "parameters": [{ "$ref": "#/components/parameters/ProductId" }],
+        "responses": {
+          "200": { "description": "Product details.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "apiKey": [] }, { "oauth2": ["catalog:read"] }]
+      },
+      "put": {
+        "operationId": "updateProduct",
+        "summary": "Update a product",
+        "tags": ["products"],
+        "parameters": [{ "$ref": "#/components/parameters/ProductId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductCreate" } } } },
+        "responses": {
+          "200": { "description": "Product updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["catalog:write"] }]
+      },
+      "delete": {
+        "operationId": "deleteProduct",
+        "summary": "Delete a product",
+        "tags": ["products"],
+        "parameters": [{ "$ref": "#/components/parameters/ProductId" }],
+        "responses": {
+          "204": { "description": "Product deleted." },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["catalog:write"] }]
+      }
+    },
+    "/products/{productId}/reviews": {
+      "get": {
+        "operationId": "listProductReviews",
+        "summary": "List product reviews",
+        "tags": ["products"],
+        "x-badges": [{ "name": "Beta", "color": "blue" }],
+        "parameters": [{ "$ref": "#/components/parameters/ProductId" }, { "$ref": "#/components/parameters/Limit" }],
+        "responses": {
+          "200": {
+            "description": "Product reviews.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Review" } },
+                    "next_cursor": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "apiKey": [] }]
+      }
+    },
+    "/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "summary": "List orders",
+        "tags": ["orders"],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/OrderStatus" } },
+          { "name": "placed_after", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } },
+                    "next_cursor": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            },
+            "headers": { "X-Request-Id": { "$ref": "#/components/headers/X-Request-Id" } }
+          }
+        },
+        "security": [{ "oauth2": ["orders:read"] }],
+        "x-codeSamples": [
+          { "lang": "Python", "source": "import requests\n\nresponse = requests.get(\n    'https://us-east.api.shopwave.example.com/v3/orders',\n    headers={'Authorization': f'Bearer {access_token}'},\n    params={'status': 'shipped', 'limit': 20}\n)\nfor order in response.json()['data']:\n    print(f\"Order {order['id']}: {order['status']}\")" }
+        ]
+      },
+      "post": {
+        "operationId": "createOrder",
+        "summary": "Place an order",
+        "description": "Creates an order. Payment is captured asynchronously after creation.",
+        "tags": ["orders"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderCreate" } } } },
+        "responses": {
+          "201": {
+            "description": "Order placed.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } },
+            "headers": { "Location": { "description": "URL of the new order.", "schema": { "type": "string", "format": "uri" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "422": { "description": "Order could not be processed (e.g., item out of stock).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        },
+        "security": [{ "oauth2": ["orders:write"] }],
+        "x-codeSamples": [
+          { "lang": "JavaScript", "label": "Node.js SDK", "source": "const order = await client.orders.create({\n  items: [{ product_id: 'prod_abc123', variant_id: 'var_s_blk', quantity: 2 }],\n  shipping_address: { line1: '123 Main St', city: 'Austin', state: 'TX', postal_code: '78701', country: 'US' },\n  payment_method_id: 'pm_visa_4242'\n});\nconsole.log(`Order ${order.id}: ${order.status}`);" }
+        ]
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "Get an order",
+        "tags": ["orders"],
+        "parameters": [{ "$ref": "#/components/parameters/OrderId" }],
+        "responses": {
+          "200": { "description": "Order details.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["orders:read"] }]
+      }
+    },
+    "/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "cancelOrder",
+        "summary": "Cancel an order",
+        "description": "Cancels a pending or processing order. Shipped orders cannot be cancelled.",
+        "tags": ["orders"],
+        "parameters": [{ "$ref": "#/components/parameters/OrderId" }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "reason": { "type": "string", "maxLength": 500 } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order cancelled.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
+          "400": { "description": "Order cannot be cancelled.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["orders:write"] }]
+      }
+    },
+    "/customers": {
+      "get": {
+        "operationId": "listCustomers",
+        "summary": "List customers",
+        "tags": ["customers"],
+        "parameters": [
+          { "name": "email", "in": "query", "description": "Filter by email.", "schema": { "type": "string", "format": "email" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Customer" } },
+                    "next_cursor": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "oauth2": ["customers:read"] }]
+      }
+    },
+    "/customers/{customerId}": {
+      "get": {
+        "operationId": "getCustomer",
+        "summary": "Get a customer",
+        "tags": ["customers"],
+        "parameters": [{ "$ref": "#/components/parameters/CustomerId" }],
+        "responses": {
+          "200": { "description": "Customer profile.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Customer" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["customers:read"] }]
+      }
+    },
+    "/customers/{customerId}/merge": {
+      "post": {
+        "operationId": "mergeCustomers",
+        "summary": "Merge duplicate customers",
+        "description": "Merges a secondary customer into this primary account. Irreversible.",
+        "tags": ["customers"],
+        "x-internal": true,
+        "parameters": [{ "$ref": "#/components/parameters/CustomerId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["secondary_customer_id"],
+                "properties": { "secondary_customer_id": { "type": "string", "format": "uuid" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Customers merged.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Customer" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["customers:admin"] }]
+      }
+    },
+    "/inventory": {
+      "get": {
+        "operationId": "listInventory",
+        "summary": "List inventory levels",
+        "tags": ["inventory"],
+        "parameters": [
+          { "name": "warehouse_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "below_threshold", "in": "query", "description": "Only items below reorder threshold.", "schema": { "type": "boolean", "default": false } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inventory levels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/InventoryRecord" } },
+                    "next_cursor": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "oauth2": ["inventory:read"] }]
+      }
+    },
+    "/inventory/adjustments": {
+      "post": {
+        "operationId": "createInventoryAdjustment",
+        "summary": "Create inventory adjustment",
+        "description": "Records a stock adjustment (receiving, damaged goods, cycle count, etc.).",
+        "tags": ["inventory"],
+        "x-badges": [{ "name": "Audited", "color": "#7C3AED" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InventoryAdjustment" } } } },
+        "responses": {
+          "201": { "description": "Adjustment recorded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InventoryRecord" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "description": "Product or warehouse not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        },
+        "security": [{ "oauth2": ["inventory:write"] }],
+        "x-codeSamples": [
+          { "lang": "cURL", "source": "curl -X POST 'https://us-east.api.shopwave.example.com/v3/inventory/adjustments' \\\n  -H 'Authorization: Bearer $TOKEN' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"product_id\": \"prod_abc123\", \"warehouse_id\": \"wh_east_01\", \"quantity_delta\": 50, \"reason\": \"received_shipment\", \"reference\": \"PO-2024-0892\"}'" }
+        ]
+      }
+    },
+    "/inventory/sync": {
+      "post": {
+        "operationId": "syncInventory",
+        "summary": "Force inventory sync",
+        "description": "Triggers a full inventory reconciliation. Expensive operation — use sparingly.",
+        "tags": ["inventory"],
+        "x-internal": true,
+        "x-badges": [{ "name": "Admin Only", "color": "#DC2626" }],
+        "responses": {
+          "202": {
+            "description": "Sync initiated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": { "type": "string", "format": "uuid" },
+                    "status": { "type": "string", "enum": ["queued"] },
+                    "poll_url": { "type": "string", "format": "uri" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "oauth2": ["inventory:admin"] }]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "required": ["id", "name", "sku", "price", "currency", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "name": { "type": "string", "minLength": 1, "maxLength": 250 },
+          "sku": { "type": "string", "pattern": "^[A-Z0-9-]+$", "description": "Unique stock keeping unit." },
+          "description": { "type": "string", "maxLength": 10000 },
+          "price": { "type": "integer", "description": "Price in smallest currency unit (e.g., cents).", "minimum": 0 },
+          "currency": { "$ref": "#/components/schemas/Currency" },
+          "category": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ProductStatus" },
+          "variants": { "type": "array", "items": { "$ref": "#/components/schemas/ProductVariant" } },
+          "images": { "type": "array", "items": { "$ref": "#/components/schemas/ProductImage" } },
+          "metadata": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Arbitrary key-value metadata." },
+          "created_at": { "type": "string", "format": "date-time", "readOnly": true },
+          "updated_at": { "type": "string", "format": "date-time", "readOnly": true }
+        }
+      },
+      "ProductCreate": {
+        "type": "object",
+        "required": ["name", "sku", "price", "currency"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 250 },
+          "sku": { "type": "string", "pattern": "^[A-Z0-9-]+$" },
+          "description": { "type": "string", "maxLength": 10000 },
+          "price": { "type": "integer", "minimum": 0 },
+          "currency": { "$ref": "#/components/schemas/Currency" },
+          "category": { "type": "string" },
+          "variants": { "type": "array", "items": { "$ref": "#/components/schemas/ProductVariantCreate" } },
+          "images": { "type": "array", "items": { "$ref": "#/components/schemas/ProductImage" } },
+          "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      },
+      "ProductVariant": {
+        "type": "object",
+        "required": ["id", "sku", "attributes"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "sku": { "type": "string", "pattern": "^[A-Z0-9-]+$" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Variant dimensions (e.g., size, color)." },
+          "price_override": { "type": "integer", "nullable": true, "description": "Overrides the base product price if set." },
+          "available": { "type": "boolean", "default": true }
+        }
+      },
+      "ProductVariantCreate": {
+        "type": "object",
+        "required": ["sku", "attributes"],
+        "properties": {
+          "sku": { "type": "string", "pattern": "^[A-Z0-9-]+$" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "price_override": { "type": "integer", "nullable": true }
+        }
+      },
+      "ProductImage": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "alt": { "type": "string", "maxLength": 250 },
+          "is_primary": { "type": "boolean", "default": false }
+        }
+      },
+      "ProductStatus": {
+        "type": "string",
+        "enum": ["draft", "active", "archived", "out_of_stock"],
+        "x-enumDescriptions": {
+          "draft": "Not yet published; visible only to administrators.",
+          "active": "Live and available for purchase.",
+          "archived": "Retired from the catalog but retained for order history.",
+          "out_of_stock": "Temporarily unavailable. Set automatically when all variant inventory reaches zero."
+        }
+      },
+      "ProductListResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } },
+          "next_cursor": { "type": "string", "nullable": true, "description": "Cursor for the next page, or null." }
+        }
+      },
+      "Currency": {
+        "type": "string",
+        "enum": ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"],
+        "description": "ISO 4217 currency code."
+      },
+      "Review": {
+        "type": "object",
+        "required": ["id", "rating", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "title": { "type": "string", "maxLength": 200 },
+          "body": { "type": "string", "maxLength": 5000 },
+          "author": {
+            "type": "object",
+            "properties": {
+              "display_name": { "type": "string" },
+              "verified_purchase": { "type": "boolean" }
+            }
+          },
+          "created_at": { "type": "string", "format": "date-time", "readOnly": true }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": ["id", "status", "items", "total", "currency", "placed_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderLineItem" }, "minItems": 1 },
+          "total": { "type": "integer", "description": "Order total in smallest currency unit." },
+          "currency": { "$ref": "#/components/schemas/Currency" },
+          "shipping_address": { "$ref": "#/components/schemas/Address" },
+          "payment": { "$ref": "#/components/schemas/PaymentSummary" },
+          "placed_at": { "type": "string", "format": "date-time", "readOnly": true },
+          "shipped_at": { "type": "string", "format": "date-time", "nullable": true, "readOnly": true },
+          "cancelled_at": { "type": "string", "format": "date-time", "nullable": true, "readOnly": true }
+        }
+      },
+      "OrderCreate": {
+        "type": "object",
+        "required": ["items", "shipping_address", "payment_method_id"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "required": ["product_id", "quantity"],
+              "properties": {
+                "product_id": { "type": "string", "format": "uuid" },
+                "variant_id": { "type": "string", "format": "uuid", "nullable": true },
+                "quantity": { "type": "integer", "minimum": 1, "maximum": 99 }
+              }
+            }
+          },
+          "shipping_address": { "$ref": "#/components/schemas/Address" },
+          "payment_method_id": { "type": "string", "description": "ID of a saved payment method." },
+          "notes": { "type": "string", "maxLength": 1000, "description": "Delivery instructions." }
+        }
+      },
+      "OrderLineItem": {
+        "type": "object",
+        "required": ["product_id", "product_name", "quantity", "unit_price"],
+        "properties": {
+          "product_id": { "type": "string", "format": "uuid" },
+          "variant_id": { "type": "string", "format": "uuid", "nullable": true },
+          "product_name": { "type": "string" },
+          "variant_label": { "type": "string", "nullable": true, "description": "e.g., 'Size: M, Color: Black'." },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "unit_price": { "type": "integer", "description": "Price per unit at time of purchase." }
+        }
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"],
+        "x-enumDescriptions": {
+          "pending": "Order received, payment not yet captured.",
+          "confirmed": "Payment captured; awaiting fulfillment.",
+          "processing": "Being picked and packed in the warehouse.",
+          "shipped": "In transit to the delivery address.",
+          "delivered": "Successfully delivered.",
+          "cancelled": "Cancelled before shipment.",
+          "refunded": "Returned and refund issued."
+        }
+      },
+      "PaymentSummary": {
+        "type": "object",
+        "required": ["method", "status"],
+        "properties": {
+          "method": { "type": "string", "enum": ["card", "bank_transfer", "wallet"] },
+          "status": { "type": "string", "enum": ["pending", "captured", "failed", "refunded"] },
+          "card_last_four": { "type": "string", "pattern": "^[0-9]{4}$", "nullable": true }
+        }
+      },
+      "Customer": {
+        "allOf": [
+          { "$ref": "#/components/schemas/CustomerBase" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid", "readOnly": true },
+              "lifetime_value": { "type": "integer", "description": "Total spend in cents.", "readOnly": true },
+              "order_count": { "type": "integer", "readOnly": true },
+              "created_at": { "type": "string", "format": "date-time", "readOnly": true }
+            }
+          }
+        ]
+      },
+      "CustomerBase": {
+        "type": "object",
+        "required": ["email", "first_name", "last_name"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "first_name": { "type": "string", "maxLength": 100 },
+          "last_name": { "type": "string", "maxLength": 100 },
+          "phone": { "type": "string", "pattern": "^\\+[1-9]\\d{1,14}$", "nullable": true, "description": "E.164 format." },
+          "default_address": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/Address" },
+              { "type": "null" }
+            ],
+            "description": "Default shipping address, or null."
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "required": ["line1", "city", "postal_code", "country"],
+        "properties": {
+          "line1": { "type": "string", "maxLength": 250 },
+          "line2": { "type": "string", "maxLength": 250, "nullable": true },
+          "city": { "type": "string", "maxLength": 100 },
+          "state": { "type": "string", "maxLength": 100, "nullable": true, "description": "State, province, or region." },
+          "postal_code": { "type": "string", "maxLength": 20 },
+          "country": { "type": "string", "minLength": 2, "maxLength": 2, "description": "ISO 3166-1 alpha-2." }
+        }
+      },
+      "InventoryRecord": {
+        "type": "object",
+        "required": ["product_id", "warehouse_id", "quantity_on_hand"],
+        "properties": {
+          "product_id": { "type": "string", "format": "uuid" },
+          "variant_id": { "type": "string", "format": "uuid", "nullable": true },
+          "warehouse_id": { "type": "string", "format": "uuid" },
+          "warehouse_name": { "type": "string" },
+          "quantity_on_hand": { "type": "integer", "minimum": 0 },
+          "quantity_reserved": { "type": "integer", "minimum": 0, "description": "Units allocated to pending orders." },
+          "quantity_available": { "type": "integer", "minimum": 0, "description": "On hand minus reserved." },
+          "reorder_threshold": { "type": "integer", "minimum": 0, "description": "Alert triggered when available drops below this." },
+          "updated_at": { "type": "string", "format": "date-time", "readOnly": true }
+        }
+      },
+      "InventoryAdjustment": {
+        "type": "object",
+        "required": ["product_id", "warehouse_id", "quantity_delta", "reason"],
+        "properties": {
+          "product_id": { "type": "string", "format": "uuid" },
+          "variant_id": { "type": "string", "format": "uuid", "nullable": true },
+          "warehouse_id": { "type": "string", "format": "uuid" },
+          "quantity_delta": { "type": "integer", "description": "Positive for stock in, negative for stock out." },
+          "reason": { "$ref": "#/components/schemas/AdjustmentReason" },
+          "reference": { "type": "string", "maxLength": 100, "description": "External reference (e.g., PO number)." }
+        }
+      },
+      "AdjustmentReason": {
+        "type": "string",
+        "enum": ["received_shipment", "returned", "damaged", "cycle_count", "theft", "other"],
+        "x-enumDescriptions": {
+          "received_shipment": "New stock from a supplier.",
+          "returned": "Customer return restocked.",
+          "damaged": "Stock removed due to damage.",
+          "cycle_count": "Correction from physical inventory count.",
+          "theft": "Loss attributed to theft or shrinkage.",
+          "other": "Reason not covered by other categories."
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "description": "Machine-readable error code." },
+          "message": { "type": "string", "description": "Human-readable description." },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "request_id": { "type": "string", "format": "uuid" }
+        }
+      }
+    },
+    "parameters": {
+      "ProductId": { "name": "productId", "in": "path", "required": true, "description": "Product ID.", "schema": { "type": "string", "format": "uuid" } },
+      "OrderId": { "name": "orderId", "in": "path", "required": true, "description": "Order ID.", "schema": { "type": "string", "format": "uuid" } },
+      "CustomerId": { "name": "customerId", "in": "path", "required": true, "description": "Customer ID.", "schema": { "type": "string", "format": "uuid" } },
+      "Limit": { "name": "limit", "in": "query", "description": "Max items to return.", "schema": { "type": "integer", "default": 25, "minimum": 1, "maximum": 100 } },
+      "Cursor": { "name": "cursor", "in": "query", "description": "Pagination cursor.", "schema": { "type": "string" } }
+    },
+    "headers": {
+      "X-Request-Id": { "description": "Unique request identifier for debugging.", "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "The request is invalid.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "code": "VALIDATION_ERROR", "message": "Request validation failed.", "details": [{ "field": "price", "reason": "must be a non-negative integer" }], "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested resource does not exist.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "code": "NOT_FOUND", "message": "Resource not found.", "request_id": "550e8400-e29b-41d4-a716-446655440000" }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "name": "X-API-Key",
+        "in": "header",
+        "description": "API key for public storefront operations."
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "description": "OAuth 2.0 for authenticated operations.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.shopwave.example.com/authorize",
+            "tokenUrl": "https://auth.shopwave.example.com/token",
+            "refreshUrl": "https://auth.shopwave.example.com/token",
+            "scopes": {
+              "catalog:read": "Read product catalog",
+              "catalog:write": "Create and update products",
+              "orders:read": "View orders",
+              "orders:write": "Place and manage orders",
+              "customers:read": "View customer profiles",
+              "customers:admin": "Administrative customer operations",
+              "inventory:read": "View inventory levels",
+              "inventory:write": "Adjust inventory",
+              "inventory:admin": "Administrative inventory operations"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "apiKey": [] }]
+}

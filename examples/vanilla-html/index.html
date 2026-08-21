@@ -1,0 +1,69 @@
+<!--
+  This source file is part of the Apiboost(R) API Portal product.
+
+  Copyright (c) Apiboost, Inc.
+
+  See https://www.apiboost.com/LICENSE.txt for license information.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apiboost API Docs — Vanilla HTML Example</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+
+      /*
+        Design tokens defined on the host element cascade into the renderer's
+        shadow DOM via CSS custom property inheritance.
+      */
+      omnispec-renderer {
+        display: block;
+        height: 100vh;
+        --omnispec-color-primary: #8B5CF6;
+        --omnispec-color-primary-hover: #7C3AED;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Load the standalone bundle. In production, prefer pinning to a specific
+      version, e.g. https://unpkg.com/@apiboost/omnispec@1.1.0/dist/wc/standalone.js
+    -->
+    <script src="../../packages/omnispec/dist/wc/standalone.js"></script>
+
+    <!--
+      Use the element. `spec-url` is the simplest case — a single attribute is
+      all you need. The renderer auto-detects the spec type.
+    -->
+    <omnispec-renderer
+      id="docs"
+      spec-url="https://petstore3.swagger.io/api/v3/openapi.json"
+      theme-base="auto"
+      display-mode="compact"
+    ></omnispec-renderer>
+
+    <script>
+      // Imperative property assignment is the recommended path for complex
+      // config (theme overrides, sidebar nav, parsed spec objects).
+      const el = document.getElementById('docs')
+
+      // Listen for renderer events.
+      el.addEventListener('spec-loaded', (e) => {
+        // e.detail = { title, version, type }
+        console.log('[omnispec] spec loaded:', e.detail)
+      })
+
+      el.addEventListener('try-it-request', (e) => {
+        console.log('[omnispec] try-it request:', e.detail)
+      })
+    </script>
+  </body>
+</html>

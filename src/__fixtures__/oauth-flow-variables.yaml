@@ -1,0 +1,61 @@
+openapi: "3.0.3"
+info:
+  title: OAuth Flow Variables Demo
+  description: >-
+    Demonstrates the OmniSpec `x-flowVariables` extension (ABOSPEC-221), which
+    templates OAuth flow URLs so a single spec can Try-It OAuth against multiple
+    environments, tenants, or a third-party IdP.
+  version: "1.0.0"
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      summary: List pets
+      security:
+        - envAuth:
+            - read:pets
+      responses:
+        "200":
+          description: A list of pets
+components:
+  securitySchemes:
+    # Absolute templated token URL: {env} selects the IdP host.
+    envAuth:
+      type: oauth2
+      description: OAuth against a per-environment identity provider.
+      flows:
+        clientCredentials:
+          tokenUrl: https://{env}.auth.example.com/oauth/token
+          x-flowVariables:
+            env:
+              default: dev
+              enum:
+                - dev
+                - staging
+                - prod
+              description: Deployment environment
+          scopes:
+            read:pets: Read pets
+    # Relative templated token URL: {tenant} composes with the selected server,
+    # so substitution then server-resolution combine (see ABOSPEC-220).
+    tenantAuth:
+      type: oauth2
+      description: Per-tenant token endpoint resolved against the selected server.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://{env}.auth.example.com/authorize
+          tokenUrl: /{tenant}/oauth/token
+          x-flowVariables:
+            env:
+              default: dev
+              enum:
+                - dev
+                - prod
+            tenant:
+              default: acme
+              description: Tenant slug
+          scopes:
+            read:pets: Read pets

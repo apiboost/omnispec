@@ -1,0 +1,299 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Task Management API",
+    "description": "A collaborative task management API with user accounts, task assignment, and status tracking.",
+    "version": "2.1.0",
+    "contact": { "name": "TaskFlow Engineering", "email": "api@taskflow.example.com" },
+    "license": { "name": "Apache 2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0" }
+  },
+  "servers": [
+    { "url": "https://api.taskflow.example.com/v2", "description": "Production" },
+    { "url": "https://sandbox.taskflow.example.com/v2", "description": "Sandbox" }
+  ],
+  "tags": [
+    { "name": "tasks", "description": "Create, read, update, and delete tasks.", "x-displayName": "Tasks" },
+    { "name": "users", "description": "Manage user accounts and profiles.", "x-displayName": "Users" }
+  ],
+  "paths": {
+    "/tasks": {
+      "get": {
+        "operationId": "listTasks",
+        "summary": "List tasks",
+        "description": "Returns a filtered, paginated list of tasks visible to the authenticated user.",
+        "tags": ["tasks"],
+        "parameters": [
+          { "name": "status", "in": "query", "description": "Filter by task status.", "schema": { "$ref": "#/components/schemas/TaskStatus" } },
+          { "name": "assignee_id", "in": "query", "description": "Filter by assigned user.", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 25, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "A paginated list of tasks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "security": [{ "oauth2": ["tasks:read"] }]
+      },
+      "post": {
+        "operationId": "createTask",
+        "summary": "Create a task",
+        "tags": ["tasks"],
+        "x-badges": [{ "name": "Rate Limited", "color": "orange" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TaskCreate" },
+              "examples": {
+                "minimal": {
+                  "summary": "Minimal task",
+                  "value": { "title": "Review pull request" }
+                },
+                "full": {
+                  "summary": "Fully specified task",
+                  "value": {
+                    "title": "Deploy v2.1 to staging",
+                    "description": "Run the deployment pipeline for the v2.1 release candidate.",
+                    "assignee_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "priority": "high",
+                    "labels": ["deployment", "staging"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task created.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "security": [{ "oauth2": ["tasks:write"] }],
+        "x-codeSamples": [
+          {
+            "lang": "JavaScript",
+            "label": "Node.js",
+            "source": "const res = await fetch('https://api.taskflow.example.com/v2/tasks', {\n  method: 'POST',\n  headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ title: 'Review pull request' })\n});\nconst task = await res.json();"
+          },
+          {
+            "lang": "Python",
+            "source": "import requests\n\nresponse = requests.post(\n    'https://api.taskflow.example.com/v2/tasks',\n    headers={'Authorization': f'Bearer {token}'},\n    json={'title': 'Review pull request'}\n)\ntask = response.json()"
+          }
+        ]
+      }
+    },
+    "/tasks/{taskId}": {
+      "get": {
+        "operationId": "getTask",
+        "summary": "Get a task",
+        "tags": ["tasks"],
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": {
+            "description": "The requested task.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["tasks:read"] }]
+      },
+      "patch": {
+        "operationId": "updateTask",
+        "summary": "Update a task",
+        "tags": ["tasks"],
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["tasks:write"] }]
+      },
+      "delete": {
+        "operationId": "deleteTask",
+        "summary": "Delete a task",
+        "tags": ["tasks"],
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "204": { "description": "Task deleted." },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["tasks:write"] }]
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List users",
+        "tags": ["users"],
+        "x-badges": [{ "name": "Beta", "color": "blue" }],
+        "responses": {
+          "200": {
+            "description": "A list of users.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } }
+              }
+            }
+          }
+        },
+        "security": [{ "oauth2": ["users:read"] }]
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "operationId": "getUser",
+        "summary": "Get a user",
+        "tags": ["users"],
+        "parameters": [{ "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": {
+            "description": "The requested user.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "security": [{ "oauth2": ["users:read"] }]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TaskStatus": {
+        "type": "string",
+        "enum": ["open", "in_progress", "review", "done", "cancelled"],
+        "x-enumDescriptions": {
+          "open": "Task created but work has not started.",
+          "in_progress": "Task is actively being worked on.",
+          "review": "Work complete, awaiting review.",
+          "done": "Task completed and approved.",
+          "cancelled": "Task cancelled and will not be completed."
+        }
+      },
+      "Task": {
+        "type": "object",
+        "required": ["id", "title", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 5000 },
+          "status": { "$ref": "#/components/schemas/TaskStatus" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"], "default": "medium" },
+          "assignee": { "$ref": "#/components/schemas/User" },
+          "labels": { "type": "array", "items": { "type": "string" } },
+          "created_at": { "type": "string", "format": "date-time", "readOnly": true },
+          "updated_at": { "type": "string", "format": "date-time", "readOnly": true }
+        }
+      },
+      "TaskCreate": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 5000 },
+          "assignee_id": { "type": "string", "format": "uuid" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"], "default": "medium" },
+          "labels": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "TaskUpdate": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 5000 },
+          "status": { "$ref": "#/components/schemas/TaskStatus" },
+          "assignee_id": { "type": "string", "format": "uuid", "nullable": true },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+          "labels": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": ["id", "email", "display_name"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "email": { "type": "string", "format": "email" },
+          "display_name": { "type": "string" },
+          "avatar_url": { "type": "string", "format": "uri", "nullable": true }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "The request is invalid.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "code": "VALIDATION_ERROR", "message": "Request validation failed.", "details": [{ "field": "title", "reason": "must not be empty" }] }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested resource was not found.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "code": "NOT_FOUND", "message": "Resource not found." }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "description": "OAuth 2.0 authorization code flow.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.taskflow.example.com/authorize",
+            "tokenUrl": "https://auth.taskflow.example.com/token",
+            "scopes": {
+              "tasks:read": "Read access to tasks",
+              "tasks:write": "Write access to tasks",
+              "users:read": "Read access to user profiles"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "oauth2": [] }]
+}

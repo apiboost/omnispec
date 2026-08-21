@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package example.greeter;
+
+// The greeting service definition.
+service GreeterService {
+  // Sends a greeting
+  rpc SayHello (HelloRequest) returns (HelloReply);
+  // Sends a greeting and streams back responses
+  rpc SayHelloStream (HelloRequest) returns (stream HelloReply);
+  // Streams greetings from client, responds with summary
+  rpc RecordGreetings (stream HelloRequest) returns (GreetingSummary);
+  // Bidirectional chat
+  rpc Chat (stream ChatMessage) returns (stream ChatMessage);
+}
+
+// User management service
+service UserService {
+  // Get a user by ID
+  rpc GetUser (GetUserRequest) returns (User);
+  // List all users with pagination
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+  // Create a new user
+  rpc CreateUser (CreateUserRequest) returns (User);
+  // Delete a user
+  rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+  int32 age = 2;
+  repeated string tags = 3;
+  map<string, string> metadata = 4;
+  optional string nickname = 5;
+  Address address = 6;
+  oneof contact {
+    string email = 7;
+    string phone = 8;
+  }
+}
+
+// The response message containing the greetings.
+message HelloReply {
+  string message = 1;
+  Status status = 2;
+}
+
+// Summary of recorded greetings
+message GreetingSummary {
+  int32 count = 1;
+  repeated string names = 2;
+}
+
+// Chat message
+message ChatMessage {
+  string sender = 1;
+  string text = 2;
+  int64 timestamp = 3;
+}
+
+// Address information
+message Address {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip_code = 4;
+  string country = 5;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message ListUsersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  UserRole role_filter = 3;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+  UserRole role = 3;
+  Address address = 4;
+}
+
+message DeleteUserRequest {
+  string user_id = 1;
+}
+
+message DeleteUserResponse {
+  bool success = 1;
+}
+
+// User account
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  UserRole role = 4;
+  Address address = 5;
+  repeated string permissions = 6;
+  bool active = 7;
+}
+
+// Status of a response
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OK = 1;
+  STATUS_ERROR = 2;
+  STATUS_PENDING = 3;
+}
+
+// User roles
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_ADMIN = 1;
+  USER_ROLE_EDITOR = 2;
+  USER_ROLE_VIEWER = 3;
+}

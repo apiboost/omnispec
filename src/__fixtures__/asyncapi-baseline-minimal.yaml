@@ -1,0 +1,65 @@
+asyncapi: 2.6.0
+info:
+  title: Order Notifications
+  version: 1.0.0
+  description: Simple order status notification events.
+
+servers:
+  production:
+    url: amqp://rabbitmq.internal:5672
+    protocol: amqp
+    description: Internal RabbitMQ
+
+channels:
+  orders/created:
+    description: Emitted when a new order is placed.
+    publish:
+      operationId: orderCreated
+      summary: Order created
+      message:
+        payload:
+          type: object
+          properties:
+            orderId:
+              type: string
+            customerId:
+              type: string
+            total:
+              type: number
+            createdAt:
+              type: string
+              format: date-time
+
+  orders/shipped:
+    description: Emitted when an order is shipped.
+    publish:
+      operationId: orderShipped
+      summary: Order shipped
+      message:
+        payload:
+          type: object
+          properties:
+            orderId:
+              type: string
+            trackingNumber:
+              type: string
+            carrier:
+              type: string
+            shippedAt:
+              type: string
+              format: date-time
+
+  orders/delivered:
+    description: Emitted when an order is delivered.
+    publish:
+      operationId: orderDelivered
+      summary: Order delivered
+      message:
+        payload:
+          type: object
+          properties:
+            orderId:
+              type: string
+            deliveredAt:
+              type: string
+              format: date-time

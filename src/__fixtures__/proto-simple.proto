@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package example.todo;
+
+// A simple Todo management service for creating and retrieving tasks.
+service TodoService {
+  // Creates a new todo item and returns it with a generated ID.
+  rpc CreateTodo (CreateTodoRequest) returns (Todo);
+  // Retrieves a single todo item by its unique identifier.
+  rpc GetTodo (GetTodoRequest) returns (Todo);
+  // Lists all todo items, ordered by creation time descending.
+  rpc ListTodos (ListTodosRequest) returns (ListTodosResponse);
+}
+
+// A single todo item.
+message Todo {
+  string id = 1;
+  string title = 2;
+  bool completed = 3;
+}
+
+// Request to create a new todo.
+message CreateTodoRequest {
+  string title = 1;
+}
+
+// Request to retrieve a todo by ID.
+message GetTodoRequest {
+  string id = 1;
+}
+
+// Request to list todos with optional pagination.
+message ListTodosRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+// Response containing a page of todo items.
+message ListTodosResponse {
+  repeated Todo todos = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}

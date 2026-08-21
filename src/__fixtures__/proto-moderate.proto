@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package example.chat;
+
+// Represents a point in time as seconds and nanoseconds since the Unix epoch.
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// ChatService provides real-time messaging capabilities including
+// one-to-one messaging, group channels, and live bidirectional chat.
+service ChatService {
+  // Sends a single message to a channel and returns the stored message.
+  rpc SendMessage (SendMessageRequest) returns (Message);
+
+  // Retrieves message history for a channel.
+  rpc GetMessages (GetMessagesRequest) returns (GetMessagesResponse);
+
+  // Subscribes to new messages in a channel. The server pushes each new
+  // message as it arrives until the client disconnects.
+  rpc StreamMessages (StreamMessagesRequest) returns (stream Message);
+
+  // Accepts a batch of messages from the client in a single stream,
+  // returning a summary once the client closes the stream.
+  rpc SendBulkMessages (stream SendMessageRequest) returns (BulkSendResponse);
+
+  // Opens a bidirectional channel for live conversation. Both the client
+  // and server can send messages at any time.
+  rpc LiveChat (stream Message) returns (stream Message);
+}
+
+// UserService manages user accounts and presence status
+// for the chat platform.
+service UserService {
+  // Registers a new user and returns the created profile.
+  rpc CreateUser (CreateUserRequest) returns (User);
+
+  // Retrieves a user profile by ID.
+  rpc GetUser (GetUserRequest) returns (User);
+
+  // Subscribes to real-time presence changes (online/offline/away)
+  // for a set of users.
+  rpc WatchPresence (WatchPresenceRequest) returns (stream PresenceUpdate);
+}
+
+// The type of content a message carries.
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  // Plain text message.
+  MESSAGE_TYPE_TEXT = 1;
+  // Image attachment (PNG, JPEG, GIF, WebP).
+  MESSAGE_TYPE_IMAGE = 2;
+  // Video attachment (MP4, WebM).
+  MESSAGE_TYPE_VIDEO = 3;
+  // Generic file attachment.
+  MESSAGE_TYPE_FILE = 4;
+}
+
+// Presence status for a user.
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_ONLINE = 1;
+  PRESENCE_STATUS_OFFLINE = 2;
+  PRESENCE_STATUS_AWAY = 3;
+  PRESENCE_STATUS_DO_NOT_DISTURB = 4;
+}
+
+// A chat message with polymorphic content and optional attachments.
+message Message {
+  string id = 1;
+  string channel_id = 2;
+  string sender_id = 3;
+  MessageType type = 4;
+  Timestamp sent_at = 5;
+  optional Timestamp edited_at = 6;
+  repeated Attachment attachments = 7;
+  map<string, string> metadata = 8;
+
+  // The message payload — exactly one must be set.
+  oneof content {
+    // Plain text content.
+    string text_content = 9;
+    // Binary media content (image, video, or file).
+    MediaContent media_content = 10;
+  }
+
+  // A file or media item attached to a message.
+  message Attachment {
+    string filename = 1;
+    string mime_type = 2;
+    int64 size_bytes = 3;
+    string url = 4;
+    optional string thumbnail_url = 5;
+  }
+
+  // Rich media payload for non-text messages.
+  message MediaContent {
+    string url = 1;
+    string mime_type = 2;
+    int64 size_bytes = 3;
+    optional int32 width = 4;
+    optional int32 height = 5;
+    optional int32 duration_seconds = 6;
+  }
+}
+
+// User profile.
+message User {
+  string id = 1;
+  string display_name = 2;
+  string email = 3;
+  optional string avatar_url = 4;
+  PresenceStatus presence = 5;
+  Timestamp created_at = 6;
+}
+
+// Real-time presence change notification.
+message PresenceUpdate {
+  string user_id = 1;
+  PresenceStatus status = 2;
+  Timestamp changed_at = 3;
+}
+
+// Request to send a message to a channel.
+message SendMessageRequest {
+  string channel_id = 1;
+  MessageType type = 2;
+  oneof content {
+    string text_content = 3;
+    Message.MediaContent media_content = 4;
+  }
+  repeated Message.Attachment attachments = 5;
+}
+
+// Request to list historical messages in a channel.
+message GetMessagesRequest {
+  string channel_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+// Paginated list of messages.
+message GetMessagesResponse {
+  repeated Message messages = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// Request to subscribe to a message stream.
+message StreamMessagesRequest {
+  string channel_id = 1;
+  optional Timestamp since = 2;
+}
+
+// Summary returned after a bulk send operation completes.
+message BulkSendResponse {
+  int32 messages_sent = 1;
+  int32 messages_failed = 2;
+}
+
+// Request to create a new user.
+message CreateUserRequest {
+  string display_name = 1;
+  string email = 2;
+  optional string avatar_url = 3;
+}
+
+// Request to retrieve a user by ID.
+message GetUserRequest {
+  string user_id = 1;
+}
+
+// Request to watch presence for a set of users.
+message WatchPresenceRequest {
+  repeated string user_ids = 1;
+}

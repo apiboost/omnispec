@@ -1,0 +1,1243 @@
+openapi: 3.0.3
+info:
+  title: OAS Compliance Test API
+  version: 2.1.0
+  description: |
+    A **comprehensive test specification** designed to exercise every rendering feature
+    of the Apiboost API Documentation Renderer.
+
+    ## Markdown Support
+
+    This description uses CommonMark markdown:
+
+    - **Bold** and *italic* text
+    - `Inline code` and [links](https://example.com)
+    - Lists and headings
+
+    ```json
+    { "example": "code block" }
+    ```
+
+    > Blockquote for good measure.
+  contact:
+    name: API Support Team
+    email: support@example.com
+    url: https://example.com/support
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+  termsOfService: https://example.com/terms
+
+externalDocs:
+  description: Full developer guide
+  url: https://example.com/developer-guide
+
+servers:
+  - url: https://api.example.com/v2
+    description: Production
+  - url: https://staging-api.example.com/v2
+    description: Staging
+  - url: https://{environment}.example.com/{basePath}
+    description: Custom environment
+    variables:
+      environment:
+        default: api
+        description: Server environment
+        enum:
+          - api
+          - sandbox
+          - staging
+      basePath:
+        default: v2
+        description: API version path
+
+tags:
+  - name: Pets
+    description: |
+      Everything about your **Pets**. Manage pet records, upload photos,
+      and track vaccinations.
+
+      See the [Pet Management Guide](https://example.com/docs/pets) for details.
+  - name: Store
+    description: Access to the pet store — orders, inventory, and billing.
+  - name: Users
+    description: User account management and authentication.
+  - name: Admin
+    description: Administrative operations requiring elevated privileges.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /pets:
+    get:
+      tags:
+        - Pets
+      summary: List all pets
+      operationId: listPets
+      description: |
+        Returns a paginated list of pets. Supports filtering by status and type.
+
+        Results are sorted by `createdAt` descending by default.
+      externalDocs:
+        description: Pagination guide
+        url: https://example.com/docs/pagination
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by pet status
+          required: false
+          schema:
+            type: string
+            enum:
+              - available
+              - pending
+              - adopted
+            default: available
+        - name: type
+          in: query
+          description: Filter by animal type
+          schema:
+            type: string
+            enum:
+              - dog
+              - cat
+              - bird
+              - reptile
+        - name: limit
+          in: query
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of results to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: X-Request-Id
+          in: header
+          description: Unique request identifier for tracing
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A paginated list of pets
+          headers:
+            X-Total-Count:
+              description: Total number of pets matching the filter
+              schema:
+                type: integer
+            X-Page-Size:
+              description: Number of results per page
+              schema:
+                type: integer
+            X-Request-Id:
+              description: Echo of the request identifier
+              schema:
+                type: string
+                format: uuid
+            Link:
+              description: Pagination links (next, prev, first, last)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pet'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+              example:
+                data:
+                  - id: 1
+                    name: Buddy
+                    type: dog
+                    status: available
+                    tags:
+                      - friendly
+                      - trained
+                    createdAt: '2024-01-15T09:30:00Z'
+                  - id: 2
+                    name: Whiskers
+                    type: cat
+                    status: pending
+                    tags:
+                      - indoor
+                    createdAt: '2024-02-20T14:00:00Z'
+                pagination:
+                  total: 42
+                  limit: 20
+                  offset: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Pets
+      summary: Create a new pet
+      operationId: createPet
+      description: Creates a new pet record. Requires authentication.
+      security:
+        - bearerAuth: []
+          apiKey: []
+      requestBody:
+        required: true
+        description: Pet data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetCreate'
+            example:
+              name: Rex
+              type: dog
+              breed: German Shepherd
+              age: 3
+              weight: 34.5
+              status: available
+              tags:
+                - trained
+                - friendly
+              vaccinations:
+                - name: Rabies
+                  date: '2024-01-10'
+                  expiresAt: '2025-01-10'
+      responses:
+        '201':
+          description: Pet created successfully
+          headers:
+            Location:
+              description: URL of the newly created pet
+              schema:
+                type: string
+                format: uri
+            X-Request-Id:
+              description: Request identifier
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                code: VALIDATION_ERROR
+                message: Request body failed validation
+                errors:
+                  - field: name
+                    message: Name is required
+                    code: REQUIRED
+                  - field: age
+                    message: Must be a non-negative integer
+                    code: INVALID_TYPE
+
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        description: Unique identifier of the pet
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+        example: 42
+    get:
+      tags:
+        - Pets
+      summary: Get a pet by ID
+      operationId: getPet
+      responses:
+        '200':
+          description: Pet details
+          headers:
+            ETag:
+              description: Entity tag for cache validation
+              schema:
+                type: string
+            Cache-Control:
+              description: Caching directives
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+              examples:
+                dog:
+                  summary: A dog example
+                  value:
+                    id: 42
+                    name: Buddy
+                    type: dog
+                    breed: Golden Retriever
+                    age: 5
+                    weight: 30.2
+                    status: available
+                    tags:
+                      - friendly
+                    owner:
+                      id: 7
+                      name: Jane Doe
+                    vaccinations:
+                      - name: Rabies
+                        date: '2024-01-10'
+                        expiresAt: '2025-01-10'
+                    createdAt: '2024-01-15T09:30:00Z'
+                    updatedAt: '2024-06-01T12:00:00Z'
+                cat:
+                  summary: A cat example
+                  value:
+                    id: 43
+                    name: Whiskers
+                    type: cat
+                    breed: Siamese
+                    age: 3
+                    weight: 4.5
+                    status: adopted
+                    tags:
+                      - indoor
+                      - playful
+                    owner:
+                      id: 12
+                      name: John Smith
+                    vaccinations: []
+                    createdAt: '2024-02-20T14:00:00Z'
+                    updatedAt: '2024-05-10T08:30:00Z'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Pets
+      summary: Update a pet
+      operationId: updatePet
+      deprecated: true
+      description: |
+        **Deprecated** — use `PATCH /pets/{petId}` instead.
+
+        Full replacement of a pet record. All fields are required.
+      externalDocs:
+        description: Migration guide
+        url: https://example.com/docs/migration/put-to-patch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetCreate'
+      responses:
+        '200':
+          description: Pet updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Pets
+      summary: Partially update a pet
+      operationId: patchPet
+      description: Update specific fields of a pet record. Only provided fields are modified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetPatch'
+            example:
+              name: Buddy Jr.
+              status: adopted
+      responses:
+        '200':
+          description: Pet updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Pets
+      summary: Delete a pet
+      operationId: deletePet
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Pet deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pets/{petId}/vaccinations:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    post:
+      tags:
+        - Pets
+      summary: Add a vaccination record
+      operationId: addVaccination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VaccinationRecord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VaccinationRecord'
+      responses:
+        '201':
+          description: Vaccination added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaccinationRecord'
+
+  /pets/search:
+    post:
+      tags:
+        - Pets
+      summary: Advanced pet search
+      operationId: searchPets
+      description: Full-text search with filters. Supports complex query expressions.
+      externalDocs:
+        description: Search query syntax
+        url: https://example.com/docs/search-syntax
+      security:
+        - apiKey: []
+      parameters:
+        - name: X-Search-Version
+          in: header
+          description: Search engine version to use
+          schema:
+            type: string
+            enum:
+              - v1
+              - v2
+            default: v2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search query string
+                  minLength: 1
+                  maxLength: 500
+                  example: friendly dog
+                filters:
+                  type: object
+                  properties:
+                    status:
+                      type: array
+                      items:
+                        type: string
+                        enum:
+                          - available
+                          - pending
+                          - adopted
+                      minItems: 1
+                      maxItems: 3
+                    ageRange:
+                      type: object
+                      properties:
+                        min:
+                          type: integer
+                          minimum: 0
+                        max:
+                          type: integer
+                          maximum: 30
+                    weightRange:
+                      type: object
+                      properties:
+                        min:
+                          type: number
+                          minimum: 0
+                        max:
+                          type: number
+                          maximum: 500
+                sort:
+                  type: string
+                  enum:
+                    - relevance
+                    - createdAt
+                    - name
+                  default: relevance
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 20
+      responses:
+        '200':
+          description: Search results
+          headers:
+            X-Search-Time-Ms:
+              description: Time spent searching in milliseconds
+              schema:
+                type: integer
+            X-Total-Results:
+              description: Total matching results
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Pet'
+                        - type: object
+                          properties:
+                            _score:
+                              type: number
+                              description: Relevance score
+                              readOnly: true
+                  total:
+                    type: integer
+                  query:
+                    type: string
+
+  /store/orders:
+    get:
+      tags:
+        - Store
+      summary: List orders
+      operationId: listOrders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - pending
+              - confirmed
+              - shipped
+              - delivered
+              - cancelled
+        - name: since
+          in: query
+          description: Return orders created after this date
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          description: Return orders created before this date
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of orders
+          headers:
+            X-Total-Count:
+              description: Total order count
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+    post:
+      tags:
+        - Store
+      summary: Place an order
+      operationId: placeOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+            examples:
+              singlePet:
+                summary: Order for one pet
+                value:
+                  petId: 42
+                  quantity: 1
+                  shipDate: '2024-07-01T10:00:00Z'
+                  notes: Please handle with care
+              multiplePets:
+                summary: Bulk order
+                value:
+                  petId: 42
+                  quantity: 3
+                  shipDate: '2024-07-15T10:00:00Z'
+                  notes: For the shelter program
+      responses:
+        '201':
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /store/inventory:
+    get:
+      tags:
+        - Store
+      summary: Get inventory counts
+      operationId: getInventory
+      description: Returns a map of pet statuses to their counts.
+      security: []
+      responses:
+        '200':
+          description: Inventory counts by status
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+              example:
+                available: 120
+                pending: 14
+                adopted: 843
+
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Register a new user
+      operationId: createUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          headers:
+            Location:
+              description: URL of the new user profile
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: CONFLICT
+                message: A user with this email already exists
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/stats:
+    get:
+      tags:
+        - Admin
+      summary: Platform statistics
+      operationId: getAdminStats
+      description: Returns aggregate platform metrics. Requires admin role.
+      security:
+        - bearerAuth: []
+        - oauth2:
+            - admin:read
+      responses:
+        '200':
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalPets:
+                    type: integer
+                    readOnly: true
+                  totalUsers:
+                    type: integer
+                    readOnly: true
+                  totalOrders:
+                    type: integer
+                    readOnly: true
+                  adoptionRate:
+                    type: number
+                    format: float
+                    readOnly: true
+                    description: Percentage of pets adopted (0-100)
+                    minimum: 0
+                    maximum: 100
+                  topBreeds:
+                    type: array
+                    readOnly: true
+                    items:
+                      type: object
+                      properties:
+                        breed:
+                          type: string
+                        count:
+                          type: integer
+                    maxItems: 10
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{userId}/ban:
+    post:
+      tags:
+        - Admin
+      summary: Ban a user
+      operationId: banUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: X-Admin-Reason
+          in: header
+          required: true
+          description: Reason for the ban (for audit trail)
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 500
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+                - duration
+              properties:
+                reason:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                duration:
+                  type: string
+                  description: Ban duration
+                  enum:
+                    - 7d
+                    - 30d
+                    - 90d
+                    - permanent
+                notifyUser:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: User banned
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from `/auth/login`
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key issued from the developer portal
+    oauth2:
+      type: oauth2
+      description: OAuth 2.0 authorization
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          refreshUrl: https://auth.example.com/refresh
+          scopes:
+            read:pets: Read pet data
+            write:pets: Create and modify pets
+            admin:read: Read admin data
+            admin:write: Modify admin data
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: BAD_REQUEST
+            message: Invalid query parameters
+    Unauthorized:
+      description: Authentication required
+      headers:
+        WWW-Authenticate:
+          description: Authentication scheme
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Valid authentication credentials are required
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: NOT_FOUND
+            message: The requested resource was not found
+
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unique identifier
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Pet's name
+        type:
+          type: string
+          enum:
+            - dog
+            - cat
+            - bird
+            - reptile
+          description: Animal type
+        breed:
+          type: string
+          maxLength: 50
+          description: Breed name
+        age:
+          type: integer
+          minimum: 0
+          maximum: 30
+          description: Age in years
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 500
+          description: Weight in kilograms
+        status:
+          type: string
+          enum:
+            - available
+            - pending
+            - adopted
+          description: Adoption status
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+          maxItems: 10
+          description: Descriptive tags
+        owner:
+          $ref: '#/components/schemas/PetOwner'
+        vaccinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/VaccinationRecord'
+        photoUrl:
+          type: string
+          format: uri
+          description: URL of the pet's photo
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Record creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Last update timestamp
+
+    PetCreate:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          enum:
+            - dog
+            - cat
+            - bird
+            - reptile
+        breed:
+          type: string
+          maxLength: 50
+        age:
+          type: integer
+          minimum: 0
+          maximum: 30
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 500
+        status:
+          type: string
+          enum:
+            - available
+            - pending
+            - adopted
+          default: available
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+          maxItems: 10
+        vaccinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/VaccinationRecord'
+
+    PetPatch:
+      type: object
+      description: Partial update — only provided fields are modified
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+        breed:
+          type: string
+          maxLength: 50
+          nullable: true
+        age:
+          type: integer
+          minimum: 0
+          maximum: 30
+          nullable: true
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 500
+          nullable: true
+        status:
+          type: string
+          enum:
+            - available
+            - pending
+            - adopted
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          nullable: true
+
+    PetOwner:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        name:
+          type: string
+
+    VaccinationRecord:
+      type: object
+      required:
+        - name
+        - date
+      properties:
+        name:
+          type: string
+          description: Vaccine name
+          minLength: 1
+          maxLength: 100
+        date:
+          type: string
+          format: date
+          description: Date administered
+        expiresAt:
+          type: string
+          format: date
+          description: Expiration date
+        veterinarian:
+          type: string
+          description: Administering vet's name
+        batchNumber:
+          type: string
+          pattern: '^[A-Z]{2}\d{6}$'
+          description: 'Vaccine batch number (format: XX000000)'
+
+    Order:
+      type: object
+      required:
+        - id
+        - petId
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        petId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+        shipDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - pending
+            - confirmed
+            - shipped
+            - delivered
+            - cancelled
+          readOnly: true
+        notes:
+          type: string
+          maxLength: 500
+        total:
+          type: number
+          format: float
+          readOnly: true
+          description: Order total in USD
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    OrderCreate:
+      type: object
+      required:
+        - petId
+      properties:
+        petId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+        shipDate:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 500
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        email:
+          type: string
+          format: email
+          description: User's email address
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        role:
+          type: string
+          enum:
+            - user
+            - admin
+          default: user
+          readOnly: true
+        avatar:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        lastLoginAt:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - name
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$'
+          description: 'Must contain lowercase, uppercase, and a digit'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                required:
+                  - field
+                  - message
+                properties:
+                  field:
+                    type: string
+                    description: JSON path of the invalid field
+                  message:
+                    type: string
+                    description: Validation error message
+                  code:
+                    type: string
+                    description: Validation rule that failed
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of matching records
+          readOnly: true
+        limit:
+          type: integer
+          description: Page size
+        offset:
+          type: integer
+          description: Current offset

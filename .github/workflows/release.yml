@@ -1,0 +1,47 @@
+# This source file is part of the Apiboost(R) OmniSpec Core.
+#
+# Copyright (c) Apiboost, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# See LICENSE.md and LICENSING.md in the project root for license information.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 1.2.11)"
+        required: true
+
+permissions:
+  contents: write
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+      - run: pnpm install --frozen-lockfile
+      - run: npm version ${{ inputs.version }} --no-git-tag-version
+      - run: pnpm run build
+      - run: pnpm run check:licenses
+      - run: pnpm run verify:pack
+      - run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Tag the release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"

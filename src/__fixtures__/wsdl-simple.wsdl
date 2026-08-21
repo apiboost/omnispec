@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+  name="HelloService"
+  targetNamespace="http://example.com/hello"
+  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:tns="http://example.com/hello"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <documentation>
+    A minimal Hello World web service. Accepts a name and returns a greeting.
+  </documentation>
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/hello">
+
+      <xsd:element name="SayHelloRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="SayHelloResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="greeting" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="SayHelloInput">
+    <part name="parameters" element="tns:SayHelloRequest"/>
+  </message>
+  <message name="SayHelloOutput">
+    <part name="parameters" element="tns:SayHelloResponse"/>
+  </message>
+
+  <portType name="HelloPortType">
+    <documentation>A simple greeting service.</documentation>
+
+    <operation name="SayHello">
+      <documentation>Accepts a name and returns a personalized greeting.</documentation>
+      <input message="tns:SayHelloInput"/>
+      <output message="tns:SayHelloOutput"/>
+    </operation>
+  </portType>
+
+  <binding name="HelloSoapBinding" type="tns:HelloPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="SayHello">
+      <soap:operation soapAction="http://example.com/hello/SayHello"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <service name="HelloService">
+    <documentation>Hello World Web Service</documentation>
+    <port name="HelloPort" binding="tns:HelloSoapBinding">
+      <soap:address location="http://example.com/hello/soap"/>
+    </port>
+  </service>
+
+</definitions>

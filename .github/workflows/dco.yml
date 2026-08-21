@@ -1,0 +1,36 @@
+# This source file is part of the Apiboost(R) OmniSpec Core.
+#
+# Copyright (c) Apiboost, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# See LICENSE.md and LICENSING.md in the project root for license information.
+name: DCO
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check Signed-off-by on all PR commits
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          fail=0
+          for c in $(git rev-list "$base".."$head"); do
+            if ! git log -1 --format=%B "$c" | grep -qiE '^Signed-off-by: .+ <.+@.+>'; then
+              echo "::error::Missing Signed-off-by on commit $c"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "One or more commits are missing a DCO sign-off. See CONTRIBUTING.md."
+            exit 1
+          fi
+          echo "All PR commits are signed off."

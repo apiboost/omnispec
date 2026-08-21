@@ -1,0 +1,82 @@
+"""Star Wars API schema"""
+
+type Query {
+  """Get a hero by episode"""
+  hero(episode: Episode): Character
+  """Get a human by ID"""
+  human(id: ID!): Human
+  """Get a droid by ID"""
+  droid(id: ID!): Droid
+  """Search characters by name"""
+  search(text: String!): [SearchResult]
+}
+
+type Mutation {
+  """Create a review for an episode"""
+  createReview(episode: Episode!, review: ReviewInput!): Review
+}
+
+type Subscription {
+  """Subscribe to new reviews"""
+  reviewAdded(episode: Episode): Review
+}
+
+"""The episodes in the Star Wars trilogy"""
+enum Episode {
+  """Star Wars Episode IV: A New Hope"""
+  NEWHOPE
+  """Star Wars Episode V: The Empire Strikes Back"""
+  EMPIRE
+  """Star Wars Episode VI: Return of the Jedi"""
+  JEDI
+}
+
+"""A character from the Star Wars universe"""
+interface Character {
+  id: ID!
+  name: String!
+  friends: [Character]
+  appearsIn: [Episode]!
+}
+
+"""A human character"""
+type Human implements Character {
+  id: ID!
+  name: String!
+  friends: [Character]
+  appearsIn: [Episode]!
+  homePlanet: String
+  height(unit: LengthUnit = METER): Float
+}
+
+"""A droid character"""
+type Droid implements Character {
+  id: ID!
+  name: String!
+  friends: [Character]
+  appearsIn: [Episode]!
+  primaryFunction: String
+}
+
+"""Units of length"""
+enum LengthUnit {
+  METER
+  FOOT
+}
+
+union SearchResult = Human | Droid
+
+"""Review input for creating reviews"""
+input ReviewInput {
+  """Number of stars (1-5)"""
+  stars: Int!
+  """Optional commentary"""
+  commentary: String
+}
+
+"""A review of an episode"""
+type Review {
+  episode: Episode
+  stars: Int!
+  commentary: String
+}

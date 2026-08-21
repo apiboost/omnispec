@@ -1,0 +1,48 @@
+asyncapi: 2.6.0
+info:
+  title: Notifications Service
+  version: 1.0.0
+  description: >
+    A simple push notification service that delivers real-time alerts
+    to subscribed mobile and web clients.
+  contact:
+    name: Notifications Team
+    email: notifications@example.com
+servers:
+  production:
+    url: mqtt://notifications.example.com:1883
+    protocol: mqtt
+    description: Production MQTT broker
+channels:
+  notifications/push:
+    description: Channel for receiving push notification events.
+    subscribe:
+      operationId: onPushNotification
+      summary: Receive a push notification.
+      description: >
+        Subscribe to this channel to receive push notifications
+        in real time as they are dispatched by the system.
+      message:
+        name: pushNotification
+        title: Push Notification
+        summary: A push notification payload delivered to clients.
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - title
+            - body
+            - timestamp
+          properties:
+            title:
+              type: string
+              description: The notification headline.
+              maxLength: 120
+            body:
+              type: string
+              description: The notification body text.
+              maxLength: 500
+            timestamp:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp of when the notification was created.

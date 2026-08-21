@@ -1,0 +1,127 @@
+asyncapi: 2.6.0
+info:
+  title: Streetlights Kafka API
+  version: 1.0.0
+  description: |
+    The Smartylighting Streetlights API allows you to remotely manage the city lighting system.
+    ### Check out its awesome features:
+    * Turn a specific streetlight on/off
+    * Dim a specific streetlight
+    * Receive real-time information about environmental lighting conditions
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  production:
+    url: test.mykafkacluster.org:8092
+    protocol: kafka-secure
+    description: Production Kafka broker
+    security:
+      - saslScram: []
+  staging:
+    url: staging.mykafkacluster.org:8092
+    protocol: kafka-secure
+    description: Staging Kafka broker
+channels:
+  smartylighting/streetlights/1/0/event/{streetlightId}/lighting/measured:
+    description: The topic on which measured values may be produced and consumed.
+    parameters:
+      streetlightId:
+        description: The ID of the streetlight.
+        schema:
+          type: string
+    subscribe:
+      operationId: receiveLightMeasurement
+      summary: Receive information about environmental lighting conditions of a particular streetlight.
+      tags:
+        - name: lighting
+      message:
+        $ref: '#/components/messages/lightMeasured'
+  smartylighting/streetlights/1/0/action/{streetlightId}/turn/on:
+    parameters:
+      streetlightId:
+        description: The ID of the streetlight.
+        schema:
+          type: string
+    publish:
+      operationId: turnOn
+      summary: Command a particular streetlight to turn on.
+      tags:
+        - name: actions
+      message:
+        $ref: '#/components/messages/turnOnOff'
+  smartylighting/streetlights/1/0/action/{streetlightId}/dim:
+    parameters:
+      streetlightId:
+        description: The ID of the streetlight.
+        schema:
+          type: string
+    publish:
+      operationId: dimLight
+      summary: Command a particular streetlight to dim.
+      tags:
+        - name: actions
+      message:
+        $ref: '#/components/messages/dimLight'
+components:
+  messages:
+    lightMeasured:
+      name: lightMeasured
+      title: Light measured
+      summary: Inform about environmental lighting conditions for a particular streetlight.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/lightMeasuredPayload'
+    turnOnOff:
+      name: turnOnOff
+      title: Turn on/off
+      summary: Command a particular streetlight to turn the lights on or off.
+      payload:
+        $ref: '#/components/schemas/turnOnOffPayload'
+    dimLight:
+      name: dimLight
+      title: Dim light
+      summary: Command a particular streetlight to dim the lights.
+      payload:
+        $ref: '#/components/schemas/dimLightPayload'
+  schemas:
+    lightMeasuredPayload:
+      type: object
+      properties:
+        lumens:
+          type: integer
+          minimum: 0
+          description: Light intensity measured in lumens.
+        sentAt:
+          type: string
+          format: date-time
+          description: Date and time when the message was sent.
+    turnOnOffPayload:
+      type: object
+      properties:
+        command:
+          type: string
+          enum:
+            - "on"
+            - "off"
+          description: Whether to turn on or off the light.
+        sentAt:
+          type: string
+          format: date-time
+          description: Date and time when the message was sent.
+    dimLightPayload:
+      type: object
+      properties:
+        percentage:
+          type: integer
+          description: Percentage to which the light should be dimmed to.
+          minimum: 0
+          maximum: 100
+        sentAt:
+          type: string
+          format: date-time
+          description: Date and time when the message was sent.
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: Provide your username and password for SASL/SCRAM authentication.

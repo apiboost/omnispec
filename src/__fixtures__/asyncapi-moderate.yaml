@@ -1,0 +1,221 @@
+asyncapi: 2.6.0
+info:
+  title: Order Events Platform
+  version: 2.1.0
+  description: |
+    Real-time event streams for order lifecycle management
+    and inventory monitoring.
+  contact:
+    name: Commerce Platform Team
+    email: commerce-platform@example.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+tags:
+  - name: orders
+    description: Events related to the order lifecycle.
+    x-displayName: Order Events
+  - name: inventory
+    description: Inventory and stock management.
+    x-displayName: Inventory Alerts
+
+servers:
+  production:
+    url: amqp://events.example.com:5672
+    protocol: amqp
+    protocolVersion: '0.9.1'
+    description: Production AMQP broker
+  staging:
+    url: amqp://events-staging.example.com:5672
+    protocol: amqp
+    protocolVersion: '0.9.1'
+    description: Staging AMQP broker
+
+channels:
+  orders/created:
+    description: Published when a new order is placed.
+    publish:
+      operationId: publishOrderCreated
+      summary: Publish an order-created event.
+      tags:
+        - name: orders
+      message:
+        $ref: '#/components/messages/OrderCreated'
+
+  orders/updated/{orderId}:
+    description: Published when an order is modified.
+    parameters:
+      orderId:
+        description: Unique order identifier.
+        schema:
+          type: string
+          format: uuid
+    publish:
+      operationId: publishOrderUpdated
+      summary: Publish an order-updated event.
+      tags:
+        - name: orders
+      message:
+        $ref: '#/components/messages/OrderUpdated'
+
+  orders/cancelled/{orderId}:
+    description: Published when an order is cancelled.
+    parameters:
+      orderId:
+        schema:
+          type: string
+          format: uuid
+    subscribe:
+      operationId: onOrderCancelled
+      summary: Receive cancellation notifications.
+      tags:
+        - name: orders
+      x-badges:
+        - name: Beta
+          color: orange
+      message:
+        $ref: '#/components/messages/OrderCancelled'
+
+  inventory/low-stock:
+    description: Stock dropped below threshold.
+    subscribe:
+      operationId: onLowStock
+      summary: Receive low-stock alerts.
+      tags:
+        - name: inventory
+      message:
+        name: lowStockAlert
+        title: Low Stock Alert
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - productId
+            - currentStock
+            - threshold
+          properties:
+            productId:
+              type: string
+            productName:
+              type: string
+            currentStock:
+              type: integer
+              minimum: 0
+            threshold:
+              type: integer
+              minimum: 1
+
+components:
+  messages:
+    OrderCreated:
+      name: orderCreated
+      title: Order Created
+      summary: A new order was placed.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          correlationId:
+            type: string
+            format: uuid
+          source:
+            type: string
+      correlationId:
+        description: Correlation ID for distributed tracing.
+        location: $message.header#/correlationId
+      payload:
+        $ref: '#/components/schemas/OrderCreatedPayload'
+
+    OrderUpdated:
+      name: orderUpdated
+      title: Order Updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderUpdatedPayload'
+
+    OrderCancelled:
+      name: orderCancelled
+      title: Order Cancelled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderCancelledPayload'
+
+  schemas:
+    OrderCreatedPayload:
+      type: object
+      required:
+        - orderId
+        - items
+        - total
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+              unitPrice:
+                type: number
+                minimum: 0
+        total:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderUpdatedPayload:
+      type: object
+      required:
+        - orderId
+        - status
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - confirmed
+            - processing
+            - shipped
+            - delivered
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrderCancelledPayload:
+      type: object
+      required:
+        - orderId
+        - reason
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          enum:
+            - customer_request
+            - payment_failed
+            - out_of_stock
+            - fraud_detected
+        cancelledAt:
+          type: string
+          format: date-time

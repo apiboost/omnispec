@@ -1,0 +1,12 @@
+# Lint & format staged files.
+npx lint-staged --allow-empty
+
+# Refresh the third-party license inventory when the lockfile changes so it never
+# drifts from what actually ships. CI still enforces the no-copyleft policy.
+if git diff --cached --name-only | grep -qE '(^|/)pnpm-lock\.yaml$'; then
+  if [ -f scripts/generate-license-report.mjs ]; then
+    echo "→ dependencies changed; regenerating THIRD-PARTY-LICENSES.md"
+    pnpm run licenses:report || exit 1
+    git add THIRD-PARTY-LICENSES.md
+  fi
+fi

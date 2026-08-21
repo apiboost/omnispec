@@ -1,0 +1,34 @@
+# This source file is part of the Apiboost(R) OmniSpec Core.
+#
+# Copyright (c) Apiboost, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# See LICENSE.md and LICENSING.md in the project root for license information.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run lint
+      - run: pnpm run test
+      - run: pnpm run build
+      - run: pnpm run check:licenses
+      - run: pnpm run verify:pack

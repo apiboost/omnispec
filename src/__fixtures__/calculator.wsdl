@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+  name="CalculatorService"
+  targetNamespace="http://example.com/calculator"
+  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:tns="http://example.com/calculator"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <documentation>
+    A sample calculator web service that provides basic arithmetic operations.
+    Supports addition, subtraction, multiplication, and division.
+  </documentation>
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/calculator">
+
+      <xsd:complexType name="OperationRequest">
+        <xsd:sequence>
+          <xsd:element name="a" type="xsd:double"/>
+          <xsd:element name="b" type="xsd:double"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="OperationResponse">
+        <xsd:sequence>
+          <xsd:element name="result" type="xsd:double"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="BatchRequest">
+        <xsd:sequence>
+          <xsd:element name="operations" type="tns:BatchOperation" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="BatchOperation">
+        <xsd:sequence>
+          <xsd:element name="operator" type="xsd:string"/>
+          <xsd:element name="a" type="xsd:double"/>
+          <xsd:element name="b" type="xsd:double"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="BatchResponse">
+        <xsd:sequence>
+          <xsd:element name="results" type="xsd:double" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="CalculatorFault">
+        <xsd:sequence>
+          <xsd:element name="errorCode" type="xsd:int"/>
+          <xsd:element name="errorMessage" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:element name="AddRequest" type="tns:OperationRequest"/>
+      <xsd:element name="AddResponse" type="tns:OperationResponse"/>
+      <xsd:element name="SubtractRequest" type="tns:OperationRequest"/>
+      <xsd:element name="SubtractResponse" type="tns:OperationResponse"/>
+      <xsd:element name="MultiplyRequest" type="tns:OperationRequest"/>
+      <xsd:element name="MultiplyResponse" type="tns:OperationResponse"/>
+      <xsd:element name="DivideRequest" type="tns:OperationRequest"/>
+      <xsd:element name="DivideResponse" type="tns:OperationResponse"/>
+      <xsd:element name="BatchCalculateRequest" type="tns:BatchRequest"/>
+      <xsd:element name="BatchCalculateResponse" type="tns:BatchResponse"/>
+      <xsd:element name="CalculatorFault" type="tns:CalculatorFault"/>
+
+    </xsd:schema>
+  </types>
+
+  <message name="AddInput">
+    <part name="parameters" element="tns:AddRequest"/>
+  </message>
+  <message name="AddOutput">
+    <part name="parameters" element="tns:AddResponse"/>
+  </message>
+
+  <message name="SubtractInput">
+    <part name="parameters" element="tns:SubtractRequest"/>
+  </message>
+  <message name="SubtractOutput">
+    <part name="parameters" element="tns:SubtractResponse"/>
+  </message>
+
+  <message name="MultiplyInput">
+    <part name="parameters" element="tns:MultiplyRequest"/>
+  </message>
+  <message name="MultiplyOutput">
+    <part name="parameters" element="tns:MultiplyResponse"/>
+  </message>
+
+  <message name="DivideInput">
+    <part name="parameters" element="tns:DivideRequest"/>
+  </message>
+  <message name="DivideOutput">
+    <part name="parameters" element="tns:DivideResponse"/>
+  </message>
+
+  <message name="BatchCalculateInput">
+    <part name="parameters" element="tns:BatchCalculateRequest"/>
+  </message>
+  <message name="BatchCalculateOutput">
+    <part name="parameters" element="tns:BatchCalculateResponse"/>
+  </message>
+
+  <message name="CalculatorFaultMessage">
+    <part name="fault" element="tns:CalculatorFault"/>
+  </message>
+
+  <portType name="CalculatorPortType">
+    <documentation>Basic arithmetic operations</documentation>
+
+    <operation name="Add">
+      <documentation>Adds two numbers and returns the sum.</documentation>
+      <input message="tns:AddInput"/>
+      <output message="tns:AddOutput"/>
+    </operation>
+
+    <operation name="Subtract">
+      <documentation>Subtracts the second number from the first.</documentation>
+      <input message="tns:SubtractInput"/>
+      <output message="tns:SubtractOutput"/>
+    </operation>
+
+    <operation name="Multiply">
+      <documentation>Multiplies two numbers.</documentation>
+      <input message="tns:MultiplyInput"/>
+      <output message="tns:MultiplyOutput"/>
+    </operation>
+
+    <operation name="Divide">
+      <documentation>Divides the first number by the second. Returns a fault if dividing by zero.</documentation>
+      <input message="tns:DivideInput"/>
+      <output message="tns:DivideOutput"/>
+      <fault name="DivisionByZero" message="tns:CalculatorFaultMessage"/>
+    </operation>
+
+    <operation name="BatchCalculate">
+      <documentation>Performs multiple arithmetic operations in a single request.</documentation>
+      <input message="tns:BatchCalculateInput"/>
+      <output message="tns:BatchCalculateOutput"/>
+      <fault name="BatchError" message="tns:CalculatorFaultMessage"/>
+    </operation>
+  </portType>
+
+  <binding name="CalculatorSoapBinding" type="tns:CalculatorPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="Add">
+      <soap:operation soapAction="http://example.com/calculator/Add"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+
+    <operation name="Subtract">
+      <soap:operation soapAction="http://example.com/calculator/Subtract"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+
+    <operation name="Multiply">
+      <soap:operation soapAction="http://example.com/calculator/Multiply"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+
+    <operation name="Divide">
+      <soap:operation soapAction="http://example.com/calculator/Divide"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="DivisionByZero"><soap:fault name="DivisionByZero" use="literal"/></fault>
+    </operation>
+
+    <operation name="BatchCalculate">
+      <soap:operation soapAction="http://example.com/calculator/BatchCalculate"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="BatchError"><soap:fault name="BatchError" use="literal"/></fault>
+    </operation>
+  </binding>
+
+  <service name="CalculatorService">
+    <documentation>Calculator Web Service providing basic math operations via SOAP.</documentation>
+    <port name="CalculatorPort" binding="tns:CalculatorSoapBinding">
+      <soap:address location="http://example.com/calculator/soap"/>
+    </port>
+  </service>
+
+</definitions>

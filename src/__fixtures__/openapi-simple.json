@@ -1,0 +1,77 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bookmarks API",
+    "description": "A simple API for managing browser bookmarks.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://api.bookmarks.example.com/v1" }
+  ],
+  "paths": {
+    "/bookmarks": {
+      "get": {
+        "operationId": "listBookmarks",
+        "summary": "List all bookmarks",
+        "responses": {
+          "200": {
+            "description": "A list of bookmarks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Bookmark" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBookmark",
+        "summary": "Create a bookmark",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url", "title"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "title": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bookmark created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Bookmark" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Bookmark": {
+        "type": "object",
+        "required": ["id", "url", "title"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "url": { "type": "string", "format": "uri" },
+          "title": { "type": "string" }
+        }
+      }
+    }
+  }
+}

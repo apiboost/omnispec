@@ -1,0 +1,150 @@
+"""Social media platform API with cursor-based pagination."""
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+"""A globally unique entity"""
+interface Node {
+  id: ID!
+}
+
+"""Post lifecycle status"""
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  HIDDEN @deprecated(reason: "Use ARCHIVED instead")
+}
+
+"""Media attachment types"""
+enum MediaType { IMAGE, VIDEO, GIF, AUDIO }
+
+"""User roles"""
+enum Role { MEMBER, MODERATOR, ADMIN }
+
+type Query {
+  node(id: ID!): Node
+  me: User
+  user(username: String!): User
+  """Paginated feed of published posts"""
+  feed(first: Int = 10, after: String): PostConnection!
+  """Search posts by keyword"""
+  searchPosts(query: String!, first: Int = 10, after: String): PostConnection!
+}
+
+type Mutation {
+  createPost(input: CreatePostInput!): Post!
+  updatePost(id: ID!, input: UpdatePostInput!): Post!
+  deletePost(id: ID!): Boolean!
+  addComment(input: AddCommentInput!): Comment!
+  toggleLike(postId: ID!): Like
+  updateProfile(input: UpdateProfileInput!): User!
+}
+
+"""Input for creating a new post"""
+input CreatePostInput {
+  title: String!
+  body: String!
+  status: PostStatus = DRAFT
+  mediaIds: [ID!]
+}
+
+"""Input for updating an existing post"""
+input UpdatePostInput {
+  title: String
+  body: String
+  status: PostStatus
+}
+
+"""Input for adding a comment"""
+input AddCommentInput {
+  postId: ID!
+  body: String!
+  """Parent comment ID for threaded replies"""
+  parentId: ID
+}
+
+"""Input for updating a user profile"""
+input UpdateProfileInput {
+  displayName: String
+  bio: String
+  avatarUrl: String
+}
+
+"""A registered user"""
+type User implements Node {
+  id: ID!
+  username: String!
+  displayName: String!
+  bio: String
+  avatarUrl: String
+  role: Role!
+  posts(first: Int = 10, after: String): PostConnection!
+  followerCount: Int!
+  isFollowedByMe: Boolean!
+  createdAt: String!
+  fullName: String @deprecated(reason: "Use displayName instead")
+}
+
+"""A post published by a user"""
+type Post implements Node {
+  id: ID!
+  title: String!
+  body: String!
+  status: PostStatus!
+  author: User!
+  comments(first: Int = 10, after: String): CommentConnection!
+  likeCount: Int!
+  media: [Media!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+"""A comment on a post"""
+type Comment implements Node {
+  id: ID!
+  body: String!
+  author: User!
+  post: Post!
+  parent: Comment
+  createdAt: String!
+}
+
+"""A like on a post"""
+type Like {
+  user: User!
+  post: Post!
+}
+
+"""A media attachment"""
+type Media implements Node {
+  id: ID!
+  url: String!
+  type: MediaType!
+  altText: String
+  width: Int
+  height: Int
+}
+
+"""Cursor-based pagination info"""
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type PostConnection {
+  edges: [PostEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+type PostEdge { cursor: String!, node: Post! }
+type CommentConnection {
+  edges: [CommentEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type CommentEdge { cursor: String!, node: Comment! }

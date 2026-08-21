@@ -1,0 +1,165 @@
+{
+  "name": "@apiboost/omnispec",
+  "author": "The Apiboost Team",
+  "version": "1.2.11",
+  "packageManager": "pnpm@11.0.8",
+  "description": "React components for rendering OpenAPI and AsyncAPI documentation, with Try-It, authentication, theming, and a framework-agnostic web component",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./openapi": {
+      "types": "./dist/types/openapi/index.d.ts",
+      "import": "./dist/esm/openapi/index.js",
+      "require": "./dist/cjs/openapi/index.js"
+    },
+    "./asyncapi": {
+      "types": "./dist/types/asyncapi/index.d.ts",
+      "import": "./dist/esm/asyncapi/index.js",
+      "require": "./dist/cjs/asyncapi/index.js"
+    },
+    "./server": {
+      "types": "./dist/types/server/index.d.ts",
+      "import": "./dist/esm/server/index.js",
+      "require": "./dist/cjs/server/index.js"
+    },
+    "./core": {
+      "types": "./dist/types/core/public.d.ts",
+      "import": "./dist/esm/core/public.js",
+      "require": "./dist/cjs/core/public.js"
+    },
+    "./wc": {
+      "types": "./dist/types/wc/index.d.ts",
+      "import": "./dist/esm/wc/index.js",
+      "require": "./dist/cjs/wc/index.js"
+    },
+    "./wc/standalone": "./dist/wc/standalone.js"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "core",
+    "oauth2-redirect.html"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "licenses:report": "node scripts/generate-license-report.mjs",
+    "verify:pack": "node scripts/verify-tarball.mjs",
+    "build": "pnpm run clean && pnpm run build:lib && pnpm run build:wc && pnpm run build:types",
+    "build:esm": "rollup -c rollup.config.ts --configPlugin esbuild",
+    "build:wc": "webpack --config webpack.wc.config.ts",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
+    "watch": "rollup -c rollup.config.ts --configPlugin esbuild --watch",
+    "dev": "storybook dev -p 6006",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "storybook:build": "storybook build",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules/.cache",
+    "build:lib": "rollup -c rollup.config.ts --configPlugin esbuild"
+  },
+  "peerDependencies": {
+    "@emotion/css": "^11.0.0",
+    "express": "^4.0.0 || ^5.0.0",
+    "express-rate-limit": "^7.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "express-rate-limit": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@eslint/js": "^10.0.1",
+    "@rollup/plugin-alias": "^6.0.0",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@storybook/addon-docs": "^10.4.4",
+    "@storybook/react": "^10.4.4",
+    "@storybook/react-webpack5": "^10.4.4",
+    "@storybook/test": "^8.6.18",
+    "@stylistic/eslint-plugin": "^4.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/express": "^5.0.6",
+    "@types/prismjs": "^1.26.6",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-storybook": "10.3.6",
+    "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
+    "lint-staged": "^17.0.7",
+    "magic-string": "^1.1.0",
+    "raw-loader": "^4.0.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "rollup": "^4.62.2",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "storybook": "^10.4.4",
+    "ts-loader": "^9.6.0",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^3.2.6",
+    "webpack": "^5.107.2",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@emotion/css": "^11.13.5",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "fast-xml-parser": "^5.8.0",
+    "graphql": "^16.14.2",
+    "lucide-react": "^1.17.0",
+    "marked": "^15.0.12",
+    "motion": "^12.40.0",
+    "prismjs": "^1.30.0",
+    "protobufjs": "^8.7.1",
+    "yaml": "^2.9.0"
+  },
+  "keywords": [
+    "openapi",
+    "asyncapi",
+    "graphql",
+    "api-documentation",
+    "react",
+    "swagger"
+  ],
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apiboost/omnispec.git"
+  },
+  "homepage": "https://github.com/apiboost/omnispec#readme",
+  "bugs": {
+    "url": "https://github.com/apiboost/omnispec/issues"
+  }
+}

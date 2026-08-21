@@ -1,0 +1,39 @@
+"""A simple blog platform API"""
+
+type Query {
+  """Retrieve all published posts"""
+  posts: [Post!]!
+
+  """Retrieve a single post by its unique identifier"""
+  post(id: ID!): Post
+
+  """Retrieve a single author by their unique identifier"""
+  author(id: ID!): Author
+}
+
+type Mutation {
+  """Create a new blog post"""
+  createPost(title: String!, body: String!, authorId: ID!): Post!
+
+  """Delete a post by ID, returns true if successful"""
+  deletePost(id: ID!): Boolean!
+}
+
+"""A blog post"""
+type Post {
+  id: ID!
+  title: String!
+  body: String!
+  published: Boolean!
+  viewCount: Int!
+  author: Author!
+}
+
+"""An author who writes blog posts"""
+type Author {
+  id: ID!
+  name: String!
+  email: String!
+  bio: String
+  posts: [Post!]!
+}

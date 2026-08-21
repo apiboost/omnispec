@@ -1,0 +1,363 @@
+"""
+Marketplace Platform API — multi-seller e-commerce with orders,
+payments, reviews, and real-time tracking.
+"""
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+"""An ISO 8601 date-time string"""
+scalar DateTime
+
+"""A monetary value with currency, e.g. "29.99 USD" """
+scalar Money @specifiedBy(url: "https://en.wikipedia.org/wiki/ISO_4217")
+
+"""A valid URL string"""
+scalar URL @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3986")
+
+"""A globally unique entity"""
+interface Node {
+  id: ID!
+}
+
+"""An entity with creation and modification timestamps"""
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Search result across the marketplace"""
+union SearchResult = Product | Seller | Category
+
+"""Order lifecycle status"""
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  AWAITING_PAYMENT @deprecated(reason: "Use PENDING; payment is captured at checkout")
+}
+
+"""Available payment methods"""
+enum PaymentMethod {
+  CREDIT_CARD
+  PAYPAL
+  BANK_TRANSFER
+  CHECK @deprecated(reason: "Check payments are no longer accepted")
+}
+
+"""Shipping speed tiers"""
+enum ShippingTier { STANDARD, EXPRESS, OVERNIGHT, PICKUP }
+
+"""Product condition"""
+enum ProductCondition { NEW, REFURBISHED, USED_LIKE_NEW, USED_GOOD }
+
+"""Sort order for product listings"""
+enum ProductSortKey { RELEVANCE, PRICE_ASC, PRICE_DESC, NEWEST, TOP_RATED }
+
+"""Currency codes"""
+enum CurrencyCode { USD, EUR, GBP, JPY }
+
+type Query {
+  node(id: ID!): Node
+  product(id: ID!): Product
+  """Browse products with filtering, sorting, and pagination"""
+  products(
+    categoryId: ID
+    sellerId: ID
+    minPrice: Money
+    maxPrice: Money
+    condition: ProductCondition
+    sortBy: ProductSortKey = RELEVANCE
+    first: Int = 20
+    after: String
+  ): ProductConnection!
+  """Search across products, sellers, and categories"""
+  search(query: String!, first: Int = 20, after: String): SearchResultConnection!
+  categories: [Category!]!
+  category(slug: String!): Category
+  seller(id: ID!): Seller
+  me: Customer
+  cart: Cart
+  order(id: ID!): Order
+  orders(status: OrderStatus, first: Int = 10, after: String): OrderConnection!
+  """Legacy features kept for backward compatibility"""
+  legacyFeature: LegacyFeature
+}
+
+type Mutation {
+  addToCart(input: AddToCartInput!): Cart!
+  updateCartItem(itemId: ID!, quantity: Int!): Cart!
+  removeFromCart(itemId: ID!): Cart!
+  checkout(input: CheckoutInput!): Order!
+  cancelOrder(orderId: ID!, reason: String): Order!
+  createReview(input: CreateReviewInput!): Review!
+  addAddress(input: AddressInput!): Address!
+  deleteAddress(id: ID!): Boolean!
+}
+
+type Subscription {
+  """Real-time order status updates"""
+  orderUpdated(orderId: ID!): Order!
+  """New reviews for a product"""
+  newReview(productId: ID!): Review!
+}
+
+input AddToCartInput {
+  productId: ID!
+  quantity: Int! = 1
+  variantSelections: [VariantSelectionInput!]
+}
+
+input VariantSelectionInput {
+  name: String!
+  value: String!
+}
+
+input CheckoutInput {
+  shippingAddressId: ID!
+  billingAddressId: ID
+  paymentMethod: PaymentMethod!
+  shippingTier: ShippingTier = STANDARD
+  couponCode: String
+}
+
+input CreateReviewInput {
+  productId: ID!
+  """Rating from 1 to 5"""
+  rating: Int!
+  title: String!
+  body: String!
+}
+
+input AddressInput {
+  label: String
+  line1: String!
+  line2: String
+  city: String!
+  postalCode: String!
+  country: String!
+  isDefault: Boolean = false
+}
+
+"""A product listed on the marketplace"""
+type Product implements Node & Timestamped {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String!
+  price: Money!
+  """Original price before any discount"""
+  compareAtPrice: Money
+  condition: ProductCondition!
+  stockQuantity: Int!
+  inStock: Boolean!
+  imageUrl: URL
+  images: [ProductImage!]!
+  category: Category!
+  seller: Seller!
+  variants: [ProductVariant!]!
+  reviews(first: Int = 10, after: String): ReviewConnection!
+  averageRating: Float
+  reviewCount: Int!
+  tags: [String!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProductImage {
+  url: URL!
+  altText: String
+  position: Int!
+}
+
+type ProductVariant implements Node {
+  id: ID!
+  name: String!
+  values: [String!]!
+  priceModifier: Money
+}
+
+"""A product category (supports nesting)"""
+type Category implements Node {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  parent: Category
+  children: [Category!]!
+  productCount: Int!
+}
+
+"""A seller on the marketplace"""
+type Seller implements Node & Timestamped {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  logoUrl: URL
+  rating: Float
+  totalRatings: Int!
+  products(first: Int = 20, after: String): ProductConnection!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""A registered customer"""
+type Customer implements Node & Timestamped {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  preferredCurrency: CurrencyCode!
+  addresses: [Address!]!
+  defaultAddress: Address
+  cart: Cart
+  orders(first: Int = 10, after: String): OrderConnection!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""A postal address"""
+type Address implements Node {
+  id: ID!
+  label: String
+  line1: String!
+  line2: String
+  city: String!
+  postalCode: String!
+  country: String!
+  isDefault: Boolean!
+}
+
+"""A shopping cart"""
+type Cart {
+  items: [CartItem!]!
+  itemCount: Int!
+  subtotal: Money!
+  estimatedTotal: Money!
+}
+
+type CartItem implements Node {
+  id: ID!
+  product: Product!
+  quantity: Int!
+  variantSelections: [VariantSelection!]!
+  lineTotal: Money!
+}
+
+type VariantSelection {
+  name: String!
+  value: String!
+}
+
+"""A placed order (Order -> LineItem -> Product -> Category)"""
+type Order implements Node & Timestamped {
+  id: ID!
+  orderNumber: String!
+  status: OrderStatus!
+  customer: Customer!
+  lineItems: [LineItem!]!
+  shippingAddress: Address!
+  billingAddress: Address!
+  shipping: ShippingInfo!
+  payment: PaymentInfo!
+  subtotal: Money!
+  tax: Money!
+  shippingCost: Money!
+  discount: Money
+  total: Money!
+  couponCode: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""A line item within an order"""
+type LineItem implements Node {
+  id: ID!
+  product: Product!
+  productName: String!
+  unitPrice: Money!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+type ShippingInfo {
+  tier: ShippingTier!
+  carrier: String
+  trackingNumber: String
+  trackingUrl: URL
+  estimatedDelivery: DateTime
+}
+
+type PaymentInfo {
+  method: PaymentMethod!
+  status: String!
+  transactionId: String
+  paidAt: DateTime
+}
+
+"""A customer review of a product"""
+type Review implements Node & Timestamped {
+  id: ID!
+  product: Product!
+  customer: Customer!
+  rating: Int!
+  title: String!
+  body: String!
+  verifiedPurchase: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Cursor-based pagination info"""
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ProductEdge { cursor: String!, node: Product! }
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type OrderEdge { cursor: String!, node: Order! }
+type ReviewConnection {
+  edges: [ReviewEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ReviewEdge { cursor: String!, node: Review! }
+type SearchResultConnection {
+  edges: [SearchResultEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type SearchResultEdge { cursor: String!, node: SearchResult! }
+
+"""Grants access to a field or object based on the caller's role"""
+directive @auth(role: String) on FIELD_DEFINITION | OBJECT
+
+"""Legacy features kept for backward compatibility"""
+type LegacyFeature {
+  oldField: String @deprecated
+  """Look up legacy records"""
+  lookup(term: String, legacyFilter: String @deprecated(reason: "Use term")): String
+  gatedField: String @auth(role: "admin") @deprecated(reason: "Use gatedFieldV2")
+}

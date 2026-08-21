@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>OAuth2 Redirect</title>
+</head>
+<body>
+  <script>
+    (function () {
+      'use strict'
+      var params = new URLSearchParams(window.location.search)
+      var payload = {
+        type: 'omnispec:oauth-callback',
+        code: params.get('code'),
+        state: params.get('state'),
+        error: params.get('error'),
+        errorDescription: params.get('error_description'),
+      }
+      if (window.opener) {
+        window.opener.postMessage(payload, window.location.origin)
+        window.close()
+      } else {
+        document.body.textContent =
+          'This page handles OAuth redirects for the API documentation. You can close it.'
+      }
+    })()
+  </script>
+</body>
+</html>

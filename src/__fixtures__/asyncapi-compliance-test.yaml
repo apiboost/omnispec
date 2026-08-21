@@ -1,0 +1,594 @@
+asyncapi: 2.6.0
+info:
+  title: IoT Fleet Management Platform
+  version: 3.2.0
+  description: |
+    Real-time event streaming platform for managing IoT device fleets.
+
+    ## Overview
+
+    This API enables:
+    - **Device telemetry** ingestion and monitoring
+    - **Command & control** for remote device management
+    - **Alert routing** based on configurable thresholds
+    - **Firmware updates** via OTA push channels
+
+    All messages use JSON encoding unless otherwise specified.
+
+    > **Rate limits:** Consumers are limited to 1000 messages/second per connection.
+  contact:
+    name: Platform Engineering
+    email: platform@iotfleet.io
+    url: https://developer.iotfleet.io
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+  termsOfService: https://iotfleet.io/terms
+
+externalDocs:
+  description: Full developer documentation
+  url: https://docs.iotfleet.io
+
+servers:
+  production:
+    url: mqtt://broker.iotfleet.io:8883
+    protocol: mqtt
+    protocolVersion: '5'
+    description: Production MQTT broker (TLS required)
+    variables:
+      region:
+        default: us-east-1
+        description: Deployment region
+        enum:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+  staging:
+    url: mqtt://staging-broker.iotfleet.io:1883
+    protocol: mqtt
+    description: Staging MQTT broker (no TLS)
+  websocket:
+    url: wss://ws.iotfleet.io/v3
+    protocol: wss
+    description: WebSocket gateway for browser clients
+
+tags:
+  - name: Telemetry
+    description: Device sensor data and metrics streaming
+  - name: Commands
+    description: Remote command dispatch and acknowledgment
+  - name: Alerts
+    description: Threshold-based alert notifications
+  - name: Firmware
+    description: Over-the-air firmware update lifecycle
+  - name: Provisioning
+    description: Device registration and deregistration events
+
+channels:
+  devices/{deviceId}/telemetry:
+    description: |
+      Publishes real-time telemetry data from a device. Each message contains
+      a snapshot of all sensor readings at a given timestamp.
+
+      Messages are published at the device's configured reporting interval
+      (default: 30 seconds).
+    parameters:
+      deviceId:
+        description: Unique device identifier (UUID format)
+        schema:
+          type: string
+          format: uuid
+    publish:
+      operationId: publishTelemetry
+      summary: Device publishes telemetry data
+      description: Devices push sensor readings to this channel at their configured interval.
+      tags:
+        - name: Telemetry
+      message:
+        $ref: '#/components/messages/TelemetryMessage'
+
+  devices/{deviceId}/commands:
+    description: |
+      Subscribe to receive commands for a specific device.
+      Commands are acknowledged via the `devices/{deviceId}/commands/ack` channel.
+    parameters:
+      deviceId:
+        description: Target device identifier
+        schema:
+          type: string
+          format: uuid
+    subscribe:
+      operationId: receiveCommand
+      summary: Device receives a command
+      description: |
+        The device subscribes to this channel to receive remote commands.
+        Each command includes a `commandId` for correlation with acknowledgments.
+      tags:
+        - name: Commands
+      message:
+        $ref: '#/components/messages/CommandMessage'
+
+  devices/{deviceId}/commands/ack:
+    description: Command acknowledgment channel
+    parameters:
+      deviceId:
+        schema:
+          type: string
+          format: uuid
+    publish:
+      operationId: acknowledgeCommand
+      summary: Device acknowledges a command
+      tags:
+        - name: Commands
+      message:
+        $ref: '#/components/messages/CommandAckMessage'
+
+  alerts/{severity}:
+    description: |
+      Alert notifications routed by severity level. Consumers subscribe to
+      the severity levels they want to handle.
+    parameters:
+      severity:
+        description: Alert severity level
+        schema:
+          type: string
+          enum:
+            - critical
+            - warning
+            - info
+    subscribe:
+      operationId: receiveAlert
+      summary: Receive alerts by severity
+      description: Subscribe to receive alert notifications at a specific severity level.
+      tags:
+        - name: Alerts
+      message:
+        $ref: '#/components/messages/AlertMessage'
+
+  fleet/devices/provisioned:
+    description: Emitted when a new device is registered in the fleet.
+    publish:
+      operationId: deviceProvisioned
+      summary: New device provisioned
+      tags:
+        - name: Provisioning
+      message:
+        $ref: '#/components/messages/DeviceProvisionedMessage'
+
+  fleet/devices/deprovisioned:
+    description: Emitted when a device is removed from the fleet.
+    publish:
+      operationId: deviceDeprovisioned
+      summary: Device deprovisioned
+      tags:
+        - name: Provisioning
+      message:
+        $ref: '#/components/messages/DeviceDeprovisionedMessage'
+
+  fleet/firmware/{deviceId}/update:
+    description: Push firmware update to a specific device.
+    parameters:
+      deviceId:
+        schema:
+          type: string
+          format: uuid
+    subscribe:
+      operationId: receiveFirmwareUpdate
+      summary: Device receives firmware update
+      tags:
+        - name: Firmware
+      message:
+        $ref: '#/components/messages/FirmwareUpdateMessage'
+
+  fleet/firmware/{deviceId}/status:
+    description: Device reports firmware update progress.
+    parameters:
+      deviceId:
+        schema:
+          type: string
+          format: uuid
+    publish:
+      operationId: reportFirmwareStatus
+      summary: Device reports update status
+      tags:
+        - name: Firmware
+      message:
+        $ref: '#/components/messages/FirmwareStatusMessage'
+
+components:
+  messages:
+    TelemetryMessage:
+      title: Device Telemetry
+      summary: Sensor readings snapshot from a device
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          x-device-firmware:
+            type: string
+            description: Current firmware version
+          x-message-id:
+            type: string
+            format: uuid
+            description: Unique message identifier
+          x-timestamp:
+            type: string
+            format: date-time
+            description: Message timestamp
+      payload:
+        type: object
+        required:
+          - deviceId
+          - timestamp
+          - sensors
+        properties:
+          deviceId:
+            type: string
+            format: uuid
+            description: Device that generated this reading
+          timestamp:
+            type: string
+            format: date-time
+            description: ISO 8601 timestamp of the reading
+          sensors:
+            type: object
+            description: Map of sensor readings
+            properties:
+              temperature:
+                type: number
+                format: float
+                description: Temperature in Celsius
+                minimum: -40
+                maximum: 85
+              humidity:
+                type: number
+                format: float
+                description: Relative humidity percentage
+                minimum: 0
+                maximum: 100
+              battery:
+                type: number
+                format: float
+                description: Battery level percentage
+                minimum: 0
+                maximum: 100
+              signalStrength:
+                type: integer
+                description: RSSI in dBm
+                minimum: -120
+                maximum: 0
+              pressure:
+                type: number
+                format: float
+                description: Atmospheric pressure in hPa
+              gps:
+                type: object
+                description: GPS coordinates (if equipped)
+                properties:
+                  latitude:
+                    type: number
+                    format: double
+                    minimum: -90
+                    maximum: 90
+                  longitude:
+                    type: number
+                    format: double
+                    minimum: -180
+                    maximum: 180
+                  altitude:
+                    type: number
+                    description: Altitude in meters
+                  accuracy:
+                    type: number
+                    description: Accuracy in meters
+          metadata:
+            type: object
+            description: Optional device metadata
+            properties:
+              firmwareVersion:
+                type: string
+              uptimeSeconds:
+                type: integer
+                description: Seconds since last boot
+              networkType:
+                type: string
+                enum:
+                  - wifi
+                  - cellular
+                  - lora
+                  - ethernet
+
+    CommandMessage:
+      title: Device Command
+      summary: Remote command dispatched to a device
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - commandId
+          - type
+          - issuedAt
+        properties:
+          commandId:
+            type: string
+            format: uuid
+            description: Unique command identifier for correlation
+          type:
+            type: string
+            description: Command type
+            enum:
+              - reboot
+              - configure
+              - diagnostics
+              - reset-factory
+              - update-interval
+          issuedAt:
+            type: string
+            format: date-time
+          issuedBy:
+            type: string
+            description: User or system that issued the command
+          parameters:
+            type: object
+            description: Command-specific parameters
+            additionalProperties: true
+          ttlSeconds:
+            type: integer
+            description: Time-to-live in seconds (command expires after this)
+            minimum: 1
+            maximum: 86400
+            default: 3600
+
+    CommandAckMessage:
+      title: Command Acknowledgment
+      summary: Device confirms receipt and execution of a command
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - commandId
+          - status
+          - timestamp
+        properties:
+          commandId:
+            type: string
+            format: uuid
+          status:
+            type: string
+            enum:
+              - received
+              - executing
+              - completed
+              - failed
+              - rejected
+          timestamp:
+            type: string
+            format: date-time
+          errorMessage:
+            type: string
+            description: Error details (when status is failed/rejected)
+          result:
+            type: object
+            description: Command execution result data
+            additionalProperties: true
+
+    AlertMessage:
+      title: Alert Notification
+      summary: Threshold-based alert from the monitoring system
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - alertId
+          - deviceId
+          - severity
+          - rule
+          - triggeredAt
+        properties:
+          alertId:
+            type: string
+            format: uuid
+          deviceId:
+            type: string
+            format: uuid
+          severity:
+            type: string
+            enum:
+              - critical
+              - warning
+              - info
+          rule:
+            type: string
+            description: Name of the alert rule that triggered
+          message:
+            type: string
+            description: Human-readable alert message
+          triggeredAt:
+            type: string
+            format: date-time
+          value:
+            type: number
+            description: The sensor value that triggered the alert
+          threshold:
+            type: number
+            description: The threshold that was exceeded
+          acknowledged:
+            type: boolean
+            default: false
+
+    DeviceProvisionedMessage:
+      title: Device Provisioned
+      summary: A new device has been registered in the fleet
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - deviceId
+          - deviceType
+          - provisionedAt
+        properties:
+          deviceId:
+            type: string
+            format: uuid
+          deviceType:
+            type: string
+            enum:
+              - sensor
+              - gateway
+              - actuator
+              - camera
+          name:
+            type: string
+            description: Human-friendly device name
+          location:
+            type: string
+            description: Physical location or zone
+          firmwareVersion:
+            type: string
+          provisionedAt:
+            type: string
+            format: date-time
+          provisionedBy:
+            type: string
+
+    DeviceDeprovisionedMessage:
+      title: Device Deprovisioned
+      summary: A device has been removed from the fleet
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - deviceId
+          - deprovisionedAt
+        properties:
+          deviceId:
+            type: string
+            format: uuid
+          reason:
+            type: string
+            enum:
+              - decommissioned
+              - replaced
+              - lost
+              - rma
+          deprovisionedAt:
+            type: string
+            format: date-time
+          deprovisionedBy:
+            type: string
+
+    FirmwareUpdateMessage:
+      title: Firmware Update
+      summary: OTA firmware update pushed to a device
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - updateId
+          - version
+          - downloadUrl
+        properties:
+          updateId:
+            type: string
+            format: uuid
+          version:
+            type: string
+            description: Target firmware version (semver)
+            pattern: '^\d+\.\d+\.\d+$'
+          downloadUrl:
+            type: string
+            format: uri
+            description: URL to download the firmware binary
+          checksum:
+            type: string
+            description: SHA-256 checksum of the firmware binary
+          releaseNotes:
+            type: string
+            description: Markdown release notes
+          mandatory:
+            type: boolean
+            default: false
+            description: If true, device must update immediately
+          scheduledAt:
+            type: string
+            format: date-time
+            description: When to begin the update (if not immediate)
+
+    FirmwareStatusMessage:
+      title: Firmware Update Status
+      summary: Device reports progress of a firmware update
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - updateId
+          - status
+          - timestamp
+        properties:
+          updateId:
+            type: string
+            format: uuid
+          status:
+            type: string
+            enum:
+              - downloading
+              - downloaded
+              - installing
+              - completed
+              - failed
+              - rolled-back
+          progress:
+            type: integer
+            description: Progress percentage (0-100)
+            minimum: 0
+            maximum: 100
+          timestamp:
+            type: string
+            format: date-time
+          errorMessage:
+            type: string
+            description: Error details (when status is failed)
+          previousVersion:
+            type: string
+            description: Firmware version before the update
+
+  schemas:
+    DeviceSummary:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        deviceType:
+          type: string
+          enum:
+            - sensor
+            - gateway
+            - actuator
+            - camera
+        status:
+          type: string
+          enum:
+            - online
+            - offline
+            - maintenance
+        lastSeen:
+          type: string
+          format: date-time
+        firmwareVersion:
+          type: string
+
+    SensorReading:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

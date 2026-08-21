@@ -1,0 +1,688 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+  name="BankingService"
+  targetNamespace="http://example.com/banking"
+  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:tns="http://example.com/banking"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <documentation>
+    A comprehensive banking web service providing account management
+    and transaction processing. Requires authentication via SOAP header.
+  </documentation>
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/banking">
+
+      <!-- ================================================================ -->
+      <!-- Simple Types with Restrictions                                   -->
+      <!-- ================================================================ -->
+
+      <xsd:simpleType name="AccountNumber">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="[A-Z]{2}[0-9]{10}"/>
+          <xsd:minLength value="12"/>
+          <xsd:maxLength value="12"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="CurrencyCode">
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="[A-Z]{3}"/>
+          <xsd:minLength value="3"/>
+          <xsd:maxLength value="3"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="AccountType">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="checking"/>
+          <xsd:enumeration value="savings"/>
+          <xsd:enumeration value="money_market"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="TransactionType">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="deposit"/>
+          <xsd:enumeration value="withdrawal"/>
+          <xsd:enumeration value="transfer"/>
+          <xsd:enumeration value="fee"/>
+          <xsd:enumeration value="interest"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="TransactionStatus">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="pending"/>
+          <xsd:enumeration value="completed"/>
+          <xsd:enumeration value="failed"/>
+          <xsd:enumeration value="reversed"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="TransferStatus">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="initiated"/>
+          <xsd:enumeration value="processing"/>
+          <xsd:enumeration value="completed"/>
+          <xsd:enumeration value="failed"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- ================================================================ -->
+      <!-- SOAP Header Type                                                 -->
+      <!-- ================================================================ -->
+
+      <xsd:element name="AuthenticationHeader">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="token" type="xsd:string"/>
+            <xsd:element name="clientId" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <!-- ================================================================ -->
+      <!-- Complex Types                                                    -->
+      <!-- ================================================================ -->
+
+      <xsd:complexType name="Address">
+        <xsd:sequence>
+          <xsd:element name="street" type="xsd:string"/>
+          <xsd:element name="city" type="xsd:string"/>
+          <xsd:element name="state" type="xsd:string"/>
+          <xsd:element name="postalCode" type="xsd:string"/>
+          <xsd:element name="country" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Customer">
+        <xsd:sequence>
+          <xsd:element name="customerId" type="xsd:string"/>
+          <xsd:element name="firstName" type="xsd:string"/>
+          <xsd:element name="lastName" type="xsd:string"/>
+          <xsd:element name="email" type="xsd:string"/>
+          <xsd:element name="phone" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="address" type="tns:Address"/>
+          <xsd:element name="createdAt" type="xsd:dateTime"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Account">
+        <xsd:sequence>
+          <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+          <xsd:element name="accountType" type="tns:AccountType"/>
+          <xsd:element name="balance" type="xsd:decimal"/>
+          <xsd:element name="currency" type="tns:CurrencyCode"/>
+          <xsd:element name="owner" type="tns:Customer"/>
+          <xsd:element name="isActive" type="xsd:boolean"/>
+          <xsd:element name="openedDate" type="xsd:date"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Inheritance: SavingsAccount extends Account -->
+      <xsd:complexType name="SavingsAccount">
+        <xsd:complexContent>
+          <xsd:extension base="tns:Account">
+            <xsd:sequence>
+              <xsd:element name="interestRate" type="xsd:decimal"/>
+              <xsd:element name="compoundingFrequency" type="xsd:string"/>
+              <xsd:element name="minimumBalance" type="xsd:decimal"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+
+      <xsd:complexType name="Transaction">
+        <xsd:sequence>
+          <xsd:element name="transactionId" type="xsd:string"/>
+          <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+          <xsd:element name="type" type="tns:TransactionType"/>
+          <xsd:element name="amount" type="xsd:decimal"/>
+          <xsd:element name="currency" type="tns:CurrencyCode"/>
+          <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="status" type="tns:TransactionStatus"/>
+          <xsd:element name="timestamp" type="xsd:dateTime"/>
+          <xsd:element name="referenceNumber" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="TransactionList">
+        <xsd:sequence>
+          <xsd:element name="transactions" type="tns:Transaction" minOccurs="0" maxOccurs="unbounded"/>
+          <xsd:element name="totalCount" type="xsd:int"/>
+          <xsd:element name="page" type="xsd:int"/>
+          <xsd:element name="pageSize" type="xsd:int"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Transfer">
+        <xsd:sequence>
+          <xsd:element name="transferId" type="xsd:string"/>
+          <xsd:element name="fromAccount" type="tns:AccountNumber"/>
+          <xsd:element name="toAccount" type="tns:AccountNumber"/>
+          <xsd:element name="amount" type="xsd:decimal"/>
+          <xsd:element name="currency" type="tns:CurrencyCode"/>
+          <xsd:element name="memo" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="status" type="tns:TransferStatus"/>
+          <xsd:element name="initiatedAt" type="xsd:dateTime"/>
+          <xsd:element name="completedAt" type="xsd:dateTime" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="AccountSummary">
+        <xsd:sequence>
+          <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+          <xsd:element name="accountType" type="tns:AccountType"/>
+          <xsd:element name="balance" type="xsd:decimal"/>
+          <xsd:element name="currency" type="tns:CurrencyCode"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="AccountSummaryList">
+        <xsd:sequence>
+          <xsd:element name="accounts" type="tns:AccountSummary" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- ================================================================ -->
+      <!-- Fault Types                                                      -->
+      <!-- ================================================================ -->
+
+      <xsd:complexType name="InsufficientFundsFault">
+        <xsd:sequence>
+          <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+          <xsd:element name="currentBalance" type="xsd:decimal"/>
+          <xsd:element name="requestedAmount" type="xsd:decimal"/>
+          <xsd:element name="message" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="AccountNotFoundFault">
+        <xsd:sequence>
+          <xsd:element name="accountNumber" type="xsd:string"/>
+          <xsd:element name="message" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="AuthenticationFault">
+        <xsd:sequence>
+          <xsd:element name="errorCode" type="xsd:string"/>
+          <xsd:element name="message" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="ValidationFault">
+        <xsd:sequence>
+          <xsd:element name="field" type="xsd:string"/>
+          <xsd:element name="message" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- ================================================================ -->
+      <!-- Request/Response Elements — Account Service                      -->
+      <!-- ================================================================ -->
+
+      <xsd:element name="GetAccountRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetAccountResponse" type="tns:Account"/>
+
+      <xsd:element name="ListAccountsRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="customerId" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ListAccountsResponse" type="tns:AccountSummaryList"/>
+
+      <xsd:element name="OpenAccountRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="customerId" type="xsd:string"/>
+            <xsd:element name="accountType" type="tns:AccountType"/>
+            <xsd:element name="initialDeposit" type="xsd:decimal"/>
+            <xsd:element name="currency" type="tns:CurrencyCode"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="OpenAccountResponse" type="tns:Account"/>
+
+      <xsd:element name="CloseAccountRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+            <xsd:element name="reason" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="CloseAccountResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+            <xsd:element name="finalBalance" type="xsd:decimal"/>
+            <xsd:element name="closedAt" type="xsd:dateTime"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetBalanceRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetBalanceResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+            <xsd:element name="balance" type="xsd:decimal"/>
+            <xsd:element name="currency" type="tns:CurrencyCode"/>
+            <xsd:element name="asOf" type="xsd:dateTime"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <!-- ================================================================ -->
+      <!-- Request/Response Elements — Transaction Service                  -->
+      <!-- ================================================================ -->
+
+      <xsd:element name="DepositRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+            <xsd:element name="amount" type="xsd:decimal"/>
+            <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="DepositResponse" type="tns:Transaction"/>
+
+      <xsd:element name="WithdrawRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+            <xsd:element name="amount" type="xsd:decimal"/>
+            <xsd:element name="description" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="WithdrawResponse" type="tns:Transaction"/>
+
+      <xsd:element name="TransferRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="fromAccount" type="tns:AccountNumber"/>
+            <xsd:element name="toAccount" type="tns:AccountNumber"/>
+            <xsd:element name="amount" type="xsd:decimal"/>
+            <xsd:element name="memo" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="TransferResponse" type="tns:Transfer"/>
+
+      <xsd:element name="GetTransactionHistoryRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="accountNumber" type="tns:AccountNumber"/>
+            <xsd:element name="startDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="endDate" type="xsd:date" minOccurs="0"/>
+            <xsd:element name="page" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="pageSize" type="xsd:int" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetTransactionHistoryResponse" type="tns:TransactionList"/>
+
+      <!-- Fault Elements -->
+
+      <xsd:element name="InsufficientFundsFault" type="tns:InsufficientFundsFault"/>
+      <xsd:element name="AccountNotFoundFault" type="tns:AccountNotFoundFault"/>
+      <xsd:element name="AuthenticationFault" type="tns:AuthenticationFault"/>
+      <xsd:element name="ValidationFault" type="tns:ValidationFault"/>
+
+    </xsd:schema>
+  </types>
+
+  <!-- ==================================================================== -->
+  <!-- Messages — Account Service                                           -->
+  <!-- ==================================================================== -->
+
+  <message name="GetAccountInput">
+    <part name="parameters" element="tns:GetAccountRequest"/>
+  </message>
+  <message name="GetAccountOutput">
+    <part name="parameters" element="tns:GetAccountResponse"/>
+  </message>
+
+  <message name="ListAccountsInput">
+    <part name="parameters" element="tns:ListAccountsRequest"/>
+  </message>
+  <message name="ListAccountsOutput">
+    <part name="parameters" element="tns:ListAccountsResponse"/>
+  </message>
+
+  <message name="OpenAccountInput">
+    <part name="parameters" element="tns:OpenAccountRequest"/>
+  </message>
+  <message name="OpenAccountOutput">
+    <part name="parameters" element="tns:OpenAccountResponse"/>
+  </message>
+
+  <message name="CloseAccountInput">
+    <part name="parameters" element="tns:CloseAccountRequest"/>
+  </message>
+  <message name="CloseAccountOutput">
+    <part name="parameters" element="tns:CloseAccountResponse"/>
+  </message>
+
+  <message name="GetBalanceInput">
+    <part name="parameters" element="tns:GetBalanceRequest"/>
+  </message>
+  <message name="GetBalanceOutput">
+    <part name="parameters" element="tns:GetBalanceResponse"/>
+  </message>
+
+  <!-- ==================================================================== -->
+  <!-- Messages — Transaction Service                                       -->
+  <!-- ==================================================================== -->
+
+  <message name="DepositInput">
+    <part name="parameters" element="tns:DepositRequest"/>
+  </message>
+  <message name="DepositOutput">
+    <part name="parameters" element="tns:DepositResponse"/>
+  </message>
+
+  <message name="WithdrawInput">
+    <part name="parameters" element="tns:WithdrawRequest"/>
+  </message>
+  <message name="WithdrawOutput">
+    <part name="parameters" element="tns:WithdrawResponse"/>
+  </message>
+
+  <message name="TransferInput">
+    <part name="parameters" element="tns:TransferRequest"/>
+  </message>
+  <message name="TransferOutput">
+    <part name="parameters" element="tns:TransferResponse"/>
+  </message>
+
+  <message name="GetTransactionHistoryInput">
+    <part name="parameters" element="tns:GetTransactionHistoryRequest"/>
+  </message>
+  <message name="GetTransactionHistoryOutput">
+    <part name="parameters" element="tns:GetTransactionHistoryResponse"/>
+  </message>
+
+  <!-- ==================================================================== -->
+  <!-- Messages — SOAP Header and Faults                                    -->
+  <!-- ==================================================================== -->
+
+  <message name="AuthHeaderMessage">
+    <part name="header" element="tns:AuthenticationHeader"/>
+  </message>
+
+  <message name="InsufficientFundsFaultMessage">
+    <part name="fault" element="tns:InsufficientFundsFault"/>
+  </message>
+  <message name="AccountNotFoundFaultMessage">
+    <part name="fault" element="tns:AccountNotFoundFault"/>
+  </message>
+  <message name="AuthenticationFaultMessage">
+    <part name="fault" element="tns:AuthenticationFault"/>
+  </message>
+  <message name="ValidationFaultMessage">
+    <part name="fault" element="tns:ValidationFault"/>
+  </message>
+
+  <!-- ==================================================================== -->
+  <!-- Port Type — Account Service                                          -->
+  <!-- ==================================================================== -->
+
+  <portType name="AccountServicePortType">
+    <documentation>
+      Account management operations including opening, closing,
+      and querying bank accounts.
+    </documentation>
+
+    <operation name="GetAccount">
+      <documentation>Retrieves full account details for the specified account number.</documentation>
+      <input message="tns:GetAccountInput"/>
+      <output message="tns:GetAccountOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+
+    <operation name="ListAccounts">
+      <documentation>Lists all accounts belonging to the specified customer.</documentation>
+      <input message="tns:ListAccountsInput"/>
+      <output message="tns:ListAccountsOutput"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+
+    <operation name="OpenAccount">
+      <documentation>Opens a new bank account for an existing customer with an initial deposit.</documentation>
+      <input message="tns:OpenAccountInput"/>
+      <output message="tns:OpenAccountOutput"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+      <fault name="ValidationError" message="tns:ValidationFaultMessage"/>
+    </operation>
+
+    <operation name="CloseAccount">
+      <documentation>Closes an existing account. The account balance must be zero or will be returned to the customer.</documentation>
+      <input message="tns:CloseAccountInput"/>
+      <output message="tns:CloseAccountOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+
+    <operation name="GetBalance">
+      <documentation>Returns the current balance for the specified account.</documentation>
+      <input message="tns:GetBalanceInput"/>
+      <output message="tns:GetBalanceOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+  </portType>
+
+  <!-- ==================================================================== -->
+  <!-- Port Type — Transaction Service                                      -->
+  <!-- ==================================================================== -->
+
+  <portType name="TransactionServicePortType">
+    <documentation>
+      Transaction processing operations including deposits, withdrawals,
+      transfers, and transaction history queries.
+    </documentation>
+
+    <operation name="Deposit">
+      <documentation>Deposits funds into the specified account.</documentation>
+      <input message="tns:DepositInput"/>
+      <output message="tns:DepositOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+      <fault name="ValidationError" message="tns:ValidationFaultMessage"/>
+    </operation>
+
+    <operation name="Withdraw">
+      <documentation>Withdraws funds from the specified account. Fails if balance is insufficient.</documentation>
+      <input message="tns:WithdrawInput"/>
+      <output message="tns:WithdrawOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="InsufficientFunds" message="tns:InsufficientFundsFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+
+    <operation name="Transfer">
+      <documentation>Transfers funds between two accounts. Both accounts must exist and the source must have sufficient funds.</documentation>
+      <input message="tns:TransferInput"/>
+      <output message="tns:TransferOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="InsufficientFunds" message="tns:InsufficientFundsFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+
+    <operation name="GetTransactionHistory">
+      <documentation>Returns paginated transaction history for the specified account. Optionally filtered by date range.</documentation>
+      <input message="tns:GetTransactionHistoryInput"/>
+      <output message="tns:GetTransactionHistoryOutput"/>
+      <fault name="AccountNotFound" message="tns:AccountNotFoundFaultMessage"/>
+      <fault name="AuthenticationFailure" message="tns:AuthenticationFaultMessage"/>
+    </operation>
+  </portType>
+
+  <!-- ==================================================================== -->
+  <!-- Binding — Account Service                                            -->
+  <!-- ==================================================================== -->
+
+  <binding name="AccountServiceSoapBinding" type="tns:AccountServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="GetAccount">
+      <soap:operation soapAction="http://example.com/banking/GetAccount"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+
+    <operation name="ListAccounts">
+      <soap:operation soapAction="http://example.com/banking/ListAccounts"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+
+    <operation name="OpenAccount">
+      <soap:operation soapAction="http://example.com/banking/OpenAccount"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+      <fault name="ValidationError"><soap:fault name="ValidationError" use="literal"/></fault>
+    </operation>
+
+    <operation name="CloseAccount">
+      <soap:operation soapAction="http://example.com/banking/CloseAccount"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+
+    <operation name="GetBalance">
+      <soap:operation soapAction="http://example.com/banking/GetBalance"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+  </binding>
+
+  <!-- ==================================================================== -->
+  <!-- Binding — Transaction Service                                        -->
+  <!-- ==================================================================== -->
+
+  <binding name="TransactionServiceSoapBinding" type="tns:TransactionServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="Deposit">
+      <soap:operation soapAction="http://example.com/banking/Deposit"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+      <fault name="ValidationError"><soap:fault name="ValidationError" use="literal"/></fault>
+    </operation>
+
+    <operation name="Withdraw">
+      <soap:operation soapAction="http://example.com/banking/Withdraw"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="InsufficientFunds"><soap:fault name="InsufficientFunds" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+
+    <operation name="Transfer">
+      <soap:operation soapAction="http://example.com/banking/Transfer"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="InsufficientFunds"><soap:fault name="InsufficientFunds" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+
+    <operation name="GetTransactionHistory">
+      <soap:operation soapAction="http://example.com/banking/GetTransactionHistory"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:AuthHeaderMessage" part="header" use="literal"/>
+      </input>
+      <output><soap:body use="literal"/></output>
+      <fault name="AccountNotFound"><soap:fault name="AccountNotFound" use="literal"/></fault>
+      <fault name="AuthenticationFailure"><soap:fault name="AuthenticationFailure" use="literal"/></fault>
+    </operation>
+  </binding>
+
+  <!-- ==================================================================== -->
+  <!-- Service                                                              -->
+  <!-- ==================================================================== -->
+
+  <service name="BankingService">
+    <documentation>
+      Banking Web Service providing account management and transaction
+      processing via SOAP. All operations require authentication.
+    </documentation>
+
+    <port name="AccountServicePort" binding="tns:AccountServiceSoapBinding">
+      <soap:address location="http://example.com/banking/accounts/soap"/>
+    </port>
+
+    <port name="TransactionServicePort" binding="tns:TransactionServiceSoapBinding">
+      <soap:address location="http://example.com/banking/transactions/soap"/>
+    </port>
+  </service>
+
+</definitions>

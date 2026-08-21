@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+  name="WeatherService"
+  targetNamespace="http://example.com/weather"
+  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:tns="http://example.com/weather"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <documentation>
+    A weather information service providing current conditions, forecasts,
+    historical data, and severe weather alerts for a given city.
+  </documentation>
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/weather">
+
+      <!-- Enumerations -->
+
+      <xsd:simpleType name="WeatherCondition">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="sunny"/>
+          <xsd:enumeration value="cloudy"/>
+          <xsd:enumeration value="rainy"/>
+          <xsd:enumeration value="snowy"/>
+          <xsd:enumeration value="stormy"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="AlertSeverity">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="advisory"/>
+          <xsd:enumeration value="watch"/>
+          <xsd:enumeration value="warning"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- Complex Types -->
+
+      <xsd:complexType name="WeatherData">
+        <xsd:sequence>
+          <xsd:element name="temperature" type="xsd:double"/>
+          <xsd:element name="humidity" type="xsd:int"/>
+          <xsd:element name="windSpeed" type="xsd:double"/>
+          <xsd:element name="windDirection" type="xsd:string"/>
+          <xsd:element name="conditions" type="tns:WeatherCondition"/>
+          <xsd:element name="timestamp" type="xsd:dateTime"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="ForecastDay">
+        <xsd:sequence>
+          <xsd:element name="date" type="xsd:date"/>
+          <xsd:element name="highTemperature" type="xsd:double"/>
+          <xsd:element name="lowTemperature" type="xsd:double"/>
+          <xsd:element name="conditions" type="tns:WeatherCondition"/>
+          <xsd:element name="precipitationChance" type="xsd:int"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Forecast">
+        <xsd:sequence>
+          <xsd:element name="city" type="xsd:string"/>
+          <xsd:element name="days" type="tns:ForecastDay" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="HistoricalData">
+        <xsd:sequence>
+          <xsd:element name="city" type="xsd:string"/>
+          <xsd:element name="date" type="xsd:date"/>
+          <xsd:element name="averageTemperature" type="xsd:double"/>
+          <xsd:element name="totalPrecipitation" type="xsd:double"/>
+          <xsd:element name="conditions" type="tns:WeatherCondition"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Alert">
+        <xsd:sequence>
+          <xsd:element name="title" type="xsd:string"/>
+          <xsd:element name="severity" type="tns:AlertSeverity"/>
+          <xsd:element name="description" type="xsd:string"/>
+          <xsd:element name="issuedAt" type="xsd:dateTime"/>
+          <xsd:element name="expiresAt" type="xsd:dateTime"/>
+          <xsd:element name="affectedArea" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="AlertList">
+        <xsd:sequence>
+          <xsd:element name="alerts" type="tns:Alert" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Fault Types -->
+
+      <xsd:complexType name="CityNotFoundFault">
+        <xsd:sequence>
+          <xsd:element name="city" type="xsd:string"/>
+          <xsd:element name="message" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="ServiceUnavailableFault">
+        <xsd:sequence>
+          <xsd:element name="reason" type="xsd:string"/>
+          <xsd:element name="retryAfterSeconds" type="xsd:int"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Request/Response Elements -->
+
+      <xsd:element name="GetCurrentWeatherRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="city" type="xsd:string"/>
+            <xsd:element name="units" type="xsd:string" minOccurs="0" default="metric"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetCurrentWeatherResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="city" type="xsd:string"/>
+            <xsd:element name="weather" type="tns:WeatherData"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetForecastRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="city" type="xsd:string"/>
+            <xsd:element name="days" type="xsd:int"/>
+            <xsd:element name="units" type="xsd:string" minOccurs="0" default="metric"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetForecastResponse" type="tns:Forecast"/>
+
+      <xsd:element name="GetHistoricalRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="city" type="xsd:string"/>
+            <xsd:element name="date" type="xsd:date"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetHistoricalResponse" type="tns:HistoricalData"/>
+
+      <xsd:element name="GetAlertsRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="city" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetAlertsResponse" type="tns:AlertList"/>
+
+      <xsd:element name="CityNotFoundFault" type="tns:CityNotFoundFault"/>
+      <xsd:element name="ServiceUnavailableFault" type="tns:ServiceUnavailableFault"/>
+
+    </xsd:schema>
+  </types>
+
+  <!-- Messages -->
+
+  <message name="GetCurrentWeatherInput">
+    <part name="parameters" element="tns:GetCurrentWeatherRequest"/>
+  </message>
+  <message name="GetCurrentWeatherOutput">
+    <part name="parameters" element="tns:GetCurrentWeatherResponse"/>
+  </message>
+
+  <message name="GetForecastInput">
+    <part name="parameters" element="tns:GetForecastRequest"/>
+  </message>
+  <message name="GetForecastOutput">
+    <part name="parameters" element="tns:GetForecastResponse"/>
+  </message>
+
+  <message name="GetHistoricalInput">
+    <part name="parameters" element="tns:GetHistoricalRequest"/>
+  </message>
+  <message name="GetHistoricalOutput">
+    <part name="parameters" element="tns:GetHistoricalResponse"/>
+  </message>
+
+  <message name="GetAlertsInput">
+    <part name="parameters" element="tns:GetAlertsRequest"/>
+  </message>
+  <message name="GetAlertsOutput">
+    <part name="parameters" element="tns:GetAlertsResponse"/>
+  </message>
+
+  <message name="CityNotFoundFaultMessage">
+    <part name="fault" element="tns:CityNotFoundFault"/>
+  </message>
+  <message name="ServiceUnavailableFaultMessage">
+    <part name="fault" element="tns:ServiceUnavailableFault"/>
+  </message>
+
+  <!-- Port Type -->
+
+  <portType name="WeatherPortType">
+    <documentation>Weather information service providing real-time and historical data.</documentation>
+
+    <operation name="GetCurrentWeather">
+      <documentation>
+        Returns the current weather conditions for the specified city,
+        including temperature, humidity, wind, and conditions.
+      </documentation>
+      <input message="tns:GetCurrentWeatherInput"/>
+      <output message="tns:GetCurrentWeatherOutput"/>
+      <fault name="CityNotFound" message="tns:CityNotFoundFaultMessage"/>
+      <fault name="ServiceUnavailable" message="tns:ServiceUnavailableFaultMessage"/>
+    </operation>
+
+    <operation name="GetForecast">
+      <documentation>
+        Returns a multi-day weather forecast for the specified city.
+        The number of forecast days can be specified (1 to 14).
+      </documentation>
+      <input message="tns:GetForecastInput"/>
+      <output message="tns:GetForecastOutput"/>
+      <fault name="CityNotFound" message="tns:CityNotFoundFaultMessage"/>
+    </operation>
+
+    <operation name="GetHistorical">
+      <documentation>
+        Returns historical weather data for a specific city and date.
+        Data is available for the past 365 days.
+      </documentation>
+      <input message="tns:GetHistoricalInput"/>
+      <output message="tns:GetHistoricalOutput"/>
+      <fault name="CityNotFound" message="tns:CityNotFoundFaultMessage"/>
+    </operation>
+
+    <operation name="GetAlerts">
+      <documentation>
+        Returns any active severe weather alerts for the specified city.
+        Returns an empty list if no alerts are active.
+      </documentation>
+      <input message="tns:GetAlertsInput"/>
+      <output message="tns:GetAlertsOutput"/>
+      <fault name="CityNotFound" message="tns:CityNotFoundFaultMessage"/>
+    </operation>
+  </portType>
+
+  <!-- Binding -->
+
+  <binding name="WeatherSoapBinding" type="tns:WeatherPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="GetCurrentWeather">
+      <soap:operation soapAction="http://example.com/weather/GetCurrentWeather"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="CityNotFound"><soap:fault name="CityNotFound" use="literal"/></fault>
+      <fault name="ServiceUnavailable"><soap:fault name="ServiceUnavailable" use="literal"/></fault>
+    </operation>
+
+    <operation name="GetForecast">
+      <soap:operation soapAction="http://example.com/weather/GetForecast"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="CityNotFound"><soap:fault name="CityNotFound" use="literal"/></fault>
+    </operation>
+
+    <operation name="GetHistorical">
+      <soap:operation soapAction="http://example.com/weather/GetHistorical"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="CityNotFound"><soap:fault name="CityNotFound" use="literal"/></fault>
+    </operation>
+
+    <operation name="GetAlerts">
+      <soap:operation soapAction="http://example.com/weather/GetAlerts"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="CityNotFound"><soap:fault name="CityNotFound" use="literal"/></fault>
+    </operation>
+  </binding>
+
+  <!-- Service -->
+
+  <service name="WeatherService">
+    <documentation>Weather Web Service providing real-time conditions, forecasts, historical data, and severe weather alerts.</documentation>
+    <port name="WeatherPort" binding="tns:WeatherSoapBinding">
+      <soap:address location="http://example.com/weather/soap"/>
+    </port>
+  </service>
+
+</definitions>
