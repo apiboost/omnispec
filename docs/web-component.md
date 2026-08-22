@@ -103,6 +103,7 @@ The imperative property always wins over an attribute when both are set.
 | `sidebar-position` | `'left' \| 'right'` | Sidebar placement. |
 | `try-it-layout` | `'inline' \| 'panel'` | Try-It panel layout. |
 | `allow-try-it` | boolean | Enable Try-It. |
+| `interactive-oauth` | boolean | Opt out of the Pro interactive OAuth flow with `"false"` (forces manual token paste). No effect without Pro. |
 | `default-expand-operations` | boolean | Expand every operation on load. |
 | `proxy-url` | string | Try-It proxy endpoint. |
 | `download-link` | boolean or URL | Show a download button — pass `true` to use the spec URL or a string to specify a different URL. |

@@ -28,6 +28,7 @@ All spec renderers accept these common props:
 | `onTryItRequest` | `(request: TryItRequest) => void` | — | Fired before a Try-It request is sent |
 | `onTryItResponse` | `(response: TryItResponse) => void` | — | Fired after a Try-It response is received |
 | `oauth` | `OAuthConfig` | `undefined` | Configures the interactive OAuth Try-It flow (**Pro**). See below |
+| `interactiveOAuth` | `boolean` | `true` | Opt out of the Pro interactive OAuth "Get Token" flow. Set `false` to force manual token paste even with Pro installed. No effect without Pro (the free core is manual-paste regardless) |
 | `pro` | `ProFeatures` | `undefined` | Activates Pro capabilities (**Pro**). See below |
 | `className` | `string` | — | CSS class applied to the root container |
 
@@ -42,6 +43,8 @@ The `pro` prop accepts an **[Apiboost OmniSpec Pro](https://apiboost.com)** capa
 :::info[Pro]
 The `oauth` prop (`OAuthConfig`) drives the interactive OAuth "Get Token" Try-It flow — Authorization Code + PKCE and OpenID Connect discovery — requiring **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, OAuth2 flow details are shown and tokens are pasted manually. The `OAuthConfig` shape and setup are documented in the Pro docs.
 :::
+
+When Pro is installed the interactive flow is on by default. To force the manual token-paste experience (e.g. in an embed where popups are undesirable), pass `interactiveOAuth={false}` on the renderer, or `interactive-oauth="false"` on the `<omnispec-renderer>` web component.
 
 ### ThemeConfig
 
