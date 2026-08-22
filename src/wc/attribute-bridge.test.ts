@@ -30,6 +30,7 @@ const emptyAttrs = {
   sidebarPosition: null,
   tryItLayout: null,
   allowTryIt: null,
+  interactiveOAuth: null,
   defaultExpandOperations: null,
   proxyUrl: null,
   downloadLink: null,
@@ -183,6 +184,16 @@ describe('buildRendererProps', () => {
     })
     expect(result?.allowTryIt).toBe(false)
     expect(result?.defaultExpandOperations).toBe(true)
+  })
+
+  it('maps interactive-oauth="false" to the interactiveOAuth opt-out, absent → undefined', () => {
+    expect(
+      buildRendererProps({ ...emptyAttrs, specUrl: '/x', interactiveOAuth: 'false' })?.interactiveOAuth,
+    ).toBe(false)
+    // Absent attribute leaves the prop undefined (defaults to interactive when Pro is present).
+    expect(
+      buildRendererProps({ ...emptyAttrs, specUrl: '/x' })?.interactiveOAuth,
+    ).toBeUndefined()
   })
 
   it('treats download-link="true" as boolean true and other strings as URL', () => {

@@ -127,6 +127,8 @@ export interface RawAttributes {
   schemaStyle: string | null
   /** `allow-try-it` attribute. */
   allowTryIt: string | null
+  /** `interactive-oauth` attribute — opt out of the Pro interactive OAuth flow. */
+  interactiveOAuth: string | null
   /** `default-expand-operations` attribute. */
   defaultExpandOperations: string | null
   /** `proxy-url` attribute. */
@@ -181,6 +183,9 @@ export function buildRendererProps(raw: RawAttributes): OmniSpecRendererProps | 
 
   const allowTryIt = parseBooleanAttr(raw.allowTryIt)
   if (allowTryIt !== undefined) props.allowTryIt = allowTryIt
+
+  const interactiveOAuth = parseBooleanAttr(raw.interactiveOAuth)
+  if (interactiveOAuth !== undefined) props.interactiveOAuth = interactiveOAuth
 
   const defaultExpand = parseBooleanAttr(raw.defaultExpandOperations)
   if (defaultExpand !== undefined) props.defaultExpandOperations = defaultExpand
