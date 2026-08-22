@@ -8,3 +8,8 @@ debug-storybook.log
 .claude
 .yalc/
 yalc.lock
+
+# Docusaurus docs site (website/)
+website/build/
+website/.docusaurus/
+*.tgz

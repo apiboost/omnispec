@@ -1,0 +1,8 @@
+# Isolates the docs site as its own pnpm workspace root so its Docusaurus
+# dependency tree stays self-contained and does not affect the library package
+# install. The Pages workflow installs and builds from this directory.
+packages:
+  - '.'
+allowBuilds:
+  '@swc/core': true
+  core-js: true
