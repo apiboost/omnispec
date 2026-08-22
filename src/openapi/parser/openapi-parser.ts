@@ -21,7 +21,7 @@ import type {
   OpenApiResponse,
   OpenApiComponents,
 } from '../types/openapi.types'
-import type { AuthScheme, ClientAuthMethod } from '../../core/types/auth.types'
+import type { AuthScheme } from '../../core/types/auth.types'
 
 interface OpenAPIDocument {
   openapi?: string
@@ -217,18 +217,6 @@ function extractSecuritySchemes(api: OpenAPIDocument, isSwagger2: boolean): Auth
 }
 
 /**
- * Maps the `x-tokenEndpointAuthMethod` vendor extension to the internal
- * client-authentication method: `client_secret_basic`→`'header'`,
- * `client_secret_post`→`'body'`. Any other/absent value returns undefined so
- * the UI falls back to its Authorization-Header default.
- */
-function mapTokenEndpointAuthMethod(value: string | undefined): ClientAuthMethod | undefined {
-  if (value === 'client_secret_basic') return 'header'
-  if (value === 'client_secret_post') return 'body'
-  return undefined
-}
-
-/**
  * Collects every `x-*` vendor-extension key from a raw object, verbatim. Returns
  * undefined when there are none so the model field stays absent. The free core
  * does not interpret these; Pro reads them for the interactive OAuth flow.
@@ -266,7 +254,6 @@ function convertSecurityScheme(id: string, def: SecuritySchemeObject): AuthSchem
         type: 'oauth2',
         displayName: id,
         description: def.description,
-        tokenEndpointAuthMethod: mapTokenEndpointAuthMethod(def['x-tokenEndpointAuthMethod']),
         // Raw scheme-level x-* passthrough (Pro interprets; free core does not).
         extensions: pickXExtensions(def as unknown as Record<string, unknown>),
         flows: def.flows ? Object.fromEntries(
@@ -277,9 +264,6 @@ function convertSecurityScheme(id: string, def: SecuritySchemeObject): AuthSchem
               tokenUrl: flow.tokenUrl,
               refreshUrl: flow.refreshUrl,
               scopes: flow.scopes ?? {},
-              // OmniSpec `x-flowVariables` — URL templating variables for this
-              // flow, substituted into the flow URLs at Try-It time (ABOSPEC-221).
-              variables: flow['x-flowVariables'],
               // Raw flow-level x-* passthrough (Pro interprets; free core does not).
               extensions: pickXExtensions(flow as unknown as Record<string, unknown>),
             },

@@ -10,4 +10,3 @@
 
 export { createProxyRouter } from './proxy-router'
 export type { ProxyRouterOptions } from './proxy-router'
-export { createOAuthCallbackRoute } from './oauth-callback'

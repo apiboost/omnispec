@@ -329,7 +329,7 @@ export function OpenApiSpec({
   const resolvedDownloadLink = resolveDownloadLink(downloadLink, spec)
 
   return (
-    <ConfigProvider config={{ proxyUrl, proxyHeaders, oauth, allowTryIt, layout, sidebarPosition, tryItLayout, defaultExpandOperations, displayMode: resolvedDisplayMode, schemaStyle: resolvedSchemaStyle, slots, proRenderers: pro?.renderers ?? new Map(), premiumThemingEnabled: pro?.premiumThemingEnabled ?? false, interactiveOAuthEnabled: pro?.interactiveOAuthEnabled ?? false, interactiveAuth: pro?.interactiveAuth, interactiveOAuth, specKey: `${parsedSpec.title}@${parsedSpec.version}`, tryItPersistTtl }}>
+    <ConfigProvider config={{ proxyUrl, proxyHeaders, oauth, allowTryIt, layout, sidebarPosition, tryItLayout, defaultExpandOperations, displayMode: resolvedDisplayMode, schemaStyle: resolvedSchemaStyle, slots, proRenderers: pro?.renderers ?? new Map(), premiumThemingEnabled: pro?.premiumThemingEnabled ?? false, interactiveAuth: pro?.interactiveAuth, interactiveOAuth, specKey: `${parsedSpec.title}@${parsedSpec.version}`, tryItPersistTtl }}>
       <ExpandProvider expandAll={allExpanded} expandGeneration={expandGeneration}>
         <ThemeProvider theme={theme}>
           <AuthProvider schemes={parsedSpec.securitySchemes}>

@@ -36,8 +36,6 @@ export interface ConfigContextValue {
   slots: SlotOverrides
   proRenderers: Map<string, ComponentType<BaseSpecProps>>
   premiumThemingEnabled: boolean
-  /** Pro capability: interactive OAuth 2.0 (PKCE) Get Token flow in the Authorize panel. */
-  interactiveOAuthEnabled: boolean
   /**
    * Interactive-auth components supplied by Pro, keyed by scheme type. When
    * present (and not opted out), `AuthPanel` renders these instead of the free
@@ -63,7 +61,6 @@ const defaultConfig: ConfigContextValue = {
   slots: {},
   proRenderers: new Map(),
   premiumThemingEnabled: false,
-  interactiveOAuthEnabled: false,
   interactiveOAuth: true,
 }
 

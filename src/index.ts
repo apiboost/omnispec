@@ -50,7 +50,6 @@ export type {
   AppliedAuthValue,
 } from './core/types/auth.types'
 export { authSchemeLabel } from './core/types/auth.types'
-export { OAuthCallback } from './core/components/Auth/OAuthCallback'
 export type {
   TryItRequest,
   TryItResponse,

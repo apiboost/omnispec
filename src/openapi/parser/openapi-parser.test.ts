@@ -54,41 +54,6 @@ describe('parseOpenApiSpec', () => {
     expect(apiKey!.name).toBe('X-API-Key')
   })
 
-  it('maps x-tokenEndpointAuthMethod on an OAuth2 scheme to a token-endpoint auth default', async () => {
-    const spec = {
-      openapi: '3.0.0',
-      info: { title: 'X', version: '1.0.0' },
-      paths: {},
-      components: {
-        securitySchemes: {
-          basicAuthScheme: {
-            type: 'oauth2',
-            'x-tokenEndpointAuthMethod': 'client_secret_basic',
-            flows: { clientCredentials: { tokenUrl: 'https://a/token', scopes: {} } },
-          },
-          postAuthScheme: {
-            type: 'oauth2',
-            'x-tokenEndpointAuthMethod': 'client_secret_post',
-            flows: { clientCredentials: { tokenUrl: 'https://a/token', scopes: {} } },
-          },
-          noneScheme: {
-            type: 'oauth2',
-            flows: { clientCredentials: { tokenUrl: 'https://a/token', scopes: {} } },
-          },
-        },
-      },
-    }
-    const result = await parseOpenApiSpec(spec)
-    const basic = result.securitySchemes.find((s) => s.id === 'basicAuthScheme')!
-    const post = result.securitySchemes.find((s) => s.id === 'postAuthScheme')!
-    const none = result.securitySchemes.find((s) => s.id === 'noneScheme')!
-
-    expect(basic.tokenEndpointAuthMethod).toBe('header')
-    expect(post.tokenEndpointAuthMethod).toBe('body')
-    // Absent extension → left undefined; OAuth2Auth applies the Authorization-Header default.
-    expect(none.tokenEndpointAuthMethod).toBeUndefined()
-  })
-
   it('carries raw oauth x-* extensions generically at scheme and flow level', async () => {
     const spec = {
       openapi: '3.0.0',
@@ -118,61 +83,27 @@ describe('parseOpenApiSpec', () => {
     expect(scheme.flows!.clientCredentials!.extensions?.['x-flowVariables']).toEqual({
       env: { default: 'dev', enum: ['dev', 'prod'] },
     })
-    // Additive: the existing typed fields remain populated until Phase C.
-    expect(scheme.tokenEndpointAuthMethod).toBe('header')
-    expect(scheme.flows!.clientCredentials!.variables).toBeDefined()
   })
 
-  it('reads x-flowVariables off an OAuth2 flow into the flow model (ABOSPEC-221)', async () => {
-    const spec = {
-      openapi: '3.0.0',
-      info: { title: 'X', version: '1.0.0' },
-      paths: {},
-      components: {
-        securitySchemes: {
-          envAuth: {
-            type: 'oauth2',
-            flows: {
-              clientCredentials: {
-                tokenUrl: 'https://{env}.auth.example.com/oauth/token',
-                scopes: {},
-                'x-flowVariables': {
-                  env: { default: 'dev', enum: ['dev', 'staging', 'prod'], description: 'Environment' },
-                },
-              },
-            },
-          },
-        },
-      },
-    }
-    const result = await parseOpenApiSpec(spec)
-    const scheme = result.securitySchemes.find((s) => s.id === 'envAuth')!
-    const flow = scheme.flows!.clientCredentials!
-    expect(flow.tokenUrl).toBe('https://{env}.auth.example.com/oauth/token')
-    expect(flow.variables).toEqual({
-      env: { default: 'dev', enum: ['dev', 'staging', 'prod'], description: 'Environment' },
-    })
-  })
-
-  it('parses x-flowVariables from the oauth-flow-variables fixture (ABOSPEC-221)', async () => {
+  it('carries fixture x-flowVariables raw in flow.extensions (ABOSPEC-221)', async () => {
     const result = await parseOpenApiSpec(oauthFlowVariablesSpec)
 
     const envAuth = result.securitySchemes.find((s) => s.id === 'envAuth')!
     const cc = envAuth.flows!.clientCredentials!
     expect(cc.tokenUrl).toBe('https://{env}.auth.example.com/oauth/token')
-    expect(cc.variables!.env).toEqual({
+    const ccVars = cc.extensions?.['x-flowVariables'] as Record<string, unknown>
+    expect(ccVars.env).toEqual({
       default: 'dev', enum: ['dev', 'staging', 'prod'], description: 'Deployment environment',
     })
 
-    // Relative templated token URL with two variables.
+    // Relative templated token URL with two variables — carried raw for Pro.
     const tenantAuth = result.securitySchemes.find((s) => s.id === 'tenantAuth')!
     const ac = tenantAuth.flows!.authorizationCode!
     expect(ac.tokenUrl).toBe('/{tenant}/oauth/token')
-    expect(Object.keys(ac.variables!)).toEqual(['env', 'tenant'])
-    expect(ac.variables!.tenant.default).toBe('acme')
+    expect(Object.keys(ac.extensions?.['x-flowVariables'] as object)).toEqual(['env', 'tenant'])
   })
 
-  it('leaves flow.variables undefined when x-flowVariables is absent (ABOSPEC-221)', async () => {
+  it('leaves flow.extensions undefined when no x-* is present (ABOSPEC-221)', async () => {
     const spec = {
       openapi: '3.0.0',
       info: { title: 'X', version: '1.0.0' },
@@ -188,7 +119,7 @@ describe('parseOpenApiSpec', () => {
     }
     const result = await parseOpenApiSpec(spec)
     const flow = result.securitySchemes.find((s) => s.id === 'plain')!.flows!.clientCredentials!
-    expect(flow.variables).toBeUndefined()
+    expect(flow.extensions).toBeUndefined()
   })
 
   it('converts an openIdConnect security scheme (ABOSPEC-215)', async () => {

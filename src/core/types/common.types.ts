@@ -26,8 +26,6 @@ export interface ServerOverride {
 export interface ProFeatures {
   renderers?: Map<string, ComponentType<BaseSpecProps>>
   premiumThemingEnabled?: boolean
-  /** Enables the interactive OAuth 2.0 Authorization Code + PKCE flow in the Try-It Authorize panel. */
-  interactiveOAuthEnabled?: boolean
   /**
    * Interactive-auth components (OAuth 2.0 "Get Token" flow, OIDC discovery)
    * supplied by Pro, keyed by security-scheme type. When present, `AuthPanel`

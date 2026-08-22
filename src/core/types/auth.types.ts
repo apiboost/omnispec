@@ -32,13 +32,6 @@ export function authSchemeLabel(type: AuthSchemeType): string {
   return AUTH_SCHEME_LABELS[type]
 }
 
-/**
- * Client-authentication method for the OAuth 2.0 token endpoint (RFC 6749 §2.3.1):
- * - `'header'` — `client_secret_basic`: credentials in the `Authorization: Basic` header.
- * - `'body'`   — `client_secret_post`: credentials in the form body.
- */
-export type ClientAuthMethod = 'header' | 'body'
-
 export interface AuthScheme {
   id: string
   type: AuthSchemeType
@@ -57,14 +50,6 @@ export interface AuthScheme {
    */
   openIdConnectUrl?: string
   /**
-   * Preselected token-endpoint client-authentication method, sourced from the
-   * `x-tokenEndpointAuthMethod` vendor extension on an OAuth2 scheme
-   * (`client_secret_basic`→`'header'`, `client_secret_post`→`'body'`). Absent
-   * when the extension is not present, in which case the UI defaults to
-   * `'header'` (Authorization Header).
-   */
-  tokenEndpointAuthMethod?: ClientAuthMethod
-  /**
    * Raw scheme-level vendor extensions (any `x-*` key from the security scheme),
    * carried verbatim. The free core does not interpret these; Pro reads them
    * (e.g. `x-tokenEndpointAuthMethod`) for the interactive OAuth flow.
@@ -79,32 +64,11 @@ export interface OAuth2Flows {
   password?: OAuth2Flow
 }
 
-/**
- * A single templating variable for an OAuth flow URL, sourced from the
- * `x-flowVariables` vendor extension (ABOSPEC-221). Mirrors the shape of an
- * OpenAPI Server Variable Object: a `default`, an optional `enum` of allowed
- * values (rendered as a dropdown), and an optional `description`.
- */
-export interface OAuth2FlowVariable {
-  default: string
-  enum?: string[]
-  description?: string
-}
-
 export interface OAuth2Flow {
   authorizationUrl?: string
   tokenUrl?: string
   refreshUrl?: string
   scopes: Record<string, string>
-  /**
-   * Templating variables for this flow's URLs, from the `x-flowVariables`
-   * OmniSpec extension. Values substitute into `{name}` placeholders in
-   * `tokenUrl` / `authorizationUrl` / `refreshUrl` (before relative-URL
-   * resolution against the selected server), letting one spec Try-It OAuth
-   * across multiple environments / tenants / a third-party IdP. See
-   * ABOSPEC-221 (fills the OAI/OpenAPI-Specification#551 gap).
-   */
-  variables?: Record<string, OAuth2FlowVariable>
   /**
    * Raw flow-level vendor extensions (any `x-*` key on the flow), carried
    * verbatim. The free core does not interpret these; Pro reads them (e.g.
