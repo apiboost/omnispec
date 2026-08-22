@@ -137,6 +137,9 @@ export type { AuthScheme, AuthSchemeType, OAuth2Flows, OAuth2Flow, OAuthConfig, 
 export type { InteractiveAuthProps, InteractiveAuthComponent, InteractiveAuthRegistry } from './types/interactive-auth.types'
 export { OAuth2AuthManual } from './components/Auth/OAuth2AuthManual'
 export { OpenIdConnectManual } from './components/Auth/OpenIdConnectManual'
+// Shared auth primitives Pro's interactive OAuth components compose against.
+export { SecretInput } from './components/Auth/SecretInput'
+export { authStyles } from './components/Auth/ApiKeyAuth'
 export type { TryItRequest, TryItResponse, ProxyRequest, ProxyResponse, TryItConfig } from './types/try-it.types'
 export type { SidebarNavItem, SidebarNavGroup, SidebarNavConfig, SidebarNavPlacement } from './types/sidebar-nav.types'
 export { isSidebarNavGroup } from './types/sidebar-nav.types'
