@@ -14,6 +14,7 @@ import type { SpecType, ContentFormat } from './spec-detection.types'
 import type { TryItRequest, TryItResponse } from './try-it.types'
 import type { SidebarNavConfig } from './sidebar-nav.types'
 import type { OAuthConfig } from './auth.types'
+import type { InteractiveAuthRegistry } from './interactive-auth.types'
 import type { SchemaStyle } from '../components/SchemaViewer/schema-style'
 
 /** Render-time server override entry (see `BaseSpecProps.servers`). */
@@ -27,6 +28,13 @@ export interface ProFeatures {
   premiumThemingEnabled?: boolean
   /** Enables the interactive OAuth 2.0 Authorization Code + PKCE flow in the Try-It Authorize panel. */
   interactiveOAuthEnabled?: boolean
+  /**
+   * Interactive-auth components (OAuth 2.0 "Get Token" flow, OIDC discovery)
+   * supplied by Pro, keyed by security-scheme type. When present, `AuthPanel`
+   * renders these instead of the free manual shells — unless the consumer opts
+   * out with `interactiveOAuth={false}`.
+   */
+  interactiveAuth?: InteractiveAuthRegistry
   /**
    * Unlocks the Pro-only `schemaStyle` presentations (`table`, `card`). Without
    * it, the Free tier renders only `lines` and `tokens`; requesting a Pro-only
@@ -54,6 +62,13 @@ export interface BaseSpecProps {
    * mounted elsewhere (e.g. `/swagger/oauth2-redirect.html`).
    */
   oauth?: OAuthConfig
+  /**
+   * Opt out of the interactive OAuth 2.0 "Get Token" flow (Pro). Defaults to
+   * `true` (interactive when Pro is installed). Set to `false` to force the
+   * manual token-paste experience even with Pro present. Has no effect without
+   * Pro — the free core is manual-paste regardless.
+   */
+  interactiveOAuth?: boolean
   allowTryIt?: boolean
   /** URL or true (uses spec URL) to show a download button. False/undefined hides it. */
   downloadLink?: string | boolean

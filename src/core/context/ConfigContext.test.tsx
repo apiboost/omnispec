@@ -38,3 +38,35 @@ describe('ConfigContext — schemaStyle', () => {
     expect(getByTestId('style').textContent).toBe('card')
   })
 })
+
+function InteractiveProbe() {
+  const { interactiveOAuth, interactiveAuth } = useConfig()
+  return (
+    <span data-testid="interactive">
+      {String(interactiveOAuth)}:{interactiveAuth?.oauth2 ? 'registered' : 'none'}
+    </span>
+  )
+}
+
+describe('ConfigContext — interactive auth', () => {
+  afterEach(cleanup)
+
+  it('defaults interactiveOAuth to true and interactiveAuth to undefined', () => {
+    const { getByTestId } = render(
+      <ConfigProvider config={{}}>
+        <InteractiveProbe />
+      </ConfigProvider>,
+    )
+    expect(getByTestId('interactive').textContent).toBe('true:none')
+  })
+
+  it('carries the consumer opt-out and a Pro-supplied interactiveAuth registry', () => {
+    const Stub = () => null
+    const { getByTestId } = render(
+      <ConfigProvider config={{ interactiveOAuth: false, interactiveAuth: { oauth2: Stub } }}>
+        <InteractiveProbe />
+      </ConfigProvider>,
+    )
+    expect(getByTestId('interactive').textContent).toBe('false:registered')
+  })
+})

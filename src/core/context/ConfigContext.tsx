@@ -13,6 +13,7 @@ import type { ComponentType, ReactNode } from 'react'
 import type { SlotOverrides } from '../types/theme.types'
 import type { BaseSpecProps } from '../types/common.types'
 import type { OAuthConfig } from '../types/auth.types'
+import type { InteractiveAuthRegistry } from '../types/interactive-auth.types'
 import type { SchemaStyle } from '../components/SchemaViewer/schema-style'
 import { DEFAULT_SCHEMA_STYLE } from '../components/SchemaViewer/schema-style'
 
@@ -37,6 +38,14 @@ export interface ConfigContextValue {
   premiumThemingEnabled: boolean
   /** Pro capability: interactive OAuth 2.0 (PKCE) Get Token flow in the Authorize panel. */
   interactiveOAuthEnabled: boolean
+  /**
+   * Interactive-auth components supplied by Pro, keyed by scheme type. When
+   * present (and not opted out), `AuthPanel` renders these instead of the free
+   * manual shells.
+   */
+  interactiveAuth?: InteractiveAuthRegistry
+  /** Consumer opt-out of the interactive OAuth flow. Defaults to true. */
+  interactiveOAuth: boolean
   /** Stable identity of the rendered spec (title@version) — used to namespace Try-It persistence. */
   specKey?: string
   /** Max age in seconds for persisted Try-It inputs; 0 disables persistence; undefined = no expiry. */
@@ -55,6 +64,7 @@ const defaultConfig: ConfigContextValue = {
   proRenderers: new Map(),
   premiumThemingEnabled: false,
   interactiveOAuthEnabled: false,
+  interactiveOAuth: true,
 }
 
 const ConfigContext = createContext<ConfigContextValue>(defaultConfig)
