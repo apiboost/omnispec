@@ -11,8 +11,10 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, within, fireEvent, cleanup } from '@testing-library/react'
 import { AuthProvider } from '@core/context/AuthContext'
+import { ConfigProvider } from '@core/context/ConfigContext'
 import { AuthPanel } from '@core/components/Auth/AuthPanel'
 import type { AuthScheme } from '@core/types/auth.types'
+import type { InteractiveAuthProps } from '@core/types/interactive-auth.types'
 
 const apiKeyScheme: AuthScheme = {
   id: 'ApiKeyAuth', type: 'apiKey', displayName: 'ApiKeyAuth', in: 'header', name: 'X-API-Key',
@@ -78,5 +80,39 @@ describe('AuthPanel scheme tabs', () => {
     expect(within(apiKeyTab).getByTitle(/authorized/i)).toBeInTheDocument()
     // The other tab is not marked authorized.
     expect(within(screen.getByRole('tab', { name: /OAuth2/ })).queryByTitle(/authorized/i)).toBeNull()
+  })
+})
+
+describe('AuthPanel — interactive vs manual resolution', () => {
+  afterEach(cleanup)
+
+  // A stand-in for Pro's interactive OAuth component.
+  const StubInteractive = (_props: InteractiveAuthProps) => <div>INTERACTIVE-OAUTH</div>
+
+  const renderWithConfig = (config: Parameters<typeof ConfigProvider>[0]['config']) =>
+    render(
+      <AuthProvider schemes={[oauthScheme]}>
+        <ConfigProvider config={config}>
+          <AuthPanel schemes={[oauthScheme]} />
+        </ConfigProvider>
+      </AuthProvider>,
+    )
+
+  it('renders the free manual shell when no interactiveAuth is supplied', () => {
+    renderWithConfig({})
+    expect(screen.getByPlaceholderText('Access token')).toBeInTheDocument()
+    expect(screen.queryByText('INTERACTIVE-OAUTH')).not.toBeInTheDocument()
+  })
+
+  it('renders the Pro interactive component when supplied via interactiveAuth', () => {
+    renderWithConfig({ interactiveAuth: { oauth2: StubInteractive } })
+    expect(screen.getByText('INTERACTIVE-OAUTH')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Access token')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the manual shell when the consumer opts out (interactiveOAuth=false)', () => {
+    renderWithConfig({ interactiveAuth: { oauth2: StubInteractive }, interactiveOAuth: false })
+    expect(screen.getByPlaceholderText('Access token')).toBeInTheDocument()
+    expect(screen.queryByText('INTERACTIVE-OAUTH')).not.toBeInTheDocument()
   })
 })

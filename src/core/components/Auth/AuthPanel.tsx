@@ -13,14 +13,16 @@ import { css } from '../../styles/css'
 import type { AuthScheme, AppliedAuthValue } from '../../types/auth.types'
 import { authSchemeLabel } from '../../types/auth.types'
 import { useAuth } from '../../context/AuthContext'
+import { useConfig } from '../../context/ConfigContext'
+import type { InteractiveAuthComponent } from '../../types/interactive-auth.types'
 import { Tabs } from '../common/Tabs'
 import type { TabItem } from '../common/Tabs'
 import { Icon } from '../common/Icon'
 import { ApiKeyAuth } from './ApiKeyAuth'
 import { BearerAuth } from './BearerAuth'
 import { BasicAuth } from './BasicAuth'
-import { OAuth2Auth } from './OAuth2Auth'
-import { OpenIdConnectAuth } from './OpenIdConnectAuth'
+import { OAuth2AuthManual } from './OAuth2AuthManual'
+import { OpenIdConnectManual } from './OpenIdConnectManual'
 
 interface AuthPanelProps {
   schemes: AuthScheme[]
@@ -32,13 +34,22 @@ interface SchemeFormProps {
   scheme: AuthScheme
   onApply: (value: AppliedAuthValue) => void
   onRemove: (schemeId: string) => void
-  applied?: boolean
+  applied: boolean
   appliedValue?: AppliedAuthValue
   serverUrl?: string
 }
 
-/** Renders the form for a single scheme, or null for a type we can't render. */
-function renderSchemeForm(props: SchemeFormProps): ReactElement | null {
+/**
+ * Renders the form for a single scheme, or null for a type we can't render.
+ * The `oauth2`/`openIdConnect` components are resolved by the caller: the free
+ * manual shell by default, or a Pro-supplied interactive component when present
+ * and not opted out.
+ */
+function renderSchemeForm(
+  props: SchemeFormProps,
+  Oauth2Component: InteractiveAuthComponent,
+  OpenIdConnectComponent: InteractiveAuthComponent,
+): ReactElement | null {
   switch (props.scheme.type) {
     case 'apiKey':
       return <ApiKeyAuth {...props} />
@@ -47,9 +58,9 @@ function renderSchemeForm(props: SchemeFormProps): ReactElement | null {
     case 'http-basic':
       return <BasicAuth {...props} />
     case 'oauth2':
-      return <OAuth2Auth {...props} />
+      return <Oauth2Component {...props} />
     case 'openIdConnect':
-      return <OpenIdConnectAuth {...props} />
+      return <OpenIdConnectComponent {...props} />
     default:
       return null
   }
@@ -57,8 +68,18 @@ function renderSchemeForm(props: SchemeFormProps): ReactElement | null {
 
 export function AuthPanel({ schemes, serverUrl }: AuthPanelProps) {
   const { appliedAuth, applyAuth, removeAuth } = useAuth()
+  const { interactiveAuth, interactiveOAuth } = useConfig()
 
   if (schemes.length === 0) return null
+
+  // Interactive OAuth/OIDC is a Pro feature supplied via `interactiveAuth`. Use
+  // it when present and the consumer hasn't opted out (`interactiveOAuth={false}`);
+  // otherwise fall back to the free manual (token-paste) shell.
+  const useInteractive = interactiveOAuth !== false
+  const Oauth2Component: InteractiveAuthComponent =
+    (useInteractive && interactiveAuth?.oauth2) || OAuth2AuthManual
+  const OpenIdConnectComponent: InteractiveAuthComponent =
+    (useInteractive && interactiveAuth?.openIdConnect) || OpenIdConnectManual
 
   const buildProps = (scheme: AuthScheme): SchemeFormProps => ({
     scheme,
@@ -73,7 +94,7 @@ export function AuthPanel({ schemes, serverUrl }: AuthPanelProps) {
   // Only schemes we can actually render become forms; unknown types are dropped
   // so they never surface as an empty tab.
   const renderable = schemes
-    .map((scheme) => ({ scheme, form: renderSchemeForm(buildProps(scheme)) }))
+    .map((scheme) => ({ scheme, form: renderSchemeForm(buildProps(scheme), Oauth2Component, OpenIdConnectComponent) }))
     .filter((entry): entry is { scheme: AuthScheme; form: ReactElement } => entry.form !== null)
 
   if (renderable.length === 0) return null
