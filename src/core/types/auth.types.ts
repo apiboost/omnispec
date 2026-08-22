@@ -64,6 +64,12 @@ export interface AuthScheme {
    * `'header'` (Authorization Header).
    */
   tokenEndpointAuthMethod?: ClientAuthMethod
+  /**
+   * Raw scheme-level vendor extensions (any `x-*` key from the security scheme),
+   * carried verbatim. The free core does not interpret these; Pro reads them
+   * (e.g. `x-tokenEndpointAuthMethod`) for the interactive OAuth flow.
+   */
+  extensions?: Record<string, unknown>
 }
 
 export interface OAuth2Flows {
@@ -99,6 +105,13 @@ export interface OAuth2Flow {
    * ABOSPEC-221 (fills the OAI/OpenAPI-Specification#551 gap).
    */
   variables?: Record<string, OAuth2FlowVariable>
+  /**
+   * Raw flow-level vendor extensions (any `x-*` key on the flow), carried
+   * verbatim. The free core does not interpret these; Pro reads them (e.g.
+   * `x-flowVariables`) for the interactive OAuth flow. Kept at the flow level
+   * because `x-flowVariables` is per-flow.
+   */
+  extensions?: Record<string, unknown>
 }
 
 /** Configuration for the interactive OAuth 2.0 Try-It flow. */

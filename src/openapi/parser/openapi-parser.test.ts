@@ -89,6 +89,40 @@ describe('parseOpenApiSpec', () => {
     expect(none.tokenEndpointAuthMethod).toBeUndefined()
   })
 
+  it('carries raw oauth x-* extensions generically at scheme and flow level', async () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'X', version: '1.0.0' },
+      paths: {},
+      components: {
+        securitySchemes: {
+          envAuth: {
+            type: 'oauth2',
+            'x-tokenEndpointAuthMethod': 'client_secret_basic',
+            flows: {
+              clientCredentials: {
+                tokenUrl: 'https://{env}.auth.example.com/oauth/token',
+                scopes: {},
+                'x-flowVariables': { env: { default: 'dev', enum: ['dev', 'prod'] } },
+              },
+            },
+          },
+        },
+      },
+    }
+    const result = await parseOpenApiSpec(spec)
+    const scheme = result.securitySchemes.find((s) => s.id === 'envAuth')!
+    // Scheme-level raw passthrough (interpretation happens in Pro).
+    expect(scheme.extensions?.['x-tokenEndpointAuthMethod']).toBe('client_secret_basic')
+    // Flow-level raw passthrough (per-flow x-flowVariables cannot live in a scheme map).
+    expect(scheme.flows!.clientCredentials!.extensions?.['x-flowVariables']).toEqual({
+      env: { default: 'dev', enum: ['dev', 'prod'] },
+    })
+    // Additive: the existing typed fields remain populated until Phase C.
+    expect(scheme.tokenEndpointAuthMethod).toBe('header')
+    expect(scheme.flows!.clientCredentials!.variables).toBeDefined()
+  })
+
   it('reads x-flowVariables off an OAuth2 flow into the flow model (ABOSPEC-221)', async () => {
     const spec = {
       openapi: '3.0.0',

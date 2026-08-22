@@ -228,6 +228,19 @@ function mapTokenEndpointAuthMethod(value: string | undefined): ClientAuthMethod
   return undefined
 }
 
+/**
+ * Collects every `x-*` vendor-extension key from a raw object, verbatim. Returns
+ * undefined when there are none so the model field stays absent. The free core
+ * does not interpret these; Pro reads them for the interactive OAuth flow.
+ */
+function pickXExtensions(obj: Record<string, unknown>): Record<string, unknown> | undefined {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (key.startsWith('x-')) out[key] = value
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 function convertSecurityScheme(id: string, def: SecuritySchemeObject): AuthScheme | null {
   switch (def.type) {
     case 'apiKey':
@@ -254,6 +267,8 @@ function convertSecurityScheme(id: string, def: SecuritySchemeObject): AuthSchem
         displayName: id,
         description: def.description,
         tokenEndpointAuthMethod: mapTokenEndpointAuthMethod(def['x-tokenEndpointAuthMethod']),
+        // Raw scheme-level x-* passthrough (Pro interprets; free core does not).
+        extensions: pickXExtensions(def as unknown as Record<string, unknown>),
         flows: def.flows ? Object.fromEntries(
           Object.entries(def.flows).map(([flowType, flow]) => [
             flowType,
@@ -265,6 +280,8 @@ function convertSecurityScheme(id: string, def: SecuritySchemeObject): AuthSchem
               // OmniSpec `x-flowVariables` — URL templating variables for this
               // flow, substituted into the flow URLs at Try-It time (ABOSPEC-221).
               variables: flow['x-flowVariables'],
+              // Raw flow-level x-* passthrough (Pro interprets; free core does not).
+              extensions: pickXExtensions(flow as unknown as Record<string, unknown>),
             },
           ]),
         ) : undefined,
