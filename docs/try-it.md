@@ -1,3 +1,10 @@
+---
+id: try-it
+title: Try It & Code Samples
+sidebar_label: Try It
+description: Send live API requests from your docs with @apiboost/omnispec — direct or proxied, parameter input, file uploads, six-language code samples, and manual OAuth token paste. Interactive OAuth (PKCE) Get Token is an Apiboost OmniSpec Pro feature.
+---
+
 # Try It Now
 
 The Try It feature allows users to send live API requests directly from the documentation. It supports all standard HTTP methods, parameter input, request body editing, and displays the response with syntax highlighting.
@@ -258,90 +265,33 @@ Root-level `security` from the spec applies to every operation unless the
 operation declares its own `security` (an explicit empty array `security: []`
 marks the operation as public).
 
-## OAuth 2.0 Authorization Code with PKCE (Pro)
+## OAuth 2.0 Flows
 
-> **Pro feature.** The interactive **Get Token** flow requires
-> [`@apiboost/omnispec-pro`](https://www.apiboost.com) — it is enabled
-> automatically when you render through the Pro package (or pass
-> `pro={proFeatures}`). On the Free tier the Authorize panel shows the OAuth
-> flow details and accepts a manually pasted access token; the Get Token
-> button is omitted. OpenID Connect (`openIdConnect`) schemes build on this
-> flow and are likewise Pro for the interactive Get Token — see
-> [OpenID Connect](#openid-connect-pro) below.
+For `oauth2` and `openIdConnect` security schemes, the Authorize panel always
+displays the declared OAuth flow details (flow type, authorization/token URLs,
+and scopes) and accepts a **manually pasted access token**, which is applied
+as a `Bearer` Authorization header on Try-It requests. This works on every
+tier and requires no extra configuration.
 
-For `oauth2` security schemes that declare an `authorizationCode` flow, the
-Authorization panel offers an interactive **Get Token** flow alongside manual
-token paste. Clicking **Get Token** opens the provider's consent page in a
-popup, sends PKCE parameters (`code_challenge` / `code_challenge_method=S256`
-per RFC 7636) plus a CSRF `state`, receives the authorization code on a
-same-origin callback page, and exchanges it for an access token that is
-applied as a `Bearer` Authorization header — exactly as if the token had been
-pasted manually.
+:::info[Pro]
 
-### 1. Serve the callback page
+The interactive **Get Token** flow — Authorization Code with PKCE (RFC 7636)
+and Client Credentials — requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**.
+Pro adds a **Get Token** button that runs the flow end to end (consent popup,
+`state`/PKCE, code-for-token exchange) and applies the result automatically. In
+the free core, the Authorize panel shows the same flow details and you paste an
+access token obtained out of band.
 
-The popup must land on a callback page served from the **same origin** as
-your documentation page. The package ships it in three interchangeable forms:
+:::
 
-```ts
-// a) Express route (recommended when you already mount the Try-It proxy)
-import { createOAuthCallbackRoute } from '@apiboost/omnispec-pro/server'
-app.get('/oauth2-redirect.html', createOAuthCallbackRoute())
-```
-
-```text
-b) Static file — copy node_modules/@apiboost/omnispec/oauth2-redirect.html
-   into your static hosting (any path works, e.g. /swagger/oauth2-redirect.html)
-```
-
-```tsx
-// c) SPA route — render the component on your callback path
-import { OAuthCallback } from '@apiboost/omnispec'
-<Route path="/oauth2-redirect.html" element={<OAuthCallback />} />
-```
-
-### 2. Register the redirect URI with your identity provider
-
-OAuth servers only redirect to exactly-registered URIs. Register the full
-callback URL (e.g. `https://portal.example.com/oauth2-redirect.html`) as an
-allowed redirect URI for the OAuth client your developers will use.
-
-### 3. Point the renderer at the callback (only if non-default)
-
-The redirect URI defaults to `{origin}/oauth2-redirect.html`. If your
-callback lives elsewhere, set `oauth.redirectUri` (relative paths resolve
-against the current origin):
-
-```tsx
-<OmniSpecRenderer
-  spec={specUrl}
-  oauth={{ redirectUri: '/swagger/oauth2-redirect.html' }}
-/>
-```
-
-### Token exchange and CORS
-
-The code-for-token exchange posts to the flow's `tokenUrl` directly from the
-browser. If the token endpoint does not allow cross-origin requests, the
-exchange automatically falls back through the configured Try-It proxy
-(`proxyUrl`) — if your proxy uses an `allowedDomains` allowlist, add the
-token endpoint's host. Entering a **Client Secret** makes the client
-confidential and routes the exchange through the proxy (note: the secret is
-typed in the browser, so treat this as a developer-tool convenience for test
-clients, not a way to protect production secrets). How the credentials are
-presented at the token endpoint is controlled by the **Client authentication**
-toggle described below.
-
-### OpenID Connect (Pro)
+### OpenID Connect
 
 An `openIdConnect` security scheme declares only a discovery URL
-(`openIdConnectUrl`) rather than explicit flow URLs. When the Authorize panel
-opens, OmniSpec fetches the OpenID configuration from that URL (directly, with
-the same Try-It proxy CORS fallback the token exchange uses), then maps the
-discovered `authorization_endpoint`, `token_endpoint`, and `scopes_supported`
-into the OAuth2 flow model. The panel then renders **identically to an
-`oauth2` scheme** — the Authorization Code + PKCE (S256) flow — with the
-`openid` scope requested by default.
+(`openIdConnectUrl`) rather than explicit flow URLs. OmniSpec fetches the
+OpenID configuration from that URL and maps the discovered
+`authorization_endpoint`, `token_endpoint`, and `scopes_supported` into the
+OAuth2 flow model, so the panel renders identically to an equivalent `oauth2`
+scheme:
 
 ```yaml
 components:
@@ -351,14 +301,20 @@ components:
       openIdConnectUrl: https://idp.example.com/.well-known/openid-configuration
 ```
 
-- **Pro:** the interactive **Get Token** flow (same PKCE flow as `oauth2`).
 - **Free and Pro:** the discovered flow details plus manual access-token paste.
 - **Discovery failure** (unreachable IdP, malformed document, or an endpoint on
   a disallowed origin) degrades gracefully to a themed error and manual token
   paste — the panel never breaks.
-- If your Try-It proxy uses an `allowedDomains` allowlist, add the discovery
-  host **and** the discovered `authorization_endpoint` / `token_endpoint` hosts.
-- Decoding or displaying `id_token` claims is out of scope.
+
+:::info[Pro]
+
+The interactive **Get Token** flow over an OpenID Connect scheme (same
+Authorization Code + PKCE flow as `oauth2`) requires
+**[Apiboost OmniSpec Pro](https://www.apiboost.com)**. In the free core,
+OpenID Connect schemes render the discovered flow details with manual token
+paste.
+
+:::
 
 ### Multi-environment token endpoints (relative flow URLs)
 
@@ -395,7 +351,7 @@ default server is `/`).
 
 When the environment isn't distinguished by the server URL — for example a
 third-party IdP whose host varies by environment (`https://{env}.auth.example.com`)
-or a per-tenant token path — declare the [`x-flowVariables`](vendor-extensions.md#x-flowvariables)
+or a per-tenant token path — declare the [`x-flowVariables`](vendor-extensions.md)
 extension on the flow. Each variable renders one control in the Authorize panel
 (a dropdown when it lists an `enum`, otherwise a text input), placed just under
 the **Token URL**, and its value substitutes into the `{name}` placeholders:
@@ -419,74 +375,25 @@ Substitution runs **before** the relative-URL resolution described above, so the
 two compose: a templated *relative* URL like `/{tenant}/oauth/token` first has
 `{tenant}` filled in, then resolves against the selected server. The displayed
 Token URL reflects the substituted, resolved value, and your selection persists
-across close/reopen. This works on the Free tier — the interactive **Get Token**
-that consumes the resulting URL remains Pro.
+across close/reopen. This is spec-authored behavior that works on every tier;
+the interactive **Get Token** that consumes the resulting URL is a Pro feature
+(see below).
 
-### Client authentication method (Authorization Header vs Request Body)
+### Interactive Get Token (Pro)
 
-Whenever an interactive **Get Token** flow is available for a confidential
-client (Client Credentials, or Authorization Code with a client secret), the
-Authorize panel shows a two-option **Client authentication** toggle — the same
-choice RFC 6749 §2.3.1 defines for confidential clients:
+:::info[Pro]
 
-- **Authorization Header** (`client_secret_basic`, the default) — the client
-  id and secret are sent in an `Authorization: Basic base64(id:secret)` header
-  (each value URL-encoded before joining and base64-encoding, per RFC 6749
-  Appendix B). The request body carries only the non-credential parameters
-  (`grant_type`, `scope`, and for the authorization-code grant `code`,
-  `redirect_uri`, and `code_verifier`).
-- **Request Body** (`client_secret_post`) — the client id and secret are sent
-  as `client_id` / `client_secret` form fields in the request body.
+The interactive **Get Token** flow requires
+**[Apiboost OmniSpec Pro](https://www.apiboost.com)**. Pro runs the OAuth
+exchange from inside the Authorize panel and adds the controls that drive it —
+a client-authentication toggle (`client_secret_basic` vs `client_secret_post`),
+per-scope selection checkboxes, Client Credentials support, and hardened flow
+security (PKCE with `S256`, `state` validation, origin-locked callback
+`postMessage`, ephemeral `sessionStorage` code verifier, and a secure-context
+requirement). In the free core, the Authorize panel shows the same flow details
+and accepts a manually pasted access token.
 
-The default is **Authorization Header** unless the security scheme sets the
-[`x-tokenEndpointAuthMethod`](vendor-extensions.md#x-tokenendpointauthmethod)
-extension. Your selection is persisted alongside the client id, secret, and
-scope selection, so it is restored when you reopen the Authorize panel. When
-the exchange is proxied, the chosen method is forwarded verbatim — in header
-mode the `Authorization: Basic …` header is included in the proxied request to
-the token endpoint. On the Free tier (no interactive Get Token) the toggle is
-not shown.
-
-### Client Credentials flow
-
-For `oauth2` schemes that declare a `clientCredentials` flow, the Authorize
-panel shows a **Get Token** button beneath the Client ID / Client Secret
-fields (also Pro-gated). Unlike the Authorization Code flow, this is a direct
-machine-to-machine exchange — no popup or user login. Clicking it POSTs
-`grant_type=client_credentials` (with the client id, secret, and the flow's
-declared scopes) to the token URL and applies the returned access token as a
-`Bearer` header.
-
-Because the request carries a client secret, it routes through the Try-It
-proxy whenever `proxyUrl` is configured (and only posts directly as a
-developer-tool convenience when no proxy is set). The secret is entered in
-the browser, so treat this as a testing aid for non-production clients. This
-matches the "Get Token" that Swagger UI and RapiDoc provide for the client
-credentials grant.
-
-### Scope selection
-
-When Get Token is available for a flow, each scope the flow declares renders
-as a checkbox (all selected by default). Only the checked scopes are sent as
-the `scope` parameter of the token request, so you can request a
-least-privilege token — deselect everything to omit the parameter entirely
-and let the server apply its default scopes. The Authorization Code and
-Client Credentials flows keep independent selections. On the Free tier the
-scope list stays read-only.
-
-### Security behavior
-
-- PKCE is on by default; `oauth={{ usePkce: false }}` reverts to a plain
-  authorization-code flow for legacy servers.
-- The `state` parameter is validated before the exchange; a mismatch aborts
-  the flow.
-- The callback posts back with an origin-locked `postMessage` (never `*`),
-  and messages from foreign origins are ignored.
-- The code verifier lives in `sessionStorage` only for the duration of the
-  flow and is cleared after the exchange.
-- The flow requires a secure context (HTTPS or `localhost`) because it uses
-  WebCrypto; elsewhere the panel shows an explanatory error and manual token
-  paste remains available.
+:::
 
 ## Multiple security schemes
 
@@ -581,7 +488,7 @@ You can listen to Try It requests and responses:
 |------|------|---------|-------------|
 | `allowTryIt` | `boolean` | `true` | Enable or disable the Try It panel |
 | `proxyUrl` | `string` | `undefined` | Backend proxy URL. When set, requests route through the proxy instead of going directly to the API |
-| `oauth` | `OAuthConfig` | `undefined` | **(Pro)** Interactive OAuth 2.0 (PKCE) flow settings: `redirectUri` (defaults to `{origin}/oauth2-redirect.html`) and `usePkce` (defaults to `true`) |
+| `oauth` | `OAuthConfig` | `undefined` | **(Pro)** Configures the interactive OAuth 2.0 (PKCE) Get Token flow. Requires [Apiboost OmniSpec Pro](https://www.apiboost.com); the free core uses manual token paste |
 | `onTryItRequest` | `(request: TryItRequest) => void` | — | Callback fired before a request is sent |
 | `onTryItResponse` | `(response: TryItResponse) => void` | — | Callback fired after a response is received |
 
@@ -604,22 +511,18 @@ Code samples automatically include:
 - Path and query parameters from the parameter form
 - Request body from the editor or schema-generated defaults
 
-### Custom Code Samples (x-codeSamples)
+### Custom Code Samples (`x-codeSamples`)
 
-You can provide custom code samples per operation using the `x-codeSamples` vendor extension. Custom samples override auto-generated ones for matching languages:
+:::info[Pro]
 
-```yaml
-paths:
-  /pets:
-    get:
-      x-codeSamples:
-        - lang: JavaScript
-          label: Node.js SDK
-          source: |
-            const pets = await client.pets.list();
-```
+Overriding the auto-generated snippets with your own per-operation samples via
+the `x-codeSamples` vendor extension requires
+**[Apiboost OmniSpec Pro](https://www.apiboost.com)**. In the free core, the
+six auto-generated language samples above are always shown.
 
-See the [Vendor Extensions](vendor-extensions.md) guide for full details.
+:::
+
+See the [Vendor Extensions](vendor-extensions.md) guide for details.
 
 ### SOAP Code Samples
 

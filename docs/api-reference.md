@@ -18,6 +18,8 @@ All spec renderers accept these common props:
 | `defaultExpandOperations` | `boolean` | `false` | Expand all operations on initial render |
 | `navigationMode` | `'grouped' \| 'segmented'` | auto | `grouped` renders all operations on one page. `segmented` renders one at a time via internal routing. Auto-selects based on operation count (>50 → segmented) |
 | `displayMode` | `'compact' \| 'reference'` | `'compact'` | Compact renders operations as collapsible cards. Reference renders a Redocly-style three-panel layout with sticky samples/Try-It panel |
+| `schemaStyle` | `'lines' \| 'tokens' \| 'table' \| 'card'` | `'lines'` | Presentation style for the schema/property tree. `lines` and `tokens` are Free; `table` and `card` are Pro (fall back to `lines` in the free core). See [Configuration](./configuration.md#schema-style-schemastyle) |
+| `tryItPersistTtl` | `number` | `undefined` | Max age in seconds for persisted Try-It inputs (params, bodies, headers) in localStorage. `0` disables persistence; omit for no expiry. Auth credentials are unaffected (sessionStorage, tab lifetime only) |
 | `externalRefOrigins` | `string[]` | `undefined` | Origins allowed for external `$ref` resolution. Same-origin is always allowed. See [External Refs](./external-refs.md) |
 | `serverUrl` | `string` | `undefined` | Forces a single base URL for Try-It and code samples, overriding the spec's `servers`. Highest precedence. See [Configuration](./configuration.md#server-url-override) |
 | `servers` | `{ url: string; description?: string }[]` | `undefined` | Replaces the spec's server list in the selector. Ignored when `serverUrl` is set |
@@ -25,7 +27,21 @@ All spec renderers accept these common props:
 | `onSpecLoaded` | `(info: SpecLoadedInfo) => void` | — | Fired when the spec finishes parsing. Receives title, version, and type |
 | `onTryItRequest` | `(request: TryItRequest) => void` | — | Fired before a Try-It request is sent |
 | `onTryItResponse` | `(response: TryItResponse) => void` | — | Fired after a Try-It response is received |
+| `oauth` | `OAuthConfig` | `undefined` | Configures the interactive OAuth Try-It flow (**Pro**). See below |
+| `pro` | `ProFeatures` | `undefined` | Activates Pro capabilities (**Pro**). See below |
 | `className` | `string` | — | CSS class applied to the root container |
+
+### `pro` (Pro)
+
+:::info[Pro]
+The `pro` prop accepts an **[Apiboost OmniSpec Pro](https://apiboost.com)** capability object that unlocks Pro renderers (GraphQL, SOAP/WSDL, gRPC), full theme-token white-labeling, the `table`/`card` schema styles, and the interactive OAuth Try-It flow. In the free core it is unset and these features are unavailable. The pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` sets it for you; the deprecated `<ProProvider>` is not the current pattern. Pro configuration syntax is documented in the Pro docs.
+:::
+
+### `oauth` (Pro)
+
+:::info[Pro]
+The `oauth` prop (`OAuthConfig`) drives the interactive OAuth "Get Token" Try-It flow — Authorization Code + PKCE and OpenID Connect discovery — requiring **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, OAuth2 flow details are shown and tokens are pasted manually. The `OAuthConfig` shape and setup are documented in the Pro docs.
+:::
 
 ### ThemeConfig
 
@@ -47,11 +63,12 @@ See [Theming Guide](./theming.md) for all tokens and the full auto/controlled mo
 
 ```typescript
 interface SlotOverrides {
-  header?: ReactNode       // Above the entire renderer
-  footer?: ReactNode       // Below the entire renderer
+  header?: ReactNode         // Above the entire renderer
+  footer?: ReactNode         // Below the entire renderer
   sidebarHeader?: ReactNode  // Top of sidebar, above search/nav
   sidebarFooter?: ReactNode  // Bottom of sidebar, below nav
-  logo?: ReactNode         // Logo element
+  contentHeader?: ReactNode  // Above the main content area (e.g. breadcrumbs)
+  logo?: ReactNode           // Logo element
 }
 ```
 
@@ -96,7 +113,7 @@ import { OpenApiSpec } from '@apiboost/omnispec/openapi'
 - Component/schema browser
 - Search and filter endpoints
 
-**Supported versions**: Swagger 2.0, OpenAPI 3.0.0 — 3.0.x
+**Supported versions**: Swagger 2.0, OpenAPI 3.0.x, and OpenAPI 3.1
 
 ---
 
@@ -129,6 +146,10 @@ import { AsyncApiSpec } from '@apiboost/omnispec/asyncapi'
 
 ## GraphqlSpec
 
+:::info[Pro]
+The GraphQL renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, GraphQL specs display a styled upgrade prompt.
+:::
+
 Renders GraphQL schemas from SDL strings or introspection results.
 
 ```tsx
@@ -157,6 +178,10 @@ import { GraphqlSpec } from '@apiboost/omnispec/graphql'
 
 ## SoapSpec
 
+:::info[Pro]
+The SOAP/WSDL renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, WSDL specs display a styled upgrade prompt.
+:::
+
 Renders WSDL 1.1 / SOAP API specifications.
 
 ```tsx
@@ -183,6 +208,10 @@ import { SoapSpec } from '@apiboost/omnispec/soap'
 ---
 
 ## GrpcSpec
+
+:::info[Pro]
+The gRPC/Protobuf renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, `.proto` specs display a styled upgrade prompt.
+:::
 
 Renders gRPC services from Protocol Buffer (`.proto`) files.
 

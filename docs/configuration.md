@@ -158,21 +158,15 @@ section — across every spec type.
 | `table` | A two-column layout — the name (and its required marker) on the left, and the type, description, enum, and nested children on the right (Redocly-style, the most scannable). | Pro |
 | `card` | The schema is wrapped in an enclosed card with row hover and a soft accent rail on nested objects. | Pro |
 
-**Tier gating.** `lines` and `tokens` are available to every tier. `table` and
-`card` require the Pro **`advancedSchemaStyles`** capability (enabled
-automatically when you render with `@apiboost/omnispec-pro`, or pass
-`pro={proFeatures}`). If `table` or `card` is requested without Pro, the renderer
-**gracefully falls back to `lines`** — no error is thrown and nothing is logged.
-This means a spec authored for a Pro portal degrades cleanly when viewed in a
-Free build.
+**Tier gating.** `lines` and `tokens` are available in the free core.
+
+:::info[Pro]
+The `table` and `card` schema styles require **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, requesting `table` or `card` **gracefully falls back to `lines`** — no error is thrown and nothing is logged, so a spec authored for a Pro portal degrades cleanly when viewed in a free build.
+:::
 
 ```tsx
-// Free build: renders as `lines` (silent fallback)
+// Free core: renders as `lines` (silent fallback)
 import { OmniSpecRenderer } from '@apiboost/omnispec'
-<OmniSpecRenderer spec={url} schemaStyle="card" />
-
-// Pro build: renders as `card`
-import { OmniSpecRenderer } from '@apiboost/omnispec-pro'
 <OmniSpecRenderer spec={url} schemaStyle="card" />
 ```
 
@@ -376,6 +370,19 @@ Add version info or links below the nav tree:
 />
 ```
 
+### Content Header
+
+Inject content above the main content area — breadcrumbs, an environment banner, or a page title:
+
+```tsx
+<OpenApiSpec
+  spec={url}
+  slots={{
+    contentHeader: <Breadcrumbs items={['Docs', 'Pet Store API']} />,
+  }}
+/>
+```
+
 ### Header and Footer
 
 Wrap the entire renderer with your app chrome:
@@ -397,10 +404,7 @@ All options compose freely:
 ```tsx
 <OpenApiSpec
   spec="https://api.example.com/openapi.yaml"
-  theme={{
-    base: 'dark',
-    overrides: { '--omnispec-color-primary': '#8B5CF6' },
-  }}
+  theme={{ base: 'dark' }}
   layout="sidebar"
   sidebarPosition="left"
   tryItLayout="panel"

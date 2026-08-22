@@ -1,3 +1,10 @@
+---
+id: external-refs
+title: External $ref Resolution
+sidebar_label: External $ref
+description: Resolve external $ref pointers across files and origins in @apiboost/omnispec — same-origin auto-resolution, the externalRefOrigins allow-list, and the SSRF guard and fetch limits (5 hops, 20 files, 5s, 2MB).
+---
+
 # External $ref Resolution
 
 OpenAPI specs often split schemas across multiple files using `$ref` pointers. The renderer handles internal refs (`#/components/schemas/Pet`) automatically. External refs — paths or URLs pointing to a separate file — require a small amount of configuration when the referenced file lives on a different origin.

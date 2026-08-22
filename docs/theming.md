@@ -1,6 +1,22 @@
+---
+id: theming
+title: Theming & Customization
+sidebar_label: Theming
+description: Theme @apiboost/omnispec with light/dark/auto modes and --omnispec-* CSS-variable overrides. The theme.overrides prop is an Apiboost OmniSpec Pro feature.
+---
+
 # Theming & Customization
 
 The renderer uses CSS custom properties (design tokens) prefixed with `--omnispec-` for all visual styling. This enables white-labeling without modifying source code.
+
+In the **free core** (`@apiboost/omnispec`) you control the theme two ways:
+
+1. **`theme.base`** — pick `light`, `dark`, or `auto` (and optionally a built-in toggle). Covered next.
+2. **Raw `--omnispec-*` CSS-variable overrides** — set any of the design tokens below directly on `.omnispec-root` (or a host element) with plain CSS. This is the **free white-labeling path** and is documented under [CSS Variable Overrides (Free)](#css-variable-overrides-free).
+
+:::info[Pro]
+The programmatic `theme.overrides` prop — passing an arbitrary token map to `<OmniSpecRenderer>` — requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, set the same `--omnispec-*` tokens with a CSS rule instead (see [CSS Variable Overrides (Free)](#css-variable-overrides-free)); the token reference table below documents every available token for either approach.
+:::
 
 ## Built-in Themes
 
@@ -74,84 +90,25 @@ Use `onThemeChange` to sync external UI with the renderer's resolved theme:
 | `'auto'` | `true` (default) | System preference + built-in toggle |
 | `'auto'` | `false` | System preference, no toggle, use `onThemeChange` |
 
-## Custom Theme Overrides
+## CSS Variable Overrides (Free)
 
-Override any token to match your brand:
+Every visual detail is driven by the `--omnispec-*` design tokens listed in the [reference table](#design-token-reference) below. In the free core you re-skin the renderer by **setting those tokens with plain CSS** on the `.omnispec-root` class (or any ancestor). This is the free white-labeling path and needs no props:
 
-```tsx
-<OmniSpecRenderer
-  spec={url}
-  theme={{
-    base: 'light',
-    overrides: {
-      '--omnispec-color-primary': '#8B5CF6',
-      '--omnispec-color-primary-hover': '#7C3AED',
-      '--omnispec-color-primary-text': '#ffffff',
-      '--omnispec-nav-accent': '#8B5CF6',
-      '--omnispec-border-radius': '8px',
-    },
-  }}
-/>
+```css
+.omnispec-root {
+  --omnispec-color-primary: #8b5cf6;
+  --omnispec-color-primary-hover: #7c3aed;
+  --omnispec-color-primary-text: #ffffff;
+  --omnispec-nav-accent: #8b5cf6;
+  --omnispec-border-radius: 0.5rem;
+}
 ```
 
-Overrides are merged on top of the base theme. Only specify the tokens you want to change.
+Only declare the tokens you want to change — everything else inherits from the active `theme.base`.
 
 ### Per-Mode Overrides (Light vs Dark)
 
-`theme.overrides` is a single object that applies to whichever mode is active. If you set `--omnispec-bg-primary` to `#faf5ff`, that color is used in both light and dark mode.
-
-To apply different overrides per mode, control the mode yourself and pass different override objects:
-
-```tsx
-const lightOverrides = {
-  '--omnispec-bg-primary': '#faf5ff',
-  '--omnispec-color-primary': '#7c3aed',
-  '--omnispec-nav-bg': '#f3e8ff',
-}
-
-const darkOverrides = {
-  '--omnispec-bg-primary': '#1a1025',
-  '--omnispec-color-primary': '#a78bfa',
-  '--omnispec-nav-bg': '#2d1b4e',
-}
-
-function OmniSpec() {
-  const [mode, setMode] = useState<'light' | 'dark'>('light')
-
-  return (
-    <OmniSpecRenderer
-      spec={url}
-      theme={{
-        base: mode,
-        overrides: mode === 'light' ? lightOverrides : darkOverrides,
-      }}
-    />
-  )
-}
-```
-
-With `theme.base: 'auto'`, the renderer manages the mode internally. Use the `onThemeChange` callback to sync your override selection:
-
-```tsx
-function OmniSpec() {
-  const [resolvedMode, setResolvedMode] = useState<'light' | 'dark'>('light')
-
-  return (
-    <OmniSpecRenderer
-      spec={url}
-      theme={{
-        base: 'auto',
-        overrides: resolvedMode === 'light' ? lightOverrides : darkOverrides,
-        onThemeChange: setResolvedMode,
-      }}
-    />
-  )
-}
-```
-
-### CSS-Only Per-Mode Overrides
-
-If you prefer CSS over props, use `prefers-color-scheme` media queries:
+Because they are ordinary CSS custom properties, you can scope overrides per mode with a `prefers-color-scheme` media query. This works with any `theme.base`, including `'auto'`:
 
 ```css
 .omnispec-root {
@@ -167,28 +124,40 @@ If you prefer CSS over props, use `prefers-color-scheme` media queries:
 }
 ```
 
-This works with any theme mode including `'auto'`, and doesn't require Pro since it bypasses `theme.overrides`.
+If you control the mode yourself (rather than `'auto'`), toggle a class or `data-` attribute on your wrapper and scope the tokens to it:
 
-### Using CSS `var()` References
+```css
+.omnispec-root[data-mode='light'] {
+  --omnispec-bg-primary: #faf5ff;
+  --omnispec-color-primary: #7c3aed;
+  --omnispec-nav-bg: #f3e8ff;
+}
 
-When integrating with an app that already defines its own CSS custom properties, you can map them directly using `var()` references. This allows the browser to resolve them at runtime from the host app's theme stylesheet:
-
-```tsx
-<OmniSpecRenderer
-  spec={url}
-  theme={{
-    base: 'light',
-    overrides: {
-      '--omnispec-color-primary': 'var(--color-primary)',
-      '--omnispec-fg-primary': 'var(--color-text)',
-      '--omnispec-h1-color': 'var(--h1-font-color, var(--color-heading))',
-      '--omnispec-btn-primary-bg': 'var(--color-primary)',
-    },
-  }}
-/>
+.omnispec-root[data-mode='dark'] {
+  --omnispec-bg-primary: #1a1025;
+  --omnispec-color-primary: #a78bfa;
+  --omnispec-nav-bg: #2d1b4e;
+}
 ```
 
-Fallback values are supported: `'var(--btn-font-size, 13px)'`.
+### Mapping to Your App's CSS Variables
+
+When integrating with an app that already defines its own design tokens, point the `--omnispec-*` variables at yours with `var()` references so the browser resolves them from the host stylesheet at runtime:
+
+```css
+.omnispec-root {
+  --omnispec-color-primary: var(--color-primary);
+  --omnispec-fg-primary: var(--color-text);
+  --omnispec-h1-color: var(--h1-font-color, var(--color-heading));
+  --omnispec-btn-primary-bg: var(--color-primary);
+}
+```
+
+Fallback values are supported: `var(--btn-font-size, 0.8125rem)`.
+
+:::info[Pro]
+Passing these same token overrides **programmatically** through the `theme.overrides` prop (an arbitrary `{ '--omnispec-*': value }` map on `<OmniSpecRenderer>`, including per-mode override objects synced via `onThemeChange`) is a full white-labeling convenience that requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, apply the identical tokens with the CSS rules shown above — the visual result is the same.
+:::
 
 ## Design Token Reference
 
@@ -269,49 +238,42 @@ These tokens control the sidebar navigation layout, spacing, and styling. They a
 
 #### Navigation Style Recipes
 
+Set these tokens on `.omnispec-root` to get common navigation looks.
+
 **Clean** — no active border, sentence-case headings, rounded items:
 
-```tsx
-theme={{
-  base: 'light',
-  overrides: {
-    '--omnispec-nav-active-border-width': '0',
-    '--omnispec-nav-item-radius': '0.375rem',
-    '--omnispec-nav-group-text-transform': 'none',
-    '--omnispec-nav-group-font-size': '1rem',
-    '--omnispec-nav-indent': '1.25rem',
-  },
-}}
+```css
+.omnispec-root {
+  --omnispec-nav-active-border-width: 0;
+  --omnispec-nav-item-radius: 0.375rem;
+  --omnispec-nav-group-text-transform: none;
+  --omnispec-nav-group-font-size: 1rem;
+  --omnispec-nav-indent: 1.25rem;
+}
 ```
 
 **Compact** — narrow sidebar, tighter items, pill-shaped active state:
 
-```tsx
-theme={{
-  base: 'light',
-  overrides: {
-    '--omnispec-nav-width': '16rem',
-    '--omnispec-nav-item-padding-v': '0.375rem',
-    '--omnispec-nav-item-radius': '0.25rem',
-    '--omnispec-nav-active-border-width': '0',
-    '--omnispec-nav-active-bg': '#eef2ff',
-    '--omnispec-nav-accent': '#4f46e5',
-  },
-}}
+```css
+.omnispec-root {
+  --omnispec-nav-width: 16rem;
+  --omnispec-nav-item-padding-v: 0.375rem;
+  --omnispec-nav-item-radius: 0.25rem;
+  --omnispec-nav-active-border-width: 0;
+  --omnispec-nav-active-bg: #eef2ff;
+  --omnispec-nav-accent: #4f46e5;
+}
 ```
 
 **Minimal** — no backgrounds, transparent active state:
 
-```tsx
-theme={{
-  base: 'light',
-  overrides: {
-    '--omnispec-nav-bg': 'transparent',
-    '--omnispec-nav-hover-bg': 'transparent',
-    '--omnispec-nav-active-bg': 'transparent',
-    '--omnispec-nav-active-border-width': '0',
-  },
-}}
+```css
+.omnispec-root {
+  --omnispec-nav-bg: transparent;
+  --omnispec-nav-hover-bg: transparent;
+  --omnispec-nav-active-bg: transparent;
+  --omnispec-nav-active-border-width: 0;
+}
 ```
 
 ### Scrollbar
@@ -421,21 +383,17 @@ This single variable adjusts:
 | `--omnispec-font-size-lg` | `1rem` | `1rem` | Large text |
 | `--omnispec-font-size-xl` | `1.25rem` | `1.25rem` | Extra large text |
 
-The default sans-serif stack uses system fonts for zero download cost and instant rendering. To use a custom font like Inter, override the token and load the font in your app:
+The default sans-serif stack uses system fonts for zero download cost and instant rendering. To use a custom font like Inter, load the font in your app and set the token with CSS:
 
-```tsx
-// Load Inter via Google Fonts (or self-host)
+```html
+<!-- Load Inter via Google Fonts (or self-host) -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+```
 
-<OmniSpecRenderer
-  spec={url}
-  theme={{
-    base: 'light',
-    overrides: {
-      '--omnispec-font-sans': '"Inter", sans-serif',
-    },
-  }}
-/>
+```css
+.omnispec-root {
+  --omnispec-font-sans: "Inter", sans-serif;
+}
 ```
 
 ## Programmatic Theme Access

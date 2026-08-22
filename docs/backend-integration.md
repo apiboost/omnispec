@@ -1,3 +1,10 @@
+---
+id: backend-integration
+title: Backend Integration
+sidebar_label: Backend Integration
+description: Serve API specs to @apiboost/omnispec and set up the optional Try-It proxy — the built-in Express middleware from @apiboost/omnispec/server, the proxy endpoint contract, and Node/PHP implementations.
+---
+
 # Backend Integration Guide
 
 This guide covers how to serve API specifications to the renderer and set up the optional Try-It proxy.
@@ -38,7 +45,17 @@ import { SpecType } from '@apiboost/omnispec'
 
 If not provided, the renderer auto-detects the type from the content.
 
-### GraphQL Introspection Uploads
+### GraphQL Introspection Uploads (Pro)
+
+:::info[Pro]
+
+Rendering GraphQL schemas — whether from SDL or an introspection JSON result —
+requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**. In the free
+core, the renderer covers OpenAPI 2.0 / 3.0 / 3.1 and AsyncAPI 2 / 3. The
+export guidance below applies when you serve GraphQL schemas to a Pro-enabled
+renderer.
+
+:::
 
 When users upload a GraphQL schema as an introspection JSON result (instead of an SDL file), the fidelity of the rendered docs depends on how the export was generated. The `getIntrospectionQuery()` defaults omit the schema description, `@specifiedBy` URLs on custom scalars, and argument/input-field deprecation — the renderer displays those when present, but cannot recover what the export left out.
 
@@ -98,12 +115,21 @@ Then pass `proxyUrl` to the renderer:
 <OmniSpecRenderer spec={specUrl} proxyUrl="/api/proxy" />
 ```
 
-### OAuth Callback Route (PKCE — Pro)
+### OAuth Callback Route
 
-The interactive OAuth 2.0 Authorization Code + PKCE flow in the Try-It
-Authorize panel (a **Pro** feature — Free shows manual token paste only)
-needs a callback page on the **same origin** as the docs page. Mount it next
-to the proxy:
+:::info[Pro]
+
+The interactive OAuth 2.0 Authorization Code + PKCE **Get Token** flow that
+uses this callback requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**.
+In the free core, the Try-It Authorize panel shows the OAuth flow details and
+accepts a manually pasted access token — no callback route is needed.
+
+:::
+
+When you run the Pro interactive Get Token flow, the OAuth popup must land on a
+callback page served from the **same origin** as your docs page. The free
+package ships that page, so the hosting is a plain-Node concern you can set up
+ahead of enabling Pro. Mount it next to the proxy:
 
 ```js
 import { createOAuthCallbackRoute } from '@apiboost/omnispec/server'
@@ -112,21 +138,15 @@ app.get('/oauth2-redirect.html', createOAuthCallbackRoute())
 ```
 
 Register that URL (e.g. `https://portal.example.com/oauth2-redirect.html`)
-as an allowed redirect URI with your identity provider. If you mount it on a
-different path, point the renderer at it with
-`oauth={{ redirectUri: '/your/path.html' }}`.
+as an allowed redirect URI with your identity provider.
 
-Two notes for proxied deployments:
+Alternatively, serve the page without Express: copy
+`node_modules/@apiboost/omnispec/oauth2-redirect.html` into your static
+hosting, or render the `OAuthCallback` React component (exported from
+`@apiboost/omnispec`) on an SPA route.
 
-- When the OAuth token endpoint blocks CORS, the code-for-token exchange
-  falls back through the Try-It proxy — include the token endpoint's host in
-  `allowedDomains` if you use the allowlist.
-- Alternatively serve the static file: copy
-  `node_modules/@apiboost/omnispec/oauth2-redirect.html` into your static
-  hosting, or render the `OAuthCallback` React component on an SPA route.
-
-See the [Try It guide](./try-it.md#oauth-20-authorization-code-with-pkce)
-for the full flow and security behavior.
+See the [Try It guide](./try-it.md#oauth-20-flows) for the flow details and
+how the free tier's manual token paste works.
 
 ### Custom Implementation
 

@@ -29,25 +29,21 @@ That's it. The component fetches the spec, auto-detects the type, and renders fu
 
 ### Adding Pro
 
-To render GraphQL, SOAP, or gRPC specs and unlock theme token customization, wrap your app with `ProProvider`:
+:::info[Pro]
+GraphQL, SOAP/WSDL, and gRPC renderers, plus full theme-token white-labeling, require **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, OpenAPI and AsyncAPI specs render fully; other spec types display a styled upgrade prompt.
+:::
+
+Pro is activated by importing the pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` — it needs no provider or extra configuration:
 
 ```tsx
-import { OmniSpecRenderer } from '@apiboost/omnispec'
-import { ProProvider } from '@apiboost/omnispec-pro'
+import { OmniSpecRenderer } from '@apiboost/omnispec-pro'
 
 function OmniSpec() {
-  return (
-    <ProProvider>
-      <OmniSpecRenderer
-        spec="/schema.graphql"
-        theme={{ base: 'auto', overrides: { '--omnispec-color-primary': '#8B5CF6' } }}
-      />
-    </ProProvider>
-  )
+  return <OmniSpecRenderer spec="/schema.graphql" />
 }
 ```
 
-Without Pro, non-supported spec types display a styled upgrade prompt. OpenAPI and AsyncAPI specs always work without Pro.
+Alternatively, keep importing from `@apiboost/omnispec` and pass the Pro capability object through the `pro` prop. (The deprecated `<ProProvider>` wrapper still works but should not be used in new code.)
 
 ## Framework Setup
 
@@ -121,7 +117,7 @@ For Vue, Angular, Svelte, or vanilla HTML, use the framework-agnostic
 `<omnispec-renderer>` custom element:
 
 ```html
-<script src="https://unpkg.com/@apiboost/omnispec@1.1.0/dist/wc/standalone.js"></script>
+<script src="https://unpkg.com/@apiboost/omnispec@latest/dist/wc/standalone.js"></script>
 <omnispec-renderer spec-url="/openapi.json" theme-base="auto"></omnispec-renderer>
 ```
 
@@ -172,13 +168,13 @@ See [Backend Integration](./backend-integration.md) for proxy configuration opti
 | Component | Spec Type | Versions | Package |
 |-----------|-----------|----------|---------|
 | `<OmniSpecRenderer>` | Auto-detect | All below | `@apiboost/omnispec` |
-| `<OpenApiSpec>` | OpenAPI / Swagger | 2.0 — 3.0.x | `@apiboost/omnispec` |
+| `<OpenApiSpec>` | OpenAPI / Swagger | 2.0, 3.0.x, 3.1 | `@apiboost/omnispec` |
 | `<AsyncApiSpec>` | AsyncAPI | 2.x — 3.x | `@apiboost/omnispec` |
 | `<GraphqlSpec>` | GraphQL SDL | Any | `@apiboost/omnispec-pro` |
 | `<SoapSpec>` | WSDL / SOAP | 1.1 | `@apiboost/omnispec-pro` |
 | `<GrpcSpec>` | Protocol Buffers | proto3 | `@apiboost/omnispec-pro` |
 
-`<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. When Pro is installed and `<ProProvider>` wraps the app, all spec types render automatically.
+`<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. When you render with `@apiboost/omnispec-pro` (or pass the `pro` prop), all spec types render automatically.
 
 ## Passing Specs
 
@@ -240,23 +236,11 @@ Three built-in theme modes: `'light'`, `'dark'`, and `'auto'` (detects system pr
 <OmniSpecRenderer spec={specUrl} theme={{ base: 'auto' }} />
 ```
 
-With `@apiboost/omnispec-pro`, customize any of the 70+ design tokens:
+Both modes accept raw `--omnispec-*` CSS-variable overrides scoped to `.omnispec-root`, the free white-label path.
 
-```tsx
-<ProProvider>
-  <OmniSpecRenderer
-    spec={specUrl}
-    theme={{
-      base: 'dark',
-      overrides: {
-        '--omnispec-color-primary': '#8B5CF6',
-        '--omnispec-color-primary-hover': '#7C3AED',
-        '--omnispec-font-sans': '"Inter", sans-serif',
-      },
-    }}
-  />
-</ProProvider>
-```
+:::info[Pro]
+Structured `theme.overrides` (full 70+ design-token white-labeling via the `theme` prop) requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, set the same tokens as raw CSS variables on `.omnispec-root` in your own stylesheet.
+:::
 
 See [Theming Guide](./theming.md) for all design tokens.
 

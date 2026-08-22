@@ -15,7 +15,7 @@ pnpm dev
    `vite.config.ts` so it does not try to resolve it as a Vue component:
 
    ```ts
-   isCustomElement: (tag) => tag.startsWith('api-doc-'),
+   isCustomElement: (tag) => tag.startsWith('omnispec-'),
    ```
 
 2. **Import once at app startup** in `main.ts` — `@apiboost/omnispec/wc`

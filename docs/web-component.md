@@ -1,3 +1,10 @@
+---
+id: web-component
+title: Web Component
+sidebar_label: Web Component
+description: Use the framework-agnostic <omnispec-renderer> Web Component from @apiboost/omnispec in vanilla HTML, Vue, Angular, or Svelte.
+---
+
 # Web Component
 
 `@apiboost/omnispec` ships a framework-agnostic Web Component
@@ -15,7 +22,7 @@ step on the consumer side.
 <!doctype html>
 <html>
   <body>
-    <script src="https://unpkg.com/@apiboost/omnispec@1.1.0/dist/wc/standalone.js"></script>
+    <script src="https://unpkg.com/@apiboost/omnispec@latest/dist/wc/standalone.js"></script>
     <omnispec-renderer
       spec-url="https://petstore3.swagger.io/api/v3/openapi.json"
     ></omnispec-renderer>
@@ -172,14 +179,14 @@ omnispec-renderer {
 ### Vanilla HTML
 
 ```html
-<script src="https://unpkg.com/@apiboost/omnispec@1.1.0/dist/wc/standalone.js"></script>
+<script src="https://unpkg.com/@apiboost/omnispec@latest/dist/wc/standalone.js"></script>
 <omnispec-renderer spec-url="/openapi.json"></omnispec-renderer>
 ```
 
 ### Vue 3
 
-Tell the Vue compiler that `<api-doc-...>` is a custom element so it does not
-try to resolve it as a Vue component:
+Tell the Vue compiler that any `<omnispec-...>` tag is a custom element so it
+does not try to resolve it as a Vue component:
 
 ```ts
 // vite.config.ts
@@ -189,7 +196,7 @@ export default defineConfig({
   plugins: [vue({
     template: {
       compilerOptions: {
-        isCustomElement: (tag) => tag.startsWith('api-doc-'),
+        isCustomElement: (tag) => tag.startsWith('omnispec-'),
       },
     },
   })],
@@ -259,20 +266,27 @@ non-React stacks.
 ## Working examples
 
 Runnable examples for each framework live under
-[`omnispec/examples/`](../../examples/):
+[`examples/`](https://github.com/apiboost/omnispec/tree/main/examples) in the
+repository. Each has its own `README.md` with run instructions:
 
-- `examples/vanilla-html/` — single-file demo
+- `examples/vanilla-html/` — single-file demo, no build step
 - `examples/vue/` — Vue 3 + Vite
-- `examples/angular/` — Angular 18 standalone component
-- `examples/svelte/` — Svelte 5 + Vite
+- `examples/angular/` — Angular 18+ standalone component
+- `examples/svelte/` — Svelte 5 + Vite (runes mode)
+
+## Pro features in the Web Component
+
+:::info[Pro]
+Pro renderers (GraphQL, SOAP/WSDL, gRPC), full white-label theming
+(`theme.overrides`), and interactive OAuth require
+**[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, the
+`<omnispec-renderer>` element renders OpenAPI and AsyncAPI specs with the base
+light/dark/auto theme and CSS-variable overrides. A parallel Pro Web Component
+is not shipped today — Pro features are available through the React component.
+:::
 
 ## Limitations and future work
 
-- **Pro features** (custom theme tokens beyond the base palette, GraphQL,
-  SOAP, and gRPC renderers) require the `<ProProvider>` wrapper from
-  `@apiboost/omnispec-pro`. A parallel `<omnispec-renderer-pro>` element is not
-  shipped today — track this as future work if you need Pro features in a
-  non-React stack.
 - **JSON attributes** are convenient but verbose. Prefer the imperative
   property API for production use.
 - **`@emotion/css` style mirroring** copies emotion-generated styles from

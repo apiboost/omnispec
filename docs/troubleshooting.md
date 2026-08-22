@@ -1,3 +1,10 @@
+---
+id: troubleshooting
+title: Troubleshooting & FAQ
+sidebar_label: Troubleshooting
+description: Fixes for common @apiboost/omnispec issues — CORS in Try-It, large-spec performance, sticky-header offset, theme tokens, external $ref resolution, relative server URLs, spec detection, and React 18/19 compatibility.
+---
+
 # Troubleshooting
 
 Common issues and how to fix them. Each section is self-contained.
@@ -101,33 +108,9 @@ See [Theming Guide](./theming.md) for the full list of layout tokens.
 
 **Symptom:** `theme.overrides` is set with custom token values but the renderer colors and fonts don't change.
 
-**Cause:** The `overrides` option inside the `theme` prop requires `@apiboost/omnispec-pro` and a `<ProProvider>` wrapper. Without Pro, `overrides` is accepted as a prop but has no effect.
+**Cause:** The `overrides` option inside the `theme` **prop** is an Apiboost OmniSpec Pro feature. On the free core `theme.overrides` is accepted but has no effect. Note this is only about the *prop* — the `--omnispec-*` design tokens themselves are plain CSS custom properties that work on every tier.
 
-**Fix (with Pro):** Wrap your app with `ProProvider`:
-
-```tsx
-import { OmniSpecRenderer } from '@apiboost/omnispec'
-import { ProProvider } from '@apiboost/omnispec-pro'
-
-function OmniSpec() {
-  return (
-    <ProProvider>
-      <OmniSpecRenderer
-        spec={specUrl}
-        theme={{
-          base: 'light',
-          overrides: {
-            '--omnispec-color-primary': '#8B5CF6',
-            '--omnispec-font-sans': '"Inter", sans-serif',
-          },
-        }}
-      />
-    </ProProvider>
-  )
-}
-```
-
-**Fix (without Pro):** Apply CSS custom property overrides directly on the `.omnispec-root` element. This works with the free package:
+**Fix (free core):** Set the `--omnispec-*` tokens directly on the `.omnispec-root` element with ordinary CSS. This is the free white-label path and requires no extra package:
 
 ```css
 .omnispec-root {
@@ -137,7 +120,16 @@ function OmniSpec() {
 }
 ```
 
-Both approaches are equivalent. The CSS override approach also works well when you need to scope different themes to different renderer instances on the same page.
+This scopes cleanly, so you can even give different renderer instances on the same page different themes.
+
+:::info[Pro]
+
+The `theme.overrides` **prop** — passing the same token map through the React
+API instead of a stylesheet — requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**.
+In the free core, use the CSS-variable approach above, which produces the same
+result.
+
+:::
 
 See [Theming Guide](./theming.md) for all 70+ available design tokens.
 

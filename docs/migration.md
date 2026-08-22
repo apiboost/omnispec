@@ -1,3 +1,10 @@
+---
+id: migration
+title: Migration Guide
+sidebar_label: Migrating to OmniSpec
+description: Migrate to @apiboost/omnispec from Redoc/Redocly, Swagger UI, Stoplight Elements, or Scalar — prop mappings and why to switch.
+---
+
 # Migration Guide
 
 Switching to `@apiboost/omnispec` from another renderer. Each section covers one tool — jump to yours.
@@ -13,7 +20,7 @@ Switching to `@apiboost/omnispec` from another renderer. Each section covers one
 
 | Capability | `@apiboost/omnispec` | Redoc CE | Swagger UI | Stoplight Elements | Scalar |
 |---|---|---|---|---|---|
-| OpenAPI 2.x / 3.x | Free | Free | Free | Free | Free |
+| OpenAPI 2.0 / 3.0 / 3.1 | Free | Free | Free | Free | Free |
 | AsyncAPI 2.x / 3.x | Free | — | — | — | — |
 | GraphQL / SOAP / gRPC | Pro | — | — | — | — |
 | Try-It panel | Free | Pro only | Free | Free | Free |
@@ -21,10 +28,16 @@ Switching to `@apiboost/omnispec` from another renderer. Each section covers one
 | Custom sidebar nav | Free | — | — | — | — |
 | Compact + reference display modes | Free | Reference only | Compact only | Compact only | Reference only |
 | Grouped + segmented navigation | Free | Grouped only | Grouped only | Segmented only | Grouped only |
-| 70+ design tokens | Free + Pro | Limited (Pro) | CSS overrides | CSS overrides | Limited |
+| Light / dark / auto theme + CSS-variable overrides | Free | Limited (Pro) | CSS overrides | CSS overrides | Limited |
+| Full white-label theming (`theme.overrides`, 70+ tokens) | Pro | Limited (Pro) | — | — | — |
 | Auto theme (system preference) | Free | — | — | — | Free |
 | Built-in CORS proxy (SSRF-safe) | Free | — | — | — | — |
-| `x-tagGroups`, `x-codeSamples`, etc. | Free + Pro | Pro | — | — | Free |
+| `x-tagGroups`, `x-codeSamples`, etc. | Pro | Pro | — | — | Free |
+
+`@apiboost/omnispec` renders OpenAPI 2.0, 3.0.x, and 3.1, plus AsyncAPI 2.x and
+3.x, in a single component — all free. GraphQL, SOAP/WSDL, and gRPC renderers,
+full white-label theming, and the premium vendor extensions are part of
+[Apiboost OmniSpec Pro](https://apiboost.com).
 
 ---
 
@@ -101,6 +114,14 @@ import { OmniSpecRenderer } from '@apiboost/omnispec'
 
 Redoc uses a nested `theme` object. `@apiboost/omnispec` uses flat CSS custom properties, which gives you more granular control.
 
+:::info[Pro]
+Passing the token map through the `theme.overrides` prop (shown in the "After"
+examples below) requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In
+the free core, set the identical `--omnispec-*` tokens with a plain CSS rule on
+`.omnispec-root` — the visual result is the same. See
+[Theming](./theming.md) for the free CSS-variable path.
+:::
+
 **Before**
 
 ```tsx
@@ -142,7 +163,7 @@ See [Theming Guide](./theming.md) for all tokens.
 
 ### Vendor Extensions
 
-All Redoc CE vendor extensions work without spec changes:
+Your existing Redoc vendor extensions carry over without spec changes:
 
 | Extension | Status |
 |---|---|
@@ -153,7 +174,11 @@ All Redoc CE vendor extensions work without spec changes:
 | `x-enumDescriptions` | Supported (Pro) |
 | `x-internal` | Supported (Pro) |
 
-If you are on Redoc Pro specifically for `x-tagGroups` and `x-codeSamples`, those require `@apiboost/omnispec-pro`. The free tier supports `x-logo` and all OpenAPI + AsyncAPI rendering.
+The free core renders `x-logo` and all OpenAPI + AsyncAPI content. The premium
+vendor extensions (`x-tagGroups`, `x-codeSamples`, `x-displayName`,
+`x-enumDescriptions`, `x-internal`) are part of
+[Apiboost OmniSpec Pro](https://apiboost.com) — the same set you would have used
+Redoc Pro for.
 
 ### Display Mode
 
@@ -468,6 +493,13 @@ import { OmniSpecRenderer } from '@apiboost/omnispec'
 ### Theme Migration
 
 Scalar's named themes (`default`, `moon`, `purple`, `solarized`) do not map directly. Use design tokens to match the visual style instead.
+
+:::info[Pro]
+As with the Redoc migration above, the `theme.overrides` prop is an
+**[Apiboost OmniSpec Pro](https://apiboost.com)** feature. In the free core,
+apply the same `--omnispec-*` tokens with a CSS rule on `.omnispec-root` — see
+[Theming](./theming.md).
+:::
 
 **Before — Scalar purple theme**
 
