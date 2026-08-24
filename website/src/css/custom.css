@@ -36,13 +36,13 @@
 /* Dark mode — brand hues lifted for readability on a dark background. */
 [data-theme='dark'] {
   /* primary base #3489f4  hsl(213, 90%, 58%) — brand navy, lifted */
-  --ifm-color-primary: #3489f4;
-  --ifm-color-primary-dark: #217ef3;
-  --ifm-color-primary-darker: #1a7af3;
-  --ifm-color-primary-darkest: #0c6de6;
-  --ifm-color-primary-light: #4794f5;
-  --ifm-color-primary-lighter: #4e98f5;
-  --ifm-color-primary-lightest: #66a6f7;
+  --ifm-color-primary: #6E9BD1;
+  --ifm-color-primary-dark: #6E9BD1;
+  --ifm-color-primary-darker: #6E9BD1;
+  --ifm-color-primary-darkest: #6E9BD1;
+  --ifm-color-primary-light: #6E9BD1;
+  --ifm-color-primary-lighter: #6E9BD1;
+  --ifm-color-primary-lightest: #6E9BD1;
 
   /* secondary base #a9b1bc  hsl(215, 12%, 70%) — brand slate, lifted */
   --ifm-color-secondary: #a9b1bc;
