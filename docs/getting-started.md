@@ -6,10 +6,10 @@ Render API documentation in your React app in under 2 minutes.
 
 | Package | Specs | Install |
 |---------|-------|---------|
-| `@apiboost/omnispec` | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec @emotion/css` |
-| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, vendor extensions | `npm install @apiboost/omnispec-pro` |
+| `@apiboost/omnispec` | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec` |
+| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, vendor extensions | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
 
-`@emotion/css` is a required peer dependency for styling. **Supported React versions:** React 18 and React 19.
+**Peer dependencies:** React 18 or 19 (`react`, `react-dom`). Everything else, including `@emotion/css` for styling, is bundled as a normal dependency — no separate install needed. (Pro additionally requires `@apiboost/omnispec` as a peer, shown above.)
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ Alternatively, keep importing from `@apiboost/omnispec` and pass the Pro capabil
 ```bash
 npm create vite@latest my-docs -- --template react-ts
 cd my-docs
-npm install @apiboost/omnispec @emotion/css react-router-dom
+npm install @apiboost/omnispec react-router-dom
 ```
 
 ```tsx
@@ -88,7 +88,7 @@ Place your spec file in the `public/specs/` directory and it will be served stat
 ### Next.js (App Router)
 
 ```bash
-npm install @apiboost/omnispec @emotion/css
+npm install @apiboost/omnispec
 ```
 
 ```tsx
