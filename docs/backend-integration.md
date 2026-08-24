@@ -115,38 +115,25 @@ Then pass `proxyUrl` to the renderer:
 <OmniSpecRenderer spec={specUrl} proxyUrl="/api/proxy" />
 ```
 
-### OAuth Callback Route
+### OAuth Callback Route (Pro)
 
 :::info[Pro]
 
-The interactive OAuth 2.0 Authorization Code + PKCE **Get Token** flow that
-uses this callback requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**.
-In the free core, the Try-It Authorize panel shows the OAuth flow details and
-accepts a manually pasted access token — no callback route is needed.
+The interactive OAuth 2.0 Authorization Code + PKCE **Get Token** flow — and the
+same-origin callback route it needs — are part of
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. The free core does
+**not** ship an OAuth callback route, page, or component.
 
 :::
 
-When you run the Pro interactive Get Token flow, the OAuth popup must land on a
-callback page served from the **same origin** as your docs page. The free
-package ships that page, so the hosting is a plain-Node concern you can set up
-ahead of enabling Pro. Mount it next to the proxy:
+In the free core, the Try-It Authorize panel shows the OAuth flow details and
+accepts a **manually pasted access token**, so no callback route is required —
+the proxy above is all the backend you need.
 
-```js
-import { createOAuthCallbackRoute } from '@apiboost/omnispec/server'
-
-app.get('/oauth2-redirect.html', createOAuthCallbackRoute())
-```
-
-Register that URL (e.g. `https://portal.example.com/oauth2-redirect.html`)
-as an allowed redirect URI with your identity provider.
-
-Alternatively, serve the page without Express: copy
-`node_modules/@apiboost/omnispec/oauth2-redirect.html` into your static
-hosting, or render the `OAuthCallback` React component (exported from
-`@apiboost/omnispec`) on an SPA route.
-
-See the [Try It guide](./try-it.md#oauth-20-flows) for the flow details and
-how the free tier's manual token paste works.
+If you enable Pro, follow the Pro documentation for wiring the callback route and
+registering its redirect URI with your identity provider. See the
+[Try It guide](./try-it.md#oauth-20-flows) for the flow details and how the free
+tier's manual token paste works.
 
 ### Custom Implementation
 

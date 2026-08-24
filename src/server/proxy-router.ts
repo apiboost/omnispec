@@ -48,7 +48,7 @@ const DEFAULT_MAX_BODY = 1_048_576
  *
  * @example
  * ```ts
- * import { createProxyRouter } from '@apiboost/omnispec-pro/server'
+ * import { createProxyRouter } from '@apiboost/omnispec/server'
  * app.use('/api/proxy', createProxyRouter({ rateLimitPerMinute: 60 }))
  * ```
  */

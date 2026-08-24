@@ -226,6 +226,9 @@ sidebarNav={{
 | Operations / Channels / Types     |
 | Schemas                           |
 +-----------------------------------+
+| sidebarNav heading                |  (placement: "after")
+| Custom nav items / groups         |
++-----------------------------------+
 | slots.sidebarFooter               |
 +-----------------------------------+
 ```

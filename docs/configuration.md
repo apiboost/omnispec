@@ -1,5 +1,7 @@
 # Configuration & Advanced Usage
 
+The examples below use `<OpenApiSpec>`, but every prop shown is shared configuration — pass the same props to `<OmniSpecRenderer>` (which auto-detects the spec type) or `<AsyncApiSpec>` interchangeably.
+
 ## Layout Modes
 
 ### Sidebar Layout (default)

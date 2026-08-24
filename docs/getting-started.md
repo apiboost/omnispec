@@ -172,7 +172,7 @@ See [Backend Integration](./backend-integration.md) for proxy configuration opti
 | `<AsyncApiSpec>` | AsyncAPI | 2.x — 3.x | `@apiboost/omnispec` |
 | `<GraphqlSpec>` | GraphQL SDL | Any | `@apiboost/omnispec-pro` |
 | `<SoapSpec>` | WSDL / SOAP | 1.1 | `@apiboost/omnispec-pro` |
-| `<GrpcSpec>` | Protocol Buffers | proto3 | `@apiboost/omnispec-pro` |
+| `<GrpcSpec>` | Protocol Buffers | proto2, proto3 | `@apiboost/omnispec-pro` |
 
 `<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. When you render with `@apiboost/omnispec-pro` (or pass the `pro` prop), all spec types render automatically.
 
@@ -220,7 +220,7 @@ OpenAPI and AsyncAPI accept JSON or YAML. GraphQL accepts SDL strings or introsp
   sidebarPosition="left"            // 'left' (default) or 'right'
   allowTryIt={true}                 // Show/hide Try-It panels (default: true)
   proxyUrl="/api/proxy"             // Route Try-It requests through backend proxy
-  downloadLink={true}               // Show spec download button (default: undefined)
+  downloadLink={true}               // Show spec download button — true uses the spec URL, or pass a string URL (default: undefined)
   defaultExpandOperations={false}   // Expand all operations on load (default: false)
   displayMode="compact"            // 'compact' (default) or 'reference' (three-panel layout)
 />
@@ -236,7 +236,7 @@ Three built-in theme modes: `'light'`, `'dark'`, and `'auto'` (detects system pr
 <OmniSpecRenderer spec={specUrl} theme={{ base: 'auto' }} />
 ```
 
-Both modes accept raw `--omnispec-*` CSS-variable overrides scoped to `.omnispec-root`, the free white-label path.
+All three modes accept raw `--omnispec-*` CSS-variable overrides scoped to `.omnispec-root` — the free white-label path.
 
 :::info[Pro]
 Structured `theme.overrides` (full 70+ design-token white-labeling via the `theme` prop) requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, set the same tokens as raw CSS variables on `.omnispec-root` in your own stylesheet.

@@ -11,9 +11,8 @@ Slots let you inject your own React components into predefined regions of the do
 | `contentHeader` | Above the main content, below header | Breadcrumbs, back navigation |
 | `sidebarHeader` | Top of sidebar, above search/nav | Logo, parent navigation, API name |
 | `sidebarFooter` | Bottom of sidebar, below nav tree | Version badge, quick links |
-| `logo` | Brand element area | Company logo |
 
-All slots accept `ReactNode` — any valid JSX.
+All slots accept `ReactNode` — any valid JSX. To place a logo, use `sidebarHeader`.
 
 ## Usage
 
@@ -160,7 +159,6 @@ const slots: SlotOverrides = {
   contentHeader: <Breadcrumbs />,
   sidebarHeader: <Logo />,
   sidebarFooter: <VersionBadge />,
-  logo: <BrandMark />,
 }
 
 <OmniSpecRenderer spec={specUrl} slots={slots} />

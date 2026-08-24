@@ -15,7 +15,7 @@ In the **free core** (`@apiboost/omnispec`) you control the theme two ways:
 2. **Raw `--omnispec-*` CSS-variable overrides** — set any of the design tokens below directly on `.omnispec-root` (or a host element) with plain CSS. This is the **free white-labeling path** and is documented under [CSS Variable Overrides (Free)](#css-variable-overrides-free).
 
 :::info[Pro]
-The programmatic `theme.overrides` prop — passing an arbitrary token map to `<OmniSpecRenderer>` — requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, set the same `--omnispec-*` tokens with a CSS rule instead (see [CSS Variable Overrides (Free)](#css-variable-overrides-free)); the token reference table below documents every available token for either approach.
+The programmatic `theme.overrides` prop — passing an arbitrary token map to `<OmniSpecRenderer>` — requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, `theme.overrides` is silently ignored (no error); set the same `--omnispec-*` tokens with a CSS rule instead (see [CSS Variable Overrides (Free)](#css-variable-overrides-free)). The token reference table below documents every available token for either approach.
 :::
 
 ## Built-in Themes
@@ -231,6 +231,7 @@ These tokens control the sidebar navigation layout, spacing, and styling. They a
 | `--omnispec-nav-group-font-weight` | `600` | `600` | Group heading font weight |
 | `--omnispec-nav-group-letter-spacing` | `0.04em` | `0.04em` | Group heading letter spacing |
 | `--omnispec-nav-group-text-transform` | `uppercase` | `uppercase` | Group heading text transform. Set to `none` for sentence case |
+| `--omnispec-nav-heading-color` | `#8c8ca1` | `#7d8590` | Custom-nav section/group heading text color |
 | `--omnispec-nav-badge-radius` | `0.25rem` | `0.25rem` | Method/status badge border radius |
 | `--omnispec-nav-badge-text` | `#ffffff` | `#ffffff` | Badge text color |
 | `--omnispec-nav-width` | `18.75rem` | `18.75rem` | Sidebar width |
@@ -441,7 +442,7 @@ To fully white-label the renderer for a client:
 3. Set button styles via `--omnispec-btn-*` tokens to match the client's button design
 4. Set `--omnispec-nav-accent` and `--omnispec-nav-active-bg` to match the primary color
 5. Customize sidebar layout via `--omnispec-nav-*` tokens (width, padding, indent, radius)
-6. Inject the client's logo via `slots.sidebarHeader` or `slots.logo`
+6. Inject the client's logo via `slots.sidebarHeader`
 7. Inject the client's header/footer via `slots.header` / `slots.footer`
 8. Add custom navigation via [`sidebarNav`](./template_customization/sidebar.md)
 9. Font families are inherited automatically from the parent app

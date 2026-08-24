@@ -43,8 +43,7 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "core",
-    "oauth2-redirect.html"
+    "core"
   ],
   "scripts": {
     "prepare": "husky",

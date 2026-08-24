@@ -18,7 +18,7 @@ All spec renderers accept these common props:
 | `defaultExpandOperations` | `boolean` | `false` | Expand all operations on initial render |
 | `navigationMode` | `'grouped' \| 'segmented'` | auto | `grouped` renders all operations on one page. `segmented` renders one at a time via internal routing. Auto-selects based on operation count (>50 → segmented) |
 | `displayMode` | `'compact' \| 'reference'` | `'compact'` | Compact renders operations as collapsible cards. Reference renders a Redocly-style three-panel layout with sticky samples/Try-It panel |
-| `schemaStyle` | `'lines' \| 'tokens' \| 'table' \| 'card'` | `'lines'` | Presentation style for the schema/property tree. `lines` and `tokens` are Free; `table` and `card` are Pro (fall back to `lines` in the free core). See [Configuration](./configuration.md#schema-style-schemastyle) |
+| `schemaStyle` | `'lines' \| 'tokens' \| 'chain' \| 'table' \| 'card'` | `'lines'` | Presentation style for the schema/property tree. `lines`, `tokens`, and `chain` are Free; `table` and `card` are Pro (fall back to `lines` in the free core). See [Configuration](./configuration.md#schema-style-schemastyle) |
 | `tryItPersistTtl` | `number` | `undefined` | Max age in seconds for persisted Try-It inputs (params, bodies, headers) in localStorage. `0` disables persistence; omit for no expiry. Auth credentials are unaffected (sessionStorage, tab lifetime only) |
 | `externalRefOrigins` | `string[]` | `undefined` | Origins allowed for external `$ref` resolution. Same-origin is always allowed. See [External Refs](./external-refs.md) |
 | `serverUrl` | `string` | `undefined` | Forces a single base URL for Try-It and code samples, overriding the spec's `servers`. Highest precedence. See [Configuration](./configuration.md#server-url-override) |
@@ -269,7 +269,7 @@ import { OmniSpecRenderer, SpecType } from '@apiboost/omnispec'
 - JSON/YAML with `openapi` key -> OpenAPI 3
 - JSON/YAML with `asyncapi` key -> AsyncAPI
 - XML with `<definitions>` -> WSDL/SOAP
-- Text with `syntax = "proto3"` -> gRPC
+- Text with `syntax = "proto2"` or `syntax = "proto3"` -> gRPC
 - Text with GraphQL keywords (`type Query`, `schema {`) -> GraphQL SDL
 - JSON with `__schema` key -> GraphQL introspection
 

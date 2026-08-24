@@ -183,16 +183,16 @@ servers:
   - url: https://api.example.com/v3
 ```
 
-If you cannot modify the spec, pass the spec object and the base URL separately using the `specBaseUrl` prop:
+If you cannot modify the spec, override the server at render time with the `serverUrl` prop:
 
 ```tsx
 <OmniSpecRenderer
   spec={parsedSpecObject}
-  specBaseUrl="https://api.example.com"
+  serverUrl="https://api.example.com/v3"
 />
 ```
 
-This tells the renderer which origin to use when resolving relative URLs in the spec, independent of where the spec content came from.
+This forces Try-It to send requests to the given absolute base URL, regardless of the `servers` declared in the spec or where the spec content came from.
 
 ---
 
@@ -213,7 +213,7 @@ import { SpecType } from '@apiboost/omnispec'
 />
 ```
 
-Available `SpecType` values: `OPENAPI_2`, `OPENAPI_3`, `ASYNCAPI_2`, `ASYNCAPI_3`, `GRAPHQL`, `SOAP`, `GRPC`.
+Available `SpecType` values: `OPENAPI_2`, `OPENAPI_3`, `ASYNCAPI_2`, `ASYNCAPI_3`, `GRAPHQL_SDL`, `GRAPHQL_INTROSPECTION`, `SOAP_WSDL`, `GRPC_PROTO`.
 
 **Fix — validate the spec content:**
 
@@ -250,14 +250,10 @@ The error boundary guarantees a single broken operation or schema can never blan
 **Fix — verify peer dependencies are met:**
 
 ```bash
-npm ls react react-dom @emotion/css
+npm ls react react-dom
 ```
 
-`@apiboost/omnispec` supports React 18 and React 19. Both versions are in the peer dependency range. `@emotion/css` is a required peer and must be installed separately:
-
-```bash
-npm install @emotion/css
-```
+`@apiboost/omnispec` supports React 18 and React 19 — both are in the peer dependency range. The only peer dependencies you must install are `react` and `react-dom` (plus `express` and `express-rate-limit` if you use the [backend proxy](./backend-integration.md)). Styling (`@emotion/css`) ships as a bundled dependency — no separate install needed.
 
 **Fix — check for duplicate React installs:**
 

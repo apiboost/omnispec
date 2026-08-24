@@ -102,17 +102,21 @@ The imperative property always wins over an attribute when both are set.
 | `layout` | `'sidebar' \| 'stacked'` | Page layout. |
 | `sidebar-position` | `'left' \| 'right'` | Sidebar placement. |
 | `try-it-layout` | `'inline' \| 'panel'` | Try-It panel layout. |
+| `schema-style` | `'lines' \| 'tokens' \| 'chain' \| 'table' \| 'card'` | Schema tree style. `table` and `card` require Pro. |
 | `allow-try-it` | boolean | Enable Try-It. |
 | `interactive-oauth` | boolean | Opt out of the Pro interactive OAuth flow with `"false"` (forces manual token paste). No effect without Pro. |
 | `default-expand-operations` | boolean | Expand every operation on load. |
 | `proxy-url` | string | Try-It proxy endpoint. |
+| `server-url` | string | Override the API base URL for Try-It, ignoring the spec's `servers`. |
+| `try-it-persist-ttl` | number (ms) | How long to persist Try-It auth and inputs in the browser. |
 | `download-link` | boolean or URL | Show a download button — pass `true` to use the spec URL or a string to specify a different URL. |
 | `docs-url` | string | URL for the upgrade prompt's docs link. |
 | `upgrade-url` | string | URL for the upgrade prompt's upgrade link. |
 
-Boolean attributes accept `'true'`, `'1'`, `'yes'`, `'on'`, the empty string
-(bare attribute), or their respective `false` analogues. The `'false'` form is
-explicit-only — to omit a boolean, leave the attribute unset.
+Boolean attributes are truthy by default: any value other than `'false'`, `'0'`,
+or `'off'` (case-insensitive) — including a bare attribute with no value — is
+treated as `true`. To disable a boolean, set it to `false`/`0`/`off` or leave the
+attribute unset.
 
 ## Property reference
 
