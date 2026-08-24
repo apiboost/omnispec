@@ -1,0 +1,50 @@
+/**
+ * This source file is part of the Apiboost(R) OmniSpec Core.
+ *
+ * Copyright (c) Apiboost, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * See LICENSE.md and LICENSING.md in the project root for license information.
+ */
+
+.stageRow {
+  display: flex;
+  height: calc(100vh - var(--ifm-navbar-height));
+  overflow: hidden;
+}
+
+.rail {
+  flex: 0 0 17.5rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.stage {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.loading {
+  padding: 2rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+/* Mobile-first fallback: stack the config rail above the renderer. */
+@media (max-width: 996px) {
+  .stageRow {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .rail {
+    flex: 0 0 auto;
+    height: auto;
+  }
+
+  .stage {
+    height: 80vh;
+  }
+}

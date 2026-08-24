@@ -75,7 +75,7 @@ export interface BaseSpecProps {
   tryItLayout?: 'inline' | 'panel'
   /** Whether operations are expanded by default. Defaults to false (compact). */
   defaultExpandOperations?: boolean
-  /** 'compact' renders operations inline. 'reference' renders a three-panel Redocly-style layout (Pro). */
+  /** 'compact' renders operations inline. 'reference' renders a three-panel Redocly-style layout. */
   displayMode?: 'compact' | 'reference'
   /**
    * Presentation style for the schema/property tree. `lines` (default) and
