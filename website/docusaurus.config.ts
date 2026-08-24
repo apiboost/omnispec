@@ -7,7 +7,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'OmniSpec',
   tagline: 'Render OpenAPI & AsyncAPI documentation in React',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
 
   future: {
     v4: true,
@@ -60,7 +60,14 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'OmniSpec',
+      // The logo is a full lockup (icon + wordmark), so no separate title text.
+      title: '',
+      logo: {
+        alt: 'Apiboost OmniSpec',
+        src: 'img/logo.svg',
+        srcDark: 'img/logo-dark.svg',
+        href: '/',
+      },
       items: [
         {
           type: 'docSidebar',
