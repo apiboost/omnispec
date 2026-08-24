@@ -7,7 +7,25 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'OmniSpec',
   tagline: 'Render OpenAPI & AsyncAPI documentation in React',
-  favicon: 'img/favicon.svg',
+  // Theme-aware favicon via two files: the light SVG is the default/fallback
+  // (also covers browsers without prefers-color-scheme), the dark SVG overrides
+  // when the browser chrome is dark. headTags hrefs are literal, so they include
+  // the baseUrl (/omnispec/) prefix.
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: { rel: 'icon', type: 'image/svg+xml', href: '/omnispec/img/favicon-light.svg' },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        type: 'image/svg+xml',
+        href: '/omnispec/img/favicon-dark.svg',
+        media: '(prefers-color-scheme: dark)',
+      },
+    },
+  ],
 
   future: {
     v4: true,

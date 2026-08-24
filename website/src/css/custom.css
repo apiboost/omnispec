@@ -55,3 +55,8 @@
 
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Navbar logo — a touch larger than the 2rem Infima default. */
+.navbar__logo {
+  height: 2.5rem;
+}
