@@ -40,7 +40,14 @@ jobs:
         with:
           node-version: 25
           cache: pnpm
-          cache-dependency-path: website/pnpm-lock.yaml
+      # The Live Demo page imports the library via a `file:..` dependency, so the
+      # package's dist must exist before the site builds. Build the library first
+      # (from the repo root), then install + build the site.
+      - name: Build the library (for the demo's file:.. dependency)
+        working-directory: .
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
       - uses: actions/upload-pages-artifact@v3

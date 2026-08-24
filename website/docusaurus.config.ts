@@ -69,6 +69,11 @@ const config: Config = {
           label: 'Docs',
         },
         {
+          to: '/demo',
+          label: 'Live Demo',
+          position: 'left',
+        },
+        {
           href: 'https://github.com/apiboost/omnispec',
           label: 'GitHub',
           position: 'right',
@@ -108,7 +113,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Apiboost, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Apiboost, Inc.`,
     },
     prism: {
       theme: prismThemes.github,
