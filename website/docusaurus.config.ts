@@ -131,7 +131,6 @@ const config: Config = {
         {
           title: 'Apiboost',
           items: [
-            {label: 'Apiboost OmniSpec', href: 'https://apiboost.com/omnispec'},
             {label: 'OmniSpec Pro', href: 'https://apiboost.com/omnispec'},
             {label: 'Apiboost', href: 'https://apiboost.com'},
             {label: 'LinkedIn', href: 'https://www.linkedin.com/company/apiboost'},

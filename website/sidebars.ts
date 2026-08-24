@@ -8,7 +8,7 @@ const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     {
       type: 'category',
-      label: 'Getting Started',
+      label: 'Introduction',
       collapsed: false,
       items: ['getting-started', 'free-vs-pro'],
     },
