@@ -30,12 +30,20 @@ export interface DemoConfig {
   defaultExpandOperations: boolean;
 }
 
-/** Bundled specs served from `static/specs/` — reliable, CORS-free switching. */
+/**
+ * Curated demo specs served from `static/specs/` — bundled for reliable,
+ * CORS-free switching. A range from a real production API through a
+ * feature-rich synthetic spec down to a minimal baseline, plus an AsyncAPI
+ * example to show multi-spec rendering. (Any other spec URL can be pasted into
+ * the field.) The default leads with the real-world Cat API rather than the
+ * bare Petstore.
+ */
 export const SPEC_OPTIONS: ReadonlyArray<{label: string; value: string}> = [
-  {label: 'Petstore (OpenAPI 3.0)', value: 'specs/petstore.json'},
-  {label: 'OpenAPI 3.1 sample', value: 'specs/openapi-3.1.json'},
-  {label: 'Task Management (larger OAS)', value: 'specs/openapi-moderate.json'},
-  {label: 'Streetlights (AsyncAPI)', value: 'specs/streetlights-asyncapi.yaml'},
+  {label: 'The Cat API — production REST API', value: 'specs/catapi.yaml'},
+  {label: 'E-Commerce Platform — complex OAS', value: 'specs/ecommerce.json'},
+  {label: 'Task Management — OAuth2 + nested schemas', value: 'specs/openapi-moderate.json'},
+  {label: 'Petstore — minimal OpenAPI 3.0', value: 'specs/petstore.json'},
+  {label: 'Streetlights — AsyncAPI (events)', value: 'specs/streetlights-asyncapi.yaml'},
 ];
 
 export const DEFAULT_DEMO_CONFIG: DemoConfig = {
