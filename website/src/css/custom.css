@@ -71,3 +71,16 @@
   --ifm-footer-title-color: #ffffff;
   --ifm-footer-color: #b4bbc5;
 }
+
+/* Doc pages: let the article fill the space between the two sidebars instead of
+   Infima's centered `.container` max-width (1320px), which on wide screens
+   floated the content in the middle and left an odd gap next to the left
+   sidebar. Scoped to the docs <main> so the navbar/footer containers keep their
+   centered width; the 2rem gutters keep the left/right insets symmetric. */
+@media (min-width: 997px) {
+  [class*='docMainContainer'] .container {
+    max-width: none;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
