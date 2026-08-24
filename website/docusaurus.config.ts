@@ -59,6 +59,14 @@ const config: Config = {
     colorMode: {
       respectPrefersColorScheme: true,
     },
+    announcementBar: {
+      id: 'enterprise-upsell',
+      content:
+        'Need advanced enterprise access controls, team workflows, or multiple portal environments? <a target="_blank" rel="noopener noreferrer" href="https://apiboost.com">Check out Apiboost Enterprise Portal Solutions</a>.',
+      backgroundColor: '#023E8A',
+      textColor: '#ffffff',
+      isCloseable: true,
+    },
     navbar: {
       title: 'OmniSpec',
       items: [
@@ -113,7 +121,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Apiboost, Inc.`,
+      copyright: `OmniSpec™ is an open-source multi-spec rendering component developed and maintained by Apiboost. © ${new Date().getFullYear()} Apiboost. All Rights Reserved.`,
     },
     prism: {
       theme: prismThemes.github,
