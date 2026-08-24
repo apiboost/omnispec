@@ -1,0 +1,2592 @@
+openapi: 3.0.0
+info:
+  title: Cat API
+  termsOfService: https://thecatapi.com/terms
+  contact: 
+    name: "ThatAPICompany"
+    url: https://thatapicompany.com/about-that-api-company/
+    email: aden@thatapicompany.com
+  license:
+    name: Terms of Use
+    url: https://thecatapi.com/terms
+  description: >-
+    ![cat-api-logo](https://thecatapi.com/_app/immutable/assets/thecatapi-logo.78868573.svg)
+
+
+    ## An open, free, read & write API all about Cats
+
+    The Cat API gives you access to 10000's of Cat images, and breeds.
+
+    - Upload your own Images
+
+    - Get detailed info on all Cat Breeds
+
+    - Allow your Users to Favourite or Vote on Images
+
+    - Save a custom value with each request so you can match data to your Users
+
+
+    ## How do i get access?
+
+    Just sign up for an API Key from https://thecatapi.com for free. We're looking forward to seeing what you build!
+
+    Don't forget to checkout it's sister API - TheDogAPI.com
+  version: 1.6.3
+servers:
+  - url: http://api.thecatapi.com/v1
+components:
+  securitySchemes:
+    noauthAuth:
+      type: http
+      scheme: noauth
+    apikeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+security:
+  - apikeyAuth: []
+tags:
+  - name: Images
+    description: Endpoints to get or upload Images
+  - name: Breeds
+    description: Endpoints to get information about different Breeds
+  - name: Favourites
+    description: Endpoints to save or get Favourited Images by your Users
+  - name: Votes
+    description: Endpoints to let your Users Vote on Images
+  - name: Webhooks
+    description: Endpoints allowing the setting up Webhooks for events in your Account
+  - name: Facts
+    description: >-
+      Premium feature:
+      [https://thecatapi.com/#pricing](https://thecatapi.com/#pricing)
+
+
+      Returns an ever-growing list of Facts about Cats, Dogs and their different
+      breeds. These have been checked for accuracy and to be safe for schools.
+paths:
+  /images/search:
+    get:
+      operationId: Images-ListSearchOrRandom
+      tags:
+        - Images
+      summary: /images/search
+      description: >-
+        Searches or returns Random selection from all approved images. Default is to return RANDOM images, but
+        with an API-Key you can use 'order=DESC' or 'order=ASC' along with the
+        'page' and 'limit' parameters to paginate through them in the order they
+        were approved.
+
+
+        Pagination-Count, Pagination-Page, and Pagination-Limit headers are
+        present in the response so you know the total number of images that can
+        be paginated through for the passed search filters.
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          description: '[optional] without it only the a basic set of images can be searched'
+          example: 'YOUR-API-KEY'
+        - name: size
+          in: query
+          schema:
+            type: string
+          description: '[optional] thumb , small, med or full - small is perfect for Discord'
+          example: med
+        - name: mime_types
+          in: query
+          schema:
+            type: string
+          description: >-
+            [optional] a comma separated string of types to return e.g. jpg,png
+            for static, or gif for gifs
+          example: jpg
+        - name: format
+          in: query
+          schema:
+            type: string
+          description: '[optional] json | src'
+          example: json
+        - name: has_breeds
+          in: query
+          schema:
+            type: boolean
+          description: '[optional] - only return images with breed data'
+          example: 'true'
+        - name: order
+          in: query
+          schema:
+            type: string
+          description: '[optional] default:RANDOM - RANDOM | ASC | DESC'
+          example: RANDOM
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: '[optional] paginate through results'
+          example: '0'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: >-
+            [optional] number of results to return, up to 25 with a valid
+            API-Key
+          example: '1'
+      responses:
+        '200':
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: post-check=0, pre-check=0
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Content-Length:
+              schema:
+                type: integer
+                example: '318'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            Date:
+              schema:
+                type: string
+                example: Sun, 20 May 2018 05:20:42 GMT
+            Expires:
+              schema:
+                type: string
+                example: Tue, 03 Jul 2001 06:00:00 GMT
+            Last-Modified:
+              schema:
+                type: string
+                example: Sun May 20 2018 15:20:42 GMT+1000 (AEST)
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            X-Response-Time:
+              schema:
+                type: string
+                example: 66ms
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                  id: Hylo4Snaf
+                  url: https://cdn.thedogapi.com/images/Hylo4Snaf.jpeg
+                  width: 1200
+                  height: 922
+                  mime_type: image/jpeg
+                  breeds:
+                    - id: 235
+                      name: Spanish Water Dog
+                      weight: "\_30 to 50 pounds"
+                      height: 16 to 20 inches at the shoulder
+                      life_span: 12 to 15 years
+                      breed_group: Sporting
+                  categories: []
+        '401':
+          description: Unauthorized
+          headers:
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Content-Length:
+              schema:
+                type: integer
+                example: '141'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            Date:
+              schema:
+                type: string
+                example: Sun, 19 Aug 2018 12:40:57 GMT
+            Server:
+              schema:
+                type: number
+                example: Apache/2.4.33 (Amazon)
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - id: Hylo4Snaf
+                  url: https://cdn.thedogapi.com/images/Hylo4Snaf.jpeg
+                  width: 1200
+                  height: 922
+                  mime_type: image/jpeg
+                  breeds:
+                    - id: 235
+                      name: Spanish Water Dog
+                      weight: ' 30 to 50 pounds'
+                      height: 16 to 20 inches at the shoulder
+                      life_span: 12 to 15 years
+                      breed_group: Sporting
+                  categories: []
+                - id: Hylo4Snaf
+                  url: https://cdn.thedogapi.com/images/Hylo4Snaf.jpeg
+                  width: 1200
+                  height: 922
+                  mime_type: image/jpeg
+                  breeds:
+                    - id: 235
+                      name: Spanish Water Dog
+                      weight: ' 30 to 50 pounds'
+                      height: 16 to 20 inches at the shoulder
+                      life_span: 12 to 15 years
+                      breed_group: Sporting
+                  categories: []
+  /images/BkIEhN3pG:
+    get:
+      tags:
+        - Images
+      summary: /images/:image_id/analysis
+      description: Get the raw analysis results for any uploaded image
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          description: |
+            [optional]  will save this request to your account analytics
+          example: 'YOUR-API-KEY'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 2826ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '1385'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:46:06 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - labels:
+                    - Name: Animal
+                      Confidence: 99.90064239501953
+                      Instances: []
+                      Parents: []
+                    - Name: Cat
+                      Confidence: 99.90064239501953
+                      Instances:
+                        - BoundingBox:
+                            Width: 0.9043794274330139
+                            Height: 0.803057074546814
+                            Left: 0.024559099227190018
+                            Top: 0.15806715190410614
+                          Confidence: 97.5887680053711
+                      Parents:
+                        - Name: Animal
+                        - Name: Mammal
+                        - Name: Pet
+                    - Name: Mammal
+                      Confidence: 99.90064239501953
+                      Instances: []
+                      Parents:
+                        - Name: Animal
+                    - Name: Manx
+                      Confidence: 99.90064239501953
+                      Instances: []
+                      Parents:
+                        - Name: Animal
+                        - Name: Cat
+                        - Name: Mammal
+                        - Name: Pet
+                    - Name: Pet
+                      Confidence: 99.90064239501953
+                      Instances: []
+                      Parents:
+                        - Name: Animal
+                    - Name: Kitten
+                      Confidence: 98.19309997558594
+                      Instances: []
+                      Parents:
+                        - Name: Animal
+                        - Name: Cat
+                        - Name: Mammal
+                        - Name: Pet
+                    - Name: Sleeping
+                      Confidence: 76.68528747558594
+                      Instances: []
+                      Parents:
+                        - Name: Person
+                    - Name: Couch
+                      Confidence: 63.19022750854492
+                      Instances: []
+                      Parents:
+                        - Name: Furniture
+                    - Name: Chair
+                      Confidence: 57.31343078613281
+                      Instances: []
+                      Parents:
+                        - Name: Furniture
+                    - Name: Abyssinian
+                      Confidence: 57.038516998291016
+                      Instances: []
+                      Parents:
+                        - Name: Animal
+                        - Name: Cat
+                        - Name: Mammal
+                        - Name: Pet
+                  moderation_labels: []
+                  vendor: AWS Rekognition
+                  image_id: xxBaNrfM0
+                  created_at: '2023-10-28T17:44:36.000Z'
+  /images/:
+    get:
+      tags:
+        - Images
+      summary: /images/ (Your uploads)
+      description: >-
+        Only returns images from your account, uploaded via
+        'api/v1/images/upload'
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: |
+            - will return all the images from your account
+          example: 'YOUR-API-KEY'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: '[Optional] number of images to return valid  1 to 10 - default: 1'
+          example: '10'
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: >-
+            [Optional] only works if account_id is present to page through your
+            own uploads
+          example: '0'
+        - name: order
+          in: query
+          schema:
+            type: string
+          description: >-
+            [Optional] only works if account_id is present, either ASC or DESC -
+            ascending or descending.
+          example: DESC
+      responses:
+        '200':
+          description: OK
+          headers:
+            connection:
+              schema:
+                type: string
+                example: keep-alive
+            content-length:
+              schema:
+                type: integer
+                example: '2495'
+            content-type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            date:
+              schema:
+                type: string
+                example: Wed, 11 Apr 2018 12:37:55 GMT
+            vary:
+              schema:
+                type: string
+                example: Origin
+            x-response-time:
+              schema:
+                type: string
+                example: 110ms
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                example-0:
+                  summary: /images/
+                  value:
+                    - id: S1bsCGxrf
+                      url: >-
+                        http://78.media.tumblr.com/2bc94b9eec2d00f5d28110ba191da896/tumblr_nyled8DYKd1qg9kado1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds:
+                        - id: 3
+                          name: Alaskan Malamute
+                          wikipedia_url: https://en.wikipedia.org/wiki/Alaskan_Malamute
+                        - id: 2
+                          name: Akita
+                          wikipedia_url: https://en.wikipedia.org/wiki/Akita_(dog)
+                      animals: []
+                      categories: []
+                    - id: B1gZsCMgrG
+                      url: >-
+                        http://78.media.tumblr.com/75f7f5ba97da53c61026fe6cad16c97c/tumblr_o8h7llrbDt1rzz2who1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: HJZWiCGgSf
+                      url: >-
+                        http://78.media.tumblr.com/84f729a7130860dda9b7544664a36094/tumblr_nvgiskSmew1un7zabo3_r1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: HyGWiRfgBM
+                      url: >-
+                        http://78.media.tumblr.com/6fb13a48907b7d65f79a07afdc9c5ebe/tumblr_nhlytoREfQ1rvsh0oo1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: Bk4-oAzlHM
+                      url: >-
+                        http://78.media.tumblr.com/4217786db510db68daed375cea8ec4d9/tumblr_nlf1ggSff71ruv93po1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: H1HWiCMxHG
+                      url: >-
+                        http://78.media.tumblr.com/a9c056e66b11e1a91a9a03d8c0d04e89/tumblr_o7uwyquvpM1qjcdw9o1_1280.png
+                      width: null
+                      height: null
+                      mime_type: image/png
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: rkUZsAGeHM
+                      url: >-
+                        http://78.media.tumblr.com/9666e3107587fa2dd7833033ec42b7ba/tumblr_o0ymimYfp71rozzl0o1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: BkDZjRzlSz
+                      url: >-
+                        http://78.media.tumblr.com/9b5ed3d0bcd102bb028f137267082777/tumblr_o6zaks1SvQ1qjcdw9o1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: ByuZj0GgBf
+                      url: >-
+                        http://78.media.tumblr.com/766f297cf8b282cd2820fc4c9161c328/tumblr_o7hktkxin01qjcdw9o1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                    - id: r1tWjAfxHz
+                      url: >-
+                        http://78.media.tumblr.com/5230380780945425e867a0a3aaa6f4b0/tumblr_n8w47dGOhd1r7qbtpo1_1280.jpg
+                      width: null
+                      height: null
+                      mime_type: image/jpeg
+                      entities: []
+                      breeds: []
+                      animals: []
+                      categories: []
+                example-1:
+                  summary: /images/
+                  value:
+                    - id: SJ6YQ-mRf
+                      url: http://cdn1.thedogapi.com/images/SJ6YQ-mRf.gif
+                      width: 330
+                      height: 186
+                      mime_type: image/gif
+                      sub_id: tumblr_p7pc03uDYD1vb46leo1_400.gif
+                      created_at: '2018-05-11T01:50:29.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p7pc03uDYD1vb46leo1_400.gif
+                    - id: r1EP7WmRM
+                      url: http://cdn1.thedogapi.com/images/r1EP7WmRM.gif
+                      width: 344
+                      height: 344
+                      mime_type: image/gif
+                      sub_id: tumblr_p7et7dDbvt1vb46leo1_400.gif
+                      created_at: '2018-05-11T01:49:48.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p7et7dDbvt1vb46leo1_400.gif
+                    - id: SJ9Nm-m0z
+                      url: http://cdn1.thedogapi.com/images/SJ9Nm-m0z.gif
+                      width: 323
+                      height: 323
+                      mime_type: image/gif
+                      sub_id: tumblr_p7anz8xrxY1vb46leo1_400.gif
+                      created_at: '2018-05-11T01:49:06.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p7anz8xrxY1vb46leo1_400.gif
+                    - id: HkWzmb7RG
+                      url: http://cdn1.thedogapi.com/images/HkWzmb7RG.gif
+                      width: 402
+                      height: 402
+                      mime_type: image/gif
+                      sub_id: tumblr_p66rh3yOQZ1vb46leo1_500.gif
+                      created_at: '2018-05-11T01:48:24.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p66rh3yOQZ1vb46leo1_500.gif
+                    - id: BJNJ7-XCM
+                      url: http://cdn1.thedogapi.com/images/BJNJ7-XCM.gif
+                      width: 328
+                      height: 340
+                      mime_type: image/gif
+                      sub_id: tumblr_p5x7l8Npvd1vb46leo1_400.gif
+                      created_at: '2018-05-11T01:47:40.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p5x7l8Npvd1vb46leo1_400.gif
+                    - id: Byd3G-7Cz
+                      url: http://cdn1.thedogapi.com/images/Byd3G-7Cz.gif
+                      width: 295
+                      height: 275
+                      mime_type: image/gif
+                      sub_id: tumblr_p5bw97ms4S1tlb56zo1_400.gif
+                      created_at: '2018-05-11T01:46:55.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p5bw97ms4S1tlb56zo1_400.gif
+                    - id: SyhKGWXRz
+                      url: http://cdn1.thedogapi.com/images/SyhKGWXRz.gif
+                      width: 240
+                      height: 300
+                      mime_type: image/gif
+                      sub_id: tumblr_p4v52oRLhQ1tlb56zo1_250.gif
+                      created_at: '2018-05-11T01:46:11.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p4v52oRLhQ1tlb56zo1_250.gif
+                    - id: BJWwzW7Rz
+                      url: http://cdn1.thedogapi.com/images/BJWwzW7Rz.gif
+                      width: 400
+                      height: 442
+                      mime_type: image/gif
+                      sub_id: tumblr_p4ue73GTqE1ry46hlo1_400.gif
+                      created_at: '2018-05-11T01:45:29.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_p4ue73GTqE1ry46hlo1_400.gif
+                    - id: ryrVzZ7RM
+                      url: http://cdn1.thedogapi.com/images/ryrVzZ7RM.gif
+                      width: 350
+                      height: 197
+                      mime_type: image/gif
+                      sub_id: tumblr_ou6lq9N06K1vb46leo1_400.gif
+                      created_at: '2018-05-11T01:44:45.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_ou6lq9N06K1vb46leo1_400.gif
+                    - id: r1F-fZQCf
+                      url: http://cdn1.thedogapi.com/images/r1F-fZQCf.gif
+                      width: 460
+                      height: 263
+                      mime_type: image/gif
+                      sub_id: tumblr_otdzzy1qvE1vnq1cro2_500.gif
+                      created_at: '2018-05-11T01:44:00.000Z'
+                      breed_ids: null
+                      category_ids: null
+                      original_filename: tumblr_otdzzy1qvE1vnq1cro2_500.gif
+  /images/upload:
+    post:
+      tags:
+        - Images
+      summary: /images/upload
+      description: >-
+        Make sure you're using the right field to send the image, and
+        Content-Type header
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                sub_id:
+                  type: string
+                  description: >-
+                    [optional] - a string you can use to segment your images,
+                    e.g. knowing which of your own users uploaded it.
+                breed_ids:
+                  type: string
+                  description: >-
+                    [optional] comma separated string of breed ids contained in
+                    the image
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: multipart/form-data
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: '- saves the uploaded image to your account.'
+          example: 'YOUR-API-KEY'
+      responses:
+        '201':
+          description: Created
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: integer
+                example: '60'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '119'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '1'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:45:29.282Z'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 7625ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '176'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:44:36 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                id: xxBaNrfM0
+                url: https://cdn2.thecatapi.com/images/xxBaNrfM0.jpg
+                sub_id: my-user-1
+                width: 480
+                height: 640
+                original_filename: bl4.jpeg
+                pending: 0
+                approved: 1
+  /images/{image_id}:
+    delete:
+      tags:
+        - Images
+      summary: /images/:image_id
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          example: 'YOUR-API-KEY'
+        - name: image_id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: dMsUj1-nz
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /images/{image_id}/breeds:
+    get:
+      tags:
+        - Images
+      summary: /images/:image_id/breeds
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: image_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    post:
+      tags:
+        - Images
+      summary: /images/:image_id/breeds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                breed_id: 10
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: |+
+            - for now, you can only tag your own images with a breed
+
+          example: 'YOUR-API-KEY'
+        - name: image_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /images/{image_id}/breeds/{breed_id}:
+    delete:
+      tags:
+        - Images
+      summary: /images/:image_id/breeds/:breed_id
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: |
+            - only you can delete breeds from your images
+          example: 'YOUR-API-KEY'
+        - name: image_id
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: breed_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /breeds:
+    get:
+      security:
+        - noauthAuth: []
+      tags:
+        - Breeds
+      summary: /breeds
+      parameters:
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          description: |
+            [required] API key to access the facts
+          example: 'YOUR-API-KEY'
+          required: true
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '0'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: number
+                example: '32.112'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '118'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '2'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:24:17.564Z'
+            Pagination-Count:
+              schema:
+                type: integer
+                example: '67'
+            Pagination-Page:
+              schema:
+                type: integer
+                example: '0'
+            Pagination-Limit:
+              schema:
+                type: integer
+                example: '2'
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: Pagination-Count, Pagination-Page, Pagination-Limit
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 920ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '2353'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:23:45 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - weight:
+                    imperial: 7  -  10
+                    metric: 3 - 5
+                  id: abys
+                  name: Abyssinian
+                  cfa_url: http://cfa.org/Breeds/BreedsAB/Abyssinian.aspx
+                  vetstreet_url: http://www.vetstreet.com/cats/abyssinian
+                  vcahospitals_url: https://vcahospitals.com/know-your-pet/cat-breeds/abyssinian
+                  temperament: Active, Energetic, Independent, Intelligent, Gentle
+                  origin: Egypt
+                  country_codes: EG
+                  country_code: EG
+                  description: >-
+                    The Abyssinian is easy to care for, and a joy to have in
+                    your home. They’re affectionate cats and love both people
+                    and other animals.
+                  life_span: 14 - 15
+                  indoor: 0
+                  lap: 1
+                  alt_names: ''
+                  adaptability: 5
+                  affection_level: 5
+                  child_friendly: 3
+                  dog_friendly: 4
+                  energy_level: 5
+                  grooming: 1
+                  health_issues: 2
+                  intelligence: 5
+                  shedding_level: 2
+                  social_needs: 5
+                  stranger_friendly: 5
+                  vocalisation: 1
+                  experimental: 0
+                  hairless: 0
+                  natural: 1
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/Abyssinian_(cat)
+                  hypoallergenic: 0
+                  reference_image_id: 0XYvRd7oD
+                  image:
+                    id: 0XYvRd7oD
+                    width: 1204
+                    height: 1445
+                    url: https://cdn2.thecatapi.com/images/0XYvRd7oD.jpg
+                - weight:
+                    imperial: 7 - 10
+                    metric: 3 - 5
+                  id: aege
+                  name: Aegean
+                  vetstreet_url: http://www.vetstreet.com/cats/aegean-cat
+                  temperament: Affectionate, Social, Intelligent, Playful, Active
+                  origin: Greece
+                  country_codes: GR
+                  country_code: GR
+                  description: >-
+                    Native to the Greek islands known as the Cyclades in the
+                    Aegean Sea, these are natural cats, meaning they developed
+                    without humans getting involved in their breeding. As a
+                    breed, Aegean Cats are rare, although they are numerous on
+                    their home islands. They are generally friendly toward
+                    people and can be excellent cats for families with children.
+                  life_span: 9 - 12
+                  indoor: 0
+                  alt_names: ''
+                  adaptability: 5
+                  affection_level: 4
+                  child_friendly: 4
+                  dog_friendly: 4
+                  energy_level: 3
+                  grooming: 3
+                  health_issues: 1
+                  intelligence: 3
+                  shedding_level: 3
+                  social_needs: 4
+                  stranger_friendly: 4
+                  vocalisation: 3
+                  experimental: 0
+                  hairless: 0
+                  natural: 0
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/Aegean_cat
+                  hypoallergenic: 0
+                  reference_image_id: ozEvzdVM-
+                  image:
+                    id: ozEvzdVM-
+                    width: 1200
+                    height: 800
+                    url: https://cdn2.thecatapi.com/images/ozEvzdVM-.jpg
+  /breeds/{breed_id}:
+    get:
+      tags:
+        - Breeds
+      summary: /breeds/:breed_id
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: breed_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          headers:
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Content-Length:
+              schema:
+                type: integer
+                example: '187'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            Date:
+              schema:
+                type: string
+                example: Sat, 19 May 2018 12:51:33 GMT
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            X-Response-Time:
+              schema:
+                type: string
+                example: 66ms
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                id: 2
+                name: Afghan Hound
+                weight: "\_50 to 60 pounds"
+                height: 25 to 27 inches at the shoulder
+                life_span: 10 to 13 years
+                bred_for: Coursing and hunting
+                breed_group: Hound
+  /breeds/{breed_id}/facts:
+    get:
+      tags:
+        - Facts
+      summary: Get Ordered Fact(s) About Breed
+      description: >-
+        Get one or more facts about the Species. For more at a time just update
+        the 'limit' field, and to paginate through them just increment the
+        'page' field.
+
+
+        The response headers have the pagination details, such as how many there
+        are in total, what page you're on, and the current amount per page.
+
+
+        To redorder change the order to ASC for ascending order, DESC for
+        descending, and RAND for random order.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '5'
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '0'
+        - name: order
+          in: query
+          schema:
+            type: string
+          example: ASC
+        - name: breed_id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: ragd
+      responses:
+        '200':
+          description: OK
+          headers:
+            x-dns-prefetch-control:
+              schema:
+                type: string
+                example: 'off'
+            x-frame-options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            strict-transport-security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            x-download-options:
+              schema:
+                type: string
+                example: noopen
+            x-content-type-options:
+              schema:
+                type: string
+                example: nosniff
+            x-xss-protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            vary:
+              schema:
+                type: string
+                example: Origin
+            retry-after-seconds:
+              schema:
+                type: number
+                example: '33.954'
+            ratelimit-limit:
+              schema:
+                type: integer
+                example: '120'
+            ratelimit-remaining:
+              schema:
+                type: integer
+                example: '115'
+            ratelimit-consumed:
+              schema:
+                type: integer
+                example: '5'
+            ratelimit-reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:03:26.716Z'
+            content-type:
+              schema:
+                type: string
+                example: application/json
+            pagination-count:
+              schema:
+                type: integer
+                example: '30'
+            pagination-page:
+              schema:
+                type: integer
+                example: '0'
+            pagination-limit:
+              schema:
+                type: integer
+                example: '5'
+            access-control-expose-headers:
+              schema:
+                type: string
+                example: Pagination-Count, Pagination-Page, Pagination-Limit
+            x-response-time:
+              schema:
+                type: string
+                example: 182ms
+            X-Cloud-Trace-Context:
+              schema:
+                type: string
+                example: 331c8d16b03bf66b4fe4e40c86dfc6a1
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:02:52 GMT
+            Server:
+              schema:
+                type: string
+                example: Google Frontend
+            Content-Length:
+              schema:
+                type: integer
+                example: '753'
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - id: JO85Z
+                  fact: >-
+                    Ragdoll cats were first bred in the 1960s in California,
+                    USA.
+                  breed_id: ragd
+                  title: Origin
+                - id: ADPHH
+                  fact: >-
+                    Ragdolls are known for their calm and gentle temperament,
+                    making them great companions.
+                  breed_id: ragd
+                  title: Temperament
+                - id: 269Q9
+                  fact: >-
+                    Ragdolls are one of the largest domestic cat breeds, with
+                    males weighing between 15-20 pounds and females weighing
+                    between 10-15 pounds.
+                  breed_id: ragd
+                  title: Size
+                - id: DE3CY
+                  fact: >-
+                    Ragdolls have a semi-long, silky coat that requires minimal
+                    grooming.
+                  breed_id: ragd
+                  title: Coat
+                - id: ADM62
+                  fact: >-
+                    Ragdolls come in various color patterns, including seal,
+                    blue, chocolate, lilac, and more.
+                  breed_id: ragd
+                  title: Color Patterns
+  /breeds/search:
+    get:
+      tags:
+        - Breeds
+      summary: Search Breeds
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: search term for breed name
+          example: air
+        - name: attach_image
+          in: query
+          schema:
+            type: integer
+          description: '[optional] whether to attach the reference_image_id image or not'
+          example: '1'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: integer
+                example: '60'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '119'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '1'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:25:59.859Z'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 1616ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '7922'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:25:00 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - weight:
+                    imperial: 8 - 15
+                    metric: 4 - 7
+                  id: asho
+                  name: American Shorthair
+                  cfa_url: http://cfa.org/Breeds/BreedsAB/AmericanShorthair.aspx
+                  vetstreet_url: http://www.vetstreet.com/cats/american-shorthair
+                  vcahospitals_url: >-
+                    https://vcahospitals.com/know-your-pet/cat-breeds/american-shorthair
+                  temperament: Active, Curious, Easy Going, Playful, Calm
+                  origin: United States
+                  country_codes: US
+                  country_code: US
+                  description: >-
+                    The American Shorthair is known for its longevity, robust
+                    health, good looks, sweet personality, and amiability with
+                    children, dogs, and other pets.
+                  life_span: 15 - 17
+                  indoor: 0
+                  lap: 1
+                  alt_names: Domestic Shorthair
+                  adaptability: 5
+                  affection_level: 5
+                  child_friendly: 4
+                  dog_friendly: 5
+                  energy_level: 3
+                  grooming: 1
+                  health_issues: 3
+                  intelligence: 3
+                  shedding_level: 3
+                  social_needs: 4
+                  stranger_friendly: 3
+                  vocalisation: 3
+                  experimental: 0
+                  hairless: 0
+                  natural: 1
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/American_Shorthair
+                  hypoallergenic: 0
+                  reference_image_id: JFPROfGtQ
+                  image:
+                    id: JFPROfGtQ
+                    width: 1600
+                    height: 1200
+                    url: https://cdn2.thecatapi.com/images/JFPROfGtQ.jpg
+                - weight:
+                    imperial: 8 - 15
+                    metric: 4 - 7
+                  id: awir
+                  name: American Wirehair
+                  cfa_url: http://cfa.org/Breeds/BreedsAB/AmericanWirehair.aspx
+                  vetstreet_url: http://www.vetstreet.com/cats/american-wirehair
+                  temperament: >-
+                    Affectionate, Curious, Gentle, Intelligent, Interactive,
+                    Lively, Loyal, Playful, Sensible, Social
+                  origin: United States
+                  country_codes: US
+                  country_code: US
+                  description: >-
+                    The American Wirehair tends to be a calm and tolerant cat
+                    who takes life as it comes. His favorite hobby is
+                    bird-watching from a sunny windowsill, and his hunting
+                    ability will stand you in good stead if insects enter the
+                    house.
+                  life_span: 14 - 18
+                  indoor: 0
+                  lap: 1
+                  alt_names: ''
+                  adaptability: 5
+                  affection_level: 5
+                  child_friendly: 4
+                  dog_friendly: 5
+                  energy_level: 3
+                  grooming: 1
+                  health_issues: 3
+                  intelligence: 3
+                  shedding_level: 1
+                  social_needs: 3
+                  stranger_friendly: 3
+                  vocalisation: 3
+                  experimental: 0
+                  hairless: 0
+                  natural: 0
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/American_Wirehair
+                  hypoallergenic: 0
+                  reference_image_id: 8D--jCd21
+                  image:
+                    id: 8D--jCd21
+                    width: 1280
+                    height: 936
+                    url: https://cdn2.thecatapi.com/images/8D--jCd21.jpg
+                - weight:
+                    imperial: 8 - 18
+                    metric: 4 - 8
+                  id: bslo
+                  name: British Longhair
+                  temperament: >-
+                    Affectionate, Easy Going, Independent, Intelligent, Loyal,
+                    Social
+                  origin: United Kingdom
+                  country_codes: GB
+                  country_code: GB
+                  description: >-
+                    The British Longhair is a very laid-back relaxed cat, often
+                    perceived to be very independent although they will enjoy
+                    the company of an equally relaxed and likeminded cat. They
+                    are an affectionate breed, but very much on their own terms
+                    and tend to prefer to choose to come and sit with their
+                    owners rather than being picked up.
+                  life_span: 12 - 14
+                  indoor: 0
+                  alt_names: ''
+                  adaptability: 5
+                  affection_level: 5
+                  child_friendly: 4
+                  dog_friendly: 5
+                  energy_level: 4
+                  grooming: 5
+                  health_issues: 1
+                  intelligence: 5
+                  shedding_level: 1
+                  social_needs: 3
+                  stranger_friendly: 4
+                  vocalisation: 1
+                  experimental: 0
+                  hairless: 0
+                  natural: 0
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/British_Longhair
+                  hypoallergenic: 0
+                  reference_image_id: 7isAO4Cav
+                  image:
+                    id: 7isAO4Cav
+                    width: 960
+                    height: 960
+                    url: https://cdn2.thecatapi.com/images/7isAO4Cav.jpg
+                - weight:
+                    imperial: 12 - 20
+                    metric: 5 - 9
+                  id: bsho
+                  name: British Shorthair
+                  cfa_url: http://cfa.org/Breeds/BreedsAB/BritishShorthair.aspx
+                  vetstreet_url: http://www.vetstreet.com/cats/british-shorthair
+                  vcahospitals_url: >-
+                    https://vcahospitals.com/know-your-pet/cat-breeds/british-shorthair
+                  temperament: Affectionate, Easy Going, Gentle, Loyal, Patient, calm
+                  origin: United Kingdom
+                  country_codes: GB
+                  country_code: GB
+                  description: >-
+                    The British Shorthair is a very pleasant cat to have as a
+                    companion, ans is easy going and placid. The British is a
+                    fiercely loyal, loving cat and will attach herself to every
+                    one of her family members. While loving to play, she doesn't
+                    need hourly attention. If she is in the mood to play, she
+                    will find someone and bring a toy to that person. The
+                    British also plays well by herself, and thus is a good
+                    companion for single people.
+                  life_span: 12 - 17
+                  indoor: 0
+                  lap: 1
+                  alt_names: Highlander, Highland Straight, Britannica
+                  adaptability: 5
+                  affection_level: 4
+                  child_friendly: 4
+                  dog_friendly: 5
+                  energy_level: 2
+                  grooming: 2
+                  health_issues: 2
+                  intelligence: 3
+                  shedding_level: 4
+                  social_needs: 3
+                  stranger_friendly: 2
+                  vocalisation: 1
+                  experimental: 0
+                  hairless: 0
+                  natural: 1
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/British_Shorthair
+                  hypoallergenic: 0
+                  reference_image_id: s4wQfYoEk
+                  image:
+                    id: s4wQfYoEk
+                    width: 1600
+                    height: 1457
+                    url: https://cdn2.thecatapi.com/images/s4wQfYoEk.jpg
+                - weight:
+                    imperial: 4 - 10
+                    metric: 2 - 5
+                  id: csho
+                  name: Colorpoint Shorthair
+                  cfa_url: http://cfa.org/Breeds/BreedsCJ/ColorpointShorthair.aspx
+                  vcahospitals_url: >-
+                    https://vcahospitals.com/know-your-pet/cat-breeds/colorpoint-shorthair
+                  temperament: Affectionate, Intelligent, Playful, Social
+                  origin: United States
+                  country_codes: US
+                  country_code: US
+                  description: >-
+                    Colorpoint Shorthairs are an affectionate breed, devoted and
+                    loyal to their people. Sensitive to their owner’s moods,
+                    Colorpoints are more than happy to sit at your side or on
+                    your lap and purr words of encouragement on a bad day. They
+                    will constantly seek out your lap whenever it is open and in
+                    the moments when your lap is preoccupied they will stretch
+                    out in sunny spots on the ground.
+                  life_span: 12 - 16
+                  indoor: 0
+                  lap: 1
+                  alt_names: ''
+                  adaptability: 3
+                  affection_level: 4
+                  child_friendly: 4
+                  cat_friendly: 3
+                  dog_friendly: 4
+                  energy_level: 4
+                  grooming: 2
+                  health_issues: 2
+                  intelligence: 5
+                  shedding_level: 3
+                  social_needs: 4
+                  stranger_friendly: 2
+                  vocalisation: 5
+                  bidability: 4
+                  experimental: 0
+                  hairless: 0
+                  natural: 0
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/Colorpoint_Shorthair
+                  hypoallergenic: 0
+                  reference_image_id: oSpqGyUDS
+                  image:
+                    id: oSpqGyUDS
+                    width: 1363
+                    height: 1600
+                    url: https://cdn2.thecatapi.com/images/oSpqGyUDS.jpg
+                - weight:
+                    imperial: 7 - 14
+                    metric: 3 - 6
+                  id: esho
+                  name: Exotic Shorthair
+                  cfa_url: http://cfa.org/Breeds/BreedsCJ/Exotic.aspx
+                  vetstreet_url: http://www.vetstreet.com/cats/exotic-shorthair
+                  vcahospitals_url: >-
+                    https://vcahospitals.com/know-your-pet/cat-breeds/exotic-shorthair
+                  temperament: Affectionate, Sweet, Loyal, Quiet, Peaceful
+                  origin: United States
+                  country_codes: US
+                  country_code: US
+                  description: >-
+                    The Exotic Shorthair is a gentle friendly cat that has the
+                    same personality as the Persian. They love having fun, don’t
+                    mind the company of other cats and dogs, also love to curl
+                    up for a sleep in a safe place. Exotics love their own
+                    people, but around strangers they are cautious at first.
+                    Given time, they usually warm up to visitors.
+                  life_span: 12 - 15
+                  indoor: 0
+                  lap: 1
+                  alt_names: Exotic
+                  adaptability: 5
+                  affection_level: 5
+                  child_friendly: 3
+                  dog_friendly: 3
+                  energy_level: 3
+                  grooming: 2
+                  health_issues: 3
+                  intelligence: 3
+                  shedding_level: 2
+                  social_needs: 4
+                  stranger_friendly: 2
+                  vocalisation: 1
+                  experimental: 0
+                  hairless: 0
+                  natural: 0
+                  rare: 0
+                  rex: 0
+                  suppressed_tail: 0
+                  short_legs: 0
+                  wikipedia_url: https://en.wikipedia.org/wiki/Exotic_Shorthair
+                  hypoallergenic: 0
+                  reference_image_id: YnPrYEmfe
+                  image:
+                    id: YnPrYEmfe
+                    width: 1024
+                    height: 768
+                    url: https://cdn2.thecatapi.com/images/YnPrYEmfe.jpg
+  /favourites:
+    get:
+      tags:
+        - Favourites
+      summary: /favourites
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: number
+                example: '22.19'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '117'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '3'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:39:57.354Z'
+            Pagination-Count:
+              schema:
+                type: integer
+                example: '1'
+            Pagination-Page:
+              schema:
+                type: integer
+                example: '0'
+            Pagination-Limit:
+              schema:
+                type: integer
+                example: '100'
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: Pagination-Count, Pagination-Page, Pagination-Limit
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 1034ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '130'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:39:35 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - id: 232413577
+                  user_id: 1ejqec
+                  image_id: asf2
+                  sub_id: my-user-1234
+                  created_at: '2023-10-28T17:39:28.000Z'
+                  image: {}
+    post:
+      tags:
+        - Favourites
+      summary: /favourites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example: "{\n\t\"image_id\":asf2,\n\t\"sub_id\": \"my-user-1234\"\n}"
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: number
+                example: '29.662'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '118'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '2'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:39:57.354Z'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 910ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '36'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:39:28 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                message: SUCCESS
+                id: 232413577
+  /favourites/{favourite_id}:
+    get:
+      tags:
+        - Favourites
+      summary: /favourites/:favourite_id
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+        - name: favourite_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    delete:
+      tags:
+        - Favourites
+      summary: /favourites/:favourite_id
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+        - name: favourite_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /votes:
+    get:
+      tags:
+        - Votes
+      summary: /votes
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: integer
+                example: '60'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '119'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '1'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:39:57.354Z'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+            Pagination-Count:
+              schema:
+                type: integer
+                example: '1'
+            Pagination-Page:
+              schema:
+                type: integer
+                example: '0'
+            Pagination-Limit:
+              schema:
+                type: integer
+                example: '100'
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: Pagination-Count, Pagination-Page, Pagination-Limit
+            X-Response-Time:
+              schema:
+                type: string
+                example: 1220ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '139'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:38:57 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - id: 1120951
+                  image_id: asf2
+                  sub_id: my-user-1234
+                  created_at: '2023-10-28T17:29:28.000Z'
+                  value: 1
+                  country_code: AU
+                  image: {}
+    post:
+      tags:
+        - Votes
+      summary: /votes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                image_id: asf2
+                sub_id: my-user-1234
+                value: 1
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+      responses:
+        '201':
+          description: Created
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Retry-After-Seconds:
+              schema:
+                type: number
+                example: '46.712'
+            RateLimit-Limit:
+              schema:
+                type: integer
+                example: '120'
+            RateLimit-Remaining:
+              schema:
+                type: integer
+                example: '118'
+            RateLimit-Consumed:
+              schema:
+                type: integer
+                example: '2'
+            RateLimit-Reset:
+              schema:
+                type: number
+                example: '2023-10-29T04:30:14.733Z'
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 1304ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '106'
+            Date:
+              schema:
+                type: string
+                example: Sun, 29 Oct 2023 04:29:28 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                message: SUCCESS
+                id: 1120951
+                image_id: asf2
+                sub_id: my-user-1234
+                value: 1
+                country_code: AU
+  /votes/{vote_id}:
+    get:
+      tags:
+        - Votes
+      summary: /votes/:vote_id
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+        - name: vote_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /vote/{vote_id}:
+    delete:
+      tags:
+        - Votes
+      summary: /votes/:vote_id
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: x-api-key
+          in: header
+          schema:
+            type: string
+          required: true
+          description: ''
+          example: 'YOUR-API-KEY'
+        - name: vote_id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /webhooks:
+    post:
+      tags:
+        - Webhooks
+      summary: Create Webhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: Charef
+                url: https://webhook.site/8ff
+                events:
+                  - favourite.created
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+                example: 'off'
+            X-Frame-Options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            Strict-Transport-Security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            X-Download-Options:
+              schema:
+                type: string
+                example: noopen
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+            X-XSS-Protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            Vary:
+              schema:
+                type: string
+                example: Origin
+            Content-Type:
+              schema:
+                type: string
+                example: application/json; charset=utf-8
+            X-Response-Time:
+              schema:
+                type: string
+                example: 1214ms
+            Content-Length:
+              schema:
+                type: integer
+                example: '475'
+            Date:
+              schema:
+                type: string
+                example: Sat, 03 Dec 2022 22:35:33 GMT
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+            Keep-Alive:
+              schema:
+                type: string
+                example: timeout=5
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                app:
+                  createdAt: '2022-11-28T12:45:47.677Z'
+                  id: app_2IB0DHxPDmSMYfIO2hyPwCiVsRx
+                  metadata: {}
+                  name: Charef
+                  uid: 1frbda
+                  updatedAt: '2022-11-28T12:45:47.677Z'
+                endpoint:
+                  channels: null
+                  createdAt: '2022-12-03T22:35:32.993Z'
+                  description: ''
+                  disabled: false
+                  filterTypes:
+                    - favourite.created
+                  id: ep_2IQHYL2Cxdkrqo1ukzaKTDViMhx
+                  metadata: null
+                  rateLimit: null
+                  uid: null
+                  updatedAt: '2022-12-03T22:35:32.993Z'
+                  url: https://webhook.site/8ff
+                  version: 1
+  /facts:
+    get:
+      tags:
+        - Facts
+      summary: Get Random Fact(s)
+      description: >-
+        Get one or more Random facts and the Species. For more at a time just
+        update the 'limit' field
+      responses:
+        '200':
+          description: OK
+          headers:
+            x-dns-prefetch-control:
+              schema:
+                type: string
+                example: 'off'
+            x-frame-options:
+              schema:
+                type: string
+                example: SAMEORIGIN
+            strict-transport-security:
+              schema:
+                type: string
+                example: max-age=15552000; includeSubDomains
+            x-download-options:
+              schema:
+                type: string
+                example: noopen
+            x-content-type-options:
+              schema:
+                type: string
+                example: nosniff
+            x-xss-protection:
+              schema:
+                type: string
+                example: 1; mode=block
+            vary:
+              schema:
+                type: string
+                example: Origin
+            content-type:
+              schema:
+                type: string
+                example: application/json
+            pagination-count:
+              schema:
+                type: integer
+                example: '711'
+            pagination-page:
+              schema:
+                type: integer
+                example: '0'
+            pagination-limit:
+              schema:
+                type: integer
+                example: '1'
+            access-control-expose-headers:
+              schema:
+                type: string
+                example: Pagination-Count, Pagination-Page, Pagination-Limit
+            x-response-time:
+              schema:
+                type: string
+                example: 182ms
+            X-Cloud-Trace-Context:
+              schema:
+                type: string
+                example: 50ca0e8d0728c4655687fd4cee3b3d7b
+            Date:
+              schema:
+                type: string
+                example: Thu, 19 Oct 2023 07:40:05 GMT
+            Server:
+              schema:
+                type: string
+                example: Google Frontend
+            Content-Length:
+              schema:
+                type: integer
+                example: '205'
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                - id: MBM2F
+                  fact: >-
+                    Cornish Rex cats have a relatively long lifespan compared to
+                    other cat breeds. They can live up to 15 years or more with
+                    proper care.
+                  breed_id: crex
+                  title: 10. Long Lifespan
