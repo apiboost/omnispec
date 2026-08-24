@@ -1,10 +1,11 @@
-import {useState} from 'react'
+import {useMemo, useState} from 'react'
 import Layout from '@theme/Layout'
 import BrowserOnly from '@docusaurus/BrowserOnly'
-import useBaseUrl from '@docusaurus/useBaseUrl'
+import {useBaseUrlUtils} from '@docusaurus/useBaseUrl'
 import {useColorMode} from '@docusaurus/theme-common'
 import DemoConfigPanel, {
   DEFAULT_DEMO_CONFIG,
+  SPEC_OPTIONS,
   type DemoConfig,
 } from '@site/src/components/DemoConfigPanel'
 import styles from './demo.module.css'
@@ -17,18 +18,19 @@ import styles from './demo.module.css'
 // the browser-only renderer are all safe here.
 function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
   const {colorMode} = useColorMode() // 'light' | 'dark' — tracks the header switcher
-  const specUrl = useBaseUrl(config.spec) // prefixes the /omnispec/ baseUrl
   const {OmniSpecRenderer} = require('@apiboost/omnispec') as typeof import('@apiboost/omnispec')
 
   return (
     <OmniSpecRenderer
+      // config.spec is already a resolved URL (a base-URL-prefixed preset, or a
+      // URL the user pasted), so it goes straight to the renderer.
       // schemaStyle / layout / sidebarPosition / tryItLayout / allowTryIt /
       // downloadLink update live via config context, so they stay OUT of the
       // key. spec / displayMode / navigationMode / defaultExpandOperations are
       // mount-time concerns (parse, initial expand), so keying on them forces a
       // clean remount when they change.
-      key={`${specUrl}|${config.displayMode}|${config.navigationMode}|${config.defaultExpandOperations}`}
-      spec={specUrl}
+      key={`${config.spec}|${config.displayMode}|${config.navigationMode}|${config.defaultExpandOperations}`}
+      spec={config.spec}
       theme={{base: colorMode}}
       layout={config.layout}
       sidebarPosition={config.sidebarPosition}
@@ -67,7 +69,18 @@ function GearIcon(): React.ReactNode {
 // because the renderer relies on browser APIs (DOM, fetch, IntersectionObserver)
 // that don't exist during the static build.
 export default function Demo(): React.ReactNode {
-  const [config, setConfig] = useState<DemoConfig>(DEFAULT_DEMO_CONFIG)
+  const {withBaseUrl} = useBaseUrlUtils()
+  // Resolve the bundled preset paths to real URLs once; an absolute URL a user
+  // pastes passes through withBaseUrl unchanged.
+  const specOptions = useMemo(
+    () => SPEC_OPTIONS.map((s) => ({label: s.label, value: withBaseUrl(s.value)})),
+    [withBaseUrl],
+  )
+  const defaults = useMemo(
+    () => ({...DEFAULT_DEMO_CONFIG, spec: withBaseUrl(DEFAULT_DEMO_CONFIG.spec)}),
+    [withBaseUrl],
+  )
+  const [config, setConfig] = useState<DemoConfig>(defaults)
   const [open, setOpen] = useState(false)
 
   return (
@@ -102,18 +115,31 @@ export default function Demo(): React.ReactNode {
         >
           <div className={styles.sheetHeader}>
             <h2 className={styles.sheetTitle}>Live configuration</h2>
-            <button
-              type="button"
-              className={styles.close}
-              onClick={() => setOpen(false)}
-              aria-label="Close configuration"
-            >
-              ×
-            </button>
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.reset}
+                onClick={() => setConfig(defaults)}
+              >
+                Reset to defaults
+              </button>
+              <button
+                type="button"
+                className={styles.close}
+                onClick={() => setOpen(false)}
+                aria-label="Close configuration"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <div className={styles.sheetBody}>
             <div className={styles.sheetInner}>
-              <DemoConfigPanel config={config} onChange={setConfig} />
+              <DemoConfigPanel
+                config={config}
+                onChange={setConfig}
+                specOptions={specOptions}
+              />
             </div>
           </div>
         </div>

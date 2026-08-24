@@ -111,27 +111,43 @@ function CheckboxField({id, label, checked, onChange}: CheckboxFieldProps): Reac
 export interface DemoConfigPanelProps {
   config: DemoConfig;
   onChange: (config: DemoConfig) => void;
+  /** Preset specs with their base-URL-resolved values, for the paste-or-pick field. */
+  specOptions: ReadonlyArray<{label: string; value: string}>;
 }
 
-export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps): ReactNode {
+export default function DemoConfigPanel({
+  config,
+  onChange,
+  specOptions,
+}: DemoConfigPanelProps): ReactNode {
   const set = <K extends keyof DemoConfig>(key: K, value: DemoConfig[K]) =>
     onChange({...config, [key]: value});
 
   return (
     <div className={styles.panel}>
       <div className={styles.grid}>
-        <SelectField
-          id="spec"
-          label="Spec"
-          value={config.spec}
-          onChange={(v) => set('spec', v)}
-        >
-          {SPEC_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </SelectField>
+        <div className={`${styles.field} ${styles.specField}`}>
+          <label className={styles.label} htmlFor="demo-spec">
+            Spec
+          </label>
+          <input
+            id="demo-spec"
+            className={styles.select}
+            type="text"
+            list="demo-spec-presets"
+            value={config.spec}
+            spellCheck={false}
+            placeholder="Paste a spec URL or pick a preset"
+            onChange={(e) => set('spec', e.target.value)}
+          />
+          <datalist id="demo-spec-presets">
+            {specOptions.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </datalist>
+        </div>
         <SelectField
           id="layout"
           label="Layout"
@@ -219,20 +235,11 @@ export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps
         />
       </div>
 
-      <div className={styles.footer}>
-        <button
-          type="button"
-          className={styles.reset}
-          onClick={() => onChange(DEFAULT_DEMO_CONFIG)}
-        >
-          Reset to defaults
-        </button>
-        <p className={styles.hint}>
-          Theme follows the site&apos;s light/dark toggle. Full white-label theming and{' '}
-          <code>table</code>/<code>card</code> schema styles are{' '}
-          <a href="https://apiboost.com/omnispec">OmniSpec Pro</a> features.
-        </p>
-      </div>
+      <p className={styles.hint}>
+        Theme follows the site&apos;s light/dark toggle. Full white-label theming and{' '}
+        <code>table</code>/<code>card</code> schema styles are{' '}
+        <a href="https://apiboost.com/omnispec">OmniSpec Pro</a> features.
+      </p>
     </div>
   );
 }
