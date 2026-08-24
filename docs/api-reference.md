@@ -35,13 +35,13 @@ All spec renderers accept these common props:
 ### `pro` (Pro)
 
 :::info[Pro]
-The `pro` prop accepts an **[Apiboost OmniSpec Pro](https://apiboost.com)** capability object that unlocks Pro renderers (GraphQL, SOAP/WSDL, gRPC), full theme-token white-labeling, the `table`/`card` schema styles, and the interactive OAuth Try-It flow. In the free core it is unset and these features are unavailable. The pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` sets it for you; the deprecated `<ProProvider>` is not the current pattern. Pro configuration syntax is documented in the Pro docs.
+The `pro` prop accepts an **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)** capability object that unlocks Pro renderers (GraphQL, SOAP/WSDL, gRPC), full theme-token white-labeling, the `table`/`card` schema styles, and the interactive OAuth Try-It flow. In the free core it is unset and these features are unavailable. The pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` sets it for you; the deprecated `<ProProvider>` is not the current pattern. Pro configuration syntax is documented in the Pro docs.
 :::
 
 ### `oauth` (Pro)
 
 :::info[Pro]
-The `oauth` prop (`OAuthConfig`) drives the interactive OAuth "Get Token" Try-It flow — Authorization Code + PKCE and OpenID Connect discovery — requiring **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, OAuth2 flow details are shown and tokens are pasted manually. The `OAuthConfig` shape and setup are documented in the Pro docs.
+The `oauth` prop (`OAuthConfig`) drives the interactive OAuth "Get Token" Try-It flow — Authorization Code + PKCE and OpenID Connect discovery — requiring **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, OAuth2 flow details are shown and tokens are pasted manually. The `OAuthConfig` shape and setup are documented in the Pro docs.
 :::
 
 When Pro is installed the interactive flow is on by default. To force the manual token-paste experience (e.g. in an embed where popups are undesirable), pass `interactiveOAuth={false}` on the renderer, or `interactive-oauth="false"` on the `<omnispec-renderer>` web component.
@@ -150,7 +150,7 @@ import { AsyncApiSpec } from '@apiboost/omnispec/asyncapi'
 ## GraphqlSpec
 
 :::info[Pro]
-The GraphQL renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, GraphQL specs display a styled upgrade prompt.
+The GraphQL renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, GraphQL specs display a styled upgrade prompt.
 :::
 
 Renders GraphQL schemas from SDL strings or introspection results.
@@ -182,7 +182,7 @@ import { GraphqlSpec } from '@apiboost/omnispec/graphql'
 ## SoapSpec
 
 :::info[Pro]
-The SOAP/WSDL renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, WSDL specs display a styled upgrade prompt.
+The SOAP/WSDL renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, WSDL specs display a styled upgrade prompt.
 :::
 
 Renders WSDL 1.1 / SOAP API specifications.
@@ -213,7 +213,7 @@ import { SoapSpec } from '@apiboost/omnispec/soap'
 ## GrpcSpec
 
 :::info[Pro]
-The gRPC/Protobuf renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, `.proto` specs display a styled upgrade prompt.
+The gRPC/Protobuf renderer requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, `.proto` specs display a styled upgrade prompt.
 :::
 
 Renders gRPC services from Protocol Buffer (`.proto`) files.

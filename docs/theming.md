@@ -15,7 +15,7 @@ In the **free core** (`@apiboost/omnispec`) you control the theme two ways:
 2. **Raw `--omnispec-*` CSS-variable overrides** — set any of the design tokens below directly on `.omnispec-root` (or a host element) with plain CSS. This is the **free white-labeling path** and is documented under [CSS Variable Overrides (Free)](#css-variable-overrides-free).
 
 :::info[Pro]
-The programmatic `theme.overrides` prop — passing an arbitrary token map to `<OmniSpecRenderer>` — requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, set the same `--omnispec-*` tokens with a CSS rule instead (see [CSS Variable Overrides (Free)](#css-variable-overrides-free)); the token reference table below documents every available token for either approach.
+The programmatic `theme.overrides` prop — passing an arbitrary token map to `<OmniSpecRenderer>` — requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, set the same `--omnispec-*` tokens with a CSS rule instead (see [CSS Variable Overrides (Free)](#css-variable-overrides-free)); the token reference table below documents every available token for either approach.
 :::
 
 ## Built-in Themes
@@ -156,7 +156,7 @@ When integrating with an app that already defines its own design tokens, point t
 Fallback values are supported: `var(--btn-font-size, 0.8125rem)`.
 
 :::info[Pro]
-Passing these same token overrides **programmatically** through the `theme.overrides` prop (an arbitrary `{ '--omnispec-*': value }` map on `<OmniSpecRenderer>`, including per-mode override objects synced via `onThemeChange`) is a full white-labeling convenience that requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, apply the identical tokens with the CSS rules shown above — the visual result is the same.
+Passing these same token overrides **programmatically** through the `theme.overrides` prop (an arbitrary `{ '--omnispec-*': value }` map on `<OmniSpecRenderer>`, including per-mode override objects synced via `onThemeChange`) is a full white-labeling convenience that requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, apply the identical tokens with the CSS rules shown above — the visual result is the same.
 :::
 
 ## Design Token Reference

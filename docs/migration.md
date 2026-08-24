@@ -37,7 +37,7 @@ Switching to `@apiboost/omnispec` from another renderer. Each section covers one
 `@apiboost/omnispec` renders OpenAPI 2.0, 3.0.x, and 3.1, plus AsyncAPI 2.x and
 3.x, in a single component — all free. GraphQL, SOAP/WSDL, and gRPC renderers,
 full white-label theming, and the premium vendor extensions are part of
-[Apiboost OmniSpec Pro](https://apiboost.com).
+[Apiboost OmniSpec Pro](https://apiboost.com/omnispec).
 
 ---
 
@@ -116,7 +116,7 @@ Redoc uses a nested `theme` object. `@apiboost/omnispec` uses flat CSS custom pr
 
 :::info[Pro]
 Passing the token map through the `theme.overrides` prop (shown in the "After"
-examples below) requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In
+examples below) requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In
 the free core, set the identical `--omnispec-*` tokens with a plain CSS rule on
 `.omnispec-root` — the visual result is the same. See
 [Theming](./theming.md) for the free CSS-variable path.
@@ -177,7 +177,7 @@ Your existing Redoc vendor extensions carry over without spec changes:
 The free core renders `x-logo` and all OpenAPI + AsyncAPI content. The premium
 vendor extensions (`x-tagGroups`, `x-codeSamples`, `x-displayName`,
 `x-enumDescriptions`, `x-internal`) are part of
-[Apiboost OmniSpec Pro](https://apiboost.com) — the same set you would have used
+[Apiboost OmniSpec Pro](https://apiboost.com/omnispec) — the same set you would have used
 Redoc Pro for.
 
 ### Display Mode
@@ -496,7 +496,7 @@ Scalar's named themes (`default`, `moon`, `purple`, `solarized`) do not map dire
 
 :::info[Pro]
 As with the Redoc migration above, the `theme.overrides` prop is an
-**[Apiboost OmniSpec Pro](https://apiboost.com)** feature. In the free core,
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)** feature. In the free core,
 apply the same `--omnispec-*` tokens with a CSS rule on `.omnispec-root` — see
 [Theming](./theming.md).
 :::

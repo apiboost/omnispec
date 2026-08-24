@@ -7,7 +7,7 @@ sidebar_position: 2
 
 `@apiboost/omnispec` — the free core — is a **complete, production-ready API documentation renderer**. It is published under the **Apache-2.0** license on the public npm registry, has no runtime license check, and is not a time-limited trial. If your APIs are described with OpenAPI or AsyncAPI, the free core renders them fully, including interactive Try-It, code samples, theming, and a framework-agnostic web component.
 
-**[Apiboost OmniSpec Pro](https://apiboost.com)** is a separate, proprietary package (`@apiboost/omnispec-pro`) that extends the free core with additional spec renderers, deeper white-labeling, premium vendor extensions, and interactive OAuth. Pro is a drop-in superset: it re-exports everything in Free and swaps in a Pro-wired renderer, so nothing you build on Free is thrown away when you upgrade.
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)** is a separate, proprietary package (`@apiboost/omnispec-pro`) that extends the free core with additional spec renderers, deeper white-labeling, premium vendor extensions, and interactive OAuth. Pro is a drop-in superset: it re-exports everything in Free and swaps in a Pro-wired renderer, so nothing you build on Free is thrown away when you upgrade.
 
 :::info
 The public documentation site fully documents everything the free core does. Pro capabilities are named and summarized here, but their configuration syntax and recipes live in the Pro documentation. Where a page mentions a Pro feature, it also states what the free core does instead.
@@ -43,7 +43,7 @@ The free core is designed to degrade gracefully — it never crashes when it enc
 
 ## When you need Pro
 
-Reach for [Apiboost OmniSpec Pro](https://apiboost.com) when you need to:
+Reach for [Apiboost OmniSpec Pro](https://apiboost.com/omnispec) when you need to:
 
 - Render **GraphQL, SOAP/WSDL, or gRPC** APIs alongside your OpenAPI/AsyncAPI docs.
 - Ship a **fully white-labeled** portal via structured `theme.overrides` rather than hand-authored CSS variables.
@@ -51,4 +51,4 @@ Reach for [Apiboost OmniSpec Pro](https://apiboost.com) when you need to:
 - Use premium vendor extensions authored for Redocly, Scalar, or RapiDoc — `x-codeSamples`, `x-tagGroups`, `x-badges`, and more — without modifying your specs.
 - Get **commercial support** with response-time commitments.
 
-Upgrading is a package swap: import `OmniSpecRenderer` from `@apiboost/omnispec-pro` instead of `@apiboost/omnispec`, and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com)**.
+Upgrading is a package swap: import `OmniSpecRenderer` from `@apiboost/omnispec-pro` instead of `@apiboost/omnispec`, and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com/omnispec)**.

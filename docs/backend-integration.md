@@ -50,7 +50,7 @@ If not provided, the renderer auto-detects the type from the content.
 :::info[Pro]
 
 Rendering GraphQL schemas — whether from SDL or an introspection JSON result —
-requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**. In the free
+requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free
 core, the renderer covers OpenAPI 2.0 / 3.0 / 3.1 and AsyncAPI 2 / 3. The
 export guidance below applies when you serve GraphQL schemas to a Pro-enabled
 renderer.
@@ -120,7 +120,7 @@ Then pass `proxyUrl` to the renderer:
 :::info[Pro]
 
 The interactive OAuth 2.0 Authorization Code + PKCE **Get Token** flow that
-uses this callback requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**.
+uses this callback requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**.
 In the free core, the Try-It Authorize panel shows the OAuth flow details and
 accepts a manually pasted access token — no callback route is needed.
 

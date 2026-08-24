@@ -125,7 +125,7 @@ This scopes cleanly, so you can even give different renderer instances on the sa
 :::info[Pro]
 
 The `theme.overrides` **prop** — passing the same token map through the React
-API instead of a stylesheet — requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**.
+API instead of a stylesheet — requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**.
 In the free core, use the CSS-variable approach above, which produces the same
 result.
 

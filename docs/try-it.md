@@ -276,7 +276,7 @@ tier and requires no extra configuration.
 :::info[Pro]
 
 The interactive **Get Token** flow — Authorization Code with PKCE (RFC 7636)
-and Client Credentials — requires **[Apiboost OmniSpec Pro](https://www.apiboost.com)**.
+and Client Credentials — requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**.
 Pro adds a **Get Token** button that runs the flow end to end (consent popup,
 `state`/PKCE, code-for-token exchange) and applies the result automatically. In
 the free core, the Authorize panel shows the same flow details and you paste an
@@ -310,7 +310,7 @@ components:
 
 The interactive **Get Token** flow over an OpenID Connect scheme (same
 Authorization Code + PKCE flow as `oauth2`) requires
-**[Apiboost OmniSpec Pro](https://www.apiboost.com)**. In the free core,
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core,
 OpenID Connect schemes render the discovered flow details with manual token
 paste.
 
@@ -384,7 +384,7 @@ the interactive **Get Token** that consumes the resulting URL is a Pro feature
 :::info[Pro]
 
 The interactive **Get Token** flow requires
-**[Apiboost OmniSpec Pro](https://www.apiboost.com)**. Pro runs the OAuth
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. Pro runs the OAuth
 exchange from inside the Authorize panel and adds the controls that drive it —
 a client-authentication toggle (`client_secret_basic` vs `client_secret_post`),
 per-scope selection checkboxes, Client Credentials support, and hardened flow
@@ -488,7 +488,7 @@ You can listen to Try It requests and responses:
 |------|------|---------|-------------|
 | `allowTryIt` | `boolean` | `true` | Enable or disable the Try It panel |
 | `proxyUrl` | `string` | `undefined` | Backend proxy URL. When set, requests route through the proxy instead of going directly to the API |
-| `oauth` | `OAuthConfig` | `undefined` | **(Pro)** Configures the interactive OAuth 2.0 (PKCE) Get Token flow. Requires [Apiboost OmniSpec Pro](https://www.apiboost.com); the free core uses manual token paste |
+| `oauth` | `OAuthConfig` | `undefined` | **(Pro)** Configures the interactive OAuth 2.0 (PKCE) Get Token flow. Requires [Apiboost OmniSpec Pro](https://apiboost.com/omnispec); the free core uses manual token paste |
 | `onTryItRequest` | `(request: TryItRequest) => void` | — | Callback fired before a request is sent |
 | `onTryItResponse` | `(response: TryItResponse) => void` | — | Callback fired after a response is received |
 
@@ -517,7 +517,7 @@ Code samples automatically include:
 
 Overriding the auto-generated snippets with your own per-operation samples via
 the `x-codeSamples` vendor extension requires
-**[Apiboost OmniSpec Pro](https://www.apiboost.com)**. In the free core, the
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, the
 six auto-generated language samples above are always shown.
 
 :::

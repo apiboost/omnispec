@@ -59,14 +59,6 @@ const config: Config = {
     colorMode: {
       respectPrefersColorScheme: true,
     },
-    announcementBar: {
-      id: 'enterprise-upsell',
-      content:
-        'Need advanced enterprise access controls, team workflows, or multiple portal environments? <a target="_blank" rel="noopener noreferrer" href="https://apiboost.com">Check out Apiboost Enterprise Portal Solutions</a>.',
-      backgroundColor: '#023E8A',
-      textColor: '#ffffff',
-      isCloseable: true,
-    },
     navbar: {
       title: 'OmniSpec',
       items: [
@@ -87,7 +79,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://www.apiboost.com',
+          href: 'https://apiboost.com/omnispec',
           label: 'Pro',
           position: 'right',
         },
@@ -114,14 +106,15 @@ const config: Config = {
         {
           title: 'Apiboost',
           items: [
-            {label: 'Website', href: 'https://apiboost.com'},
-            {label: 'OmniSpec Pro', href: 'https://apiboost.com'},
+            {label: 'Apiboost OmniSpec', href: 'https://apiboost.com/omnispec'},
+            {label: 'OmniSpec Pro', href: 'https://apiboost.com/omnispec'},
+            {label: 'Apiboost', href: 'https://apiboost.com'},
             {label: 'LinkedIn', href: 'https://www.linkedin.com/company/apiboost'},
             {label: 'Contact', href: 'https://apiboost.com/contact'},
           ],
         },
       ],
-      copyright: `OmniSpec™ is an open-source multi-spec rendering component developed and maintained by Apiboost. © ${new Date().getFullYear()} Apiboost. All Rights Reserved.`,
+      copyright: `Apiboost OmniSpec™ is an open-source multi-spec rendering component developed and maintained by Apiboost. © ${new Date().getFullYear()} Apiboost. All Rights Reserved.`,
     },
     prism: {
       theme: prismThemes.github,

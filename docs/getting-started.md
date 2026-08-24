@@ -30,7 +30,7 @@ That's it. The component fetches the spec, auto-detects the type, and renders fu
 ### Adding Pro
 
 :::info[Pro]
-GraphQL, SOAP/WSDL, and gRPC renderers, plus full theme-token white-labeling, require **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, OpenAPI and AsyncAPI specs render fully; other spec types display a styled upgrade prompt.
+GraphQL, SOAP/WSDL, and gRPC renderers, plus full theme-token white-labeling, require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, OpenAPI and AsyncAPI specs render fully; other spec types display a styled upgrade prompt.
 :::
 
 Pro is activated by importing the pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` — it needs no provider or extra configuration:
@@ -239,7 +239,7 @@ Three built-in theme modes: `'light'`, `'dark'`, and `'auto'` (detects system pr
 Both modes accept raw `--omnispec-*` CSS-variable overrides scoped to `.omnispec-root`, the free white-label path.
 
 :::info[Pro]
-Structured `theme.overrides` (full 70+ design-token white-labeling via the `theme` prop) requires **[Apiboost OmniSpec Pro](https://apiboost.com)**. In the free core, set the same tokens as raw CSS variables on `.omnispec-root` in your own stylesheet.
+Structured `theme.overrides` (full 70+ design-token white-labeling via the `theme` prop) requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, set the same tokens as raw CSS variables on `.omnispec-root` in your own stylesheet.
 :::
 
 See [Theming Guide](./theming.md) for all design tokens.
