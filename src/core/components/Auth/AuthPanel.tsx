@@ -50,17 +50,23 @@ function renderSchemeForm(
   Oauth2Component: InteractiveAuthComponent,
   OpenIdConnectComponent: InteractiveAuthComponent,
 ): ReactElement | null {
+  // Key every form by scheme id: AuthPanel/Tabs render one form at a single tree
+  // position, so without a distinct key React reuses the component instance when
+  // switching scheme tabs — bleeding per-scheme state (e.g. OAuth `activeFlow`,
+  // client id/secret, pasted token) from one scheme into the next. Keying forces
+  // a remount per scheme so each starts from its own props/applied value.
+  const key = props.scheme.id
   switch (props.scheme.type) {
     case 'apiKey':
-      return <ApiKeyAuth {...props} />
+      return <ApiKeyAuth key={key} {...props} />
     case 'http-bearer':
-      return <BearerAuth {...props} />
+      return <BearerAuth key={key} {...props} />
     case 'http-basic':
-      return <BasicAuth {...props} />
+      return <BasicAuth key={key} {...props} />
     case 'oauth2':
-      return <Oauth2Component {...props} />
+      return <Oauth2Component key={key} {...props} />
     case 'openIdConnect':
-      return <OpenIdConnectComponent {...props} />
+      return <OpenIdConnectComponent key={key} {...props} />
     default:
       return null
   }

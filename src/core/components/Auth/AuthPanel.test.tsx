@@ -83,6 +83,32 @@ describe('AuthPanel scheme tabs', () => {
   })
 })
 
+describe('AuthPanel — per-scheme state isolation across tabs', () => {
+  afterEach(cleanup)
+
+  const oauthA: AuthScheme = {
+    id: 'oauthA', type: 'oauth2', displayName: 'OAuth A',
+    flows: { clientCredentials: { tokenUrl: 'https://a/token', scopes: {} } },
+  }
+  const oauthB: AuthScheme = {
+    id: 'oauthB', type: 'oauth2', displayName: 'OAuth B',
+    flows: { authorizationCode: { authorizationUrl: 'https://b/authorize', tokenUrl: 'https://b/token', scopes: {} } },
+  }
+
+  it('does not bleed one scheme\'s input into another when switching tabs (remounts per scheme)', () => {
+    render(<AuthProvider schemes={[oauthA, oauthB]}><AuthPanel schemes={[oauthA, oauthB]} /></AuthProvider>)
+
+    // Type a token into scheme A's manual field.
+    const tokenA = screen.getByPlaceholderText('Access token') as HTMLInputElement
+    fireEvent.change(tokenA, { target: { value: 'AAA-token' } })
+    expect((screen.getByPlaceholderText('Access token') as HTMLInputElement).value).toBe('AAA-token')
+
+    // Switch to scheme B — its field must be fresh, not A's reused instance/state.
+    fireEvent.click(screen.getByRole('tab', { name: /oauthB/ }))
+    expect((screen.getByPlaceholderText('Access token') as HTMLInputElement).value).toBe('')
+  })
+})
+
 describe('AuthPanel — interactive vs manual resolution', () => {
   afterEach(cleanup)
 
