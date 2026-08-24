@@ -33,7 +33,7 @@ info:
     Don't forget to checkout it's sister API - TheDogAPI.com
   version: 1.6.3
 servers:
-  - url: http://api.thecatapi.com/v1
+  - url: https://api.thecatapi.com/v1
 components:
   securitySchemes:
     noauthAuth:
