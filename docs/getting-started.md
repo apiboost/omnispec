@@ -1,6 +1,21 @@
+---
+description: Render interactive OpenAPI, Swagger & AsyncAPI docs in React with OmniSpec — built-in Try-It console, auto-generated code samples, theming, and a framework-agnostic Web Component.
+keywords:
+  - OpenAPI
+  - Swagger
+  - AsyncAPI
+  - API documentation
+  - React API docs renderer
+  - Try-It console
+  - code samples
+  - Web Component
+  - Redoc alternative
+  - open source
+---
+
 # Getting Started
 
-Render API documentation in your React app in under 2 minutes.
+Render interactive OpenAPI, Swagger, and AsyncAPI documentation in your React app in under two minutes.
 
 ## Packages
 

@@ -6,7 +6,10 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'OmniSpec',
-  tagline: 'Render OpenAPI & AsyncAPI documentation in React',
+  // Tagline doubles as the site-wide default meta description (used on pages
+  // without their own frontmatter description), so keep it keyword-rich.
+  tagline:
+    'The open-source React renderer for interactive OpenAPI, Swagger & AsyncAPI documentation',
   // Theme-aware favicon via two files: the light SVG is the default/fallback
   // (also covers browsers without prefers-color-scheme), the dark SVG overrides
   // when the browser chrome is dark. headTags hrefs are literal, so they include
@@ -74,6 +77,17 @@ const config: Config = {
   ],
 
   themeConfig: {
+    // Site-wide SEO/social meta. Per-page frontmatter `description` overrides the
+    // tagline-derived description; these add keywords and Open Graph/Twitter tags.
+    metadata: [
+      {
+        name: 'keywords',
+        content:
+          'OpenAPI, Swagger, AsyncAPI, API documentation, React, API docs renderer, Try-It, code samples, Web Component, open source, Redoc alternative',
+      },
+      {property: 'og:type', content: 'website'},
+      {name: 'twitter:card', content: 'summary'},
+    ],
     colorMode: {
       respectPrefersColorScheme: true,
     },
