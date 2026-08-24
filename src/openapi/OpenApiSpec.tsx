@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { css, cx } from '@core/styles/css'
 import type { BaseSpecProps } from '@core/types/common.types'
 import { SpecType } from '@core/types/spec-detection.types'
@@ -46,6 +46,10 @@ import { SpecStatusScreen } from '@core/components/Layout/SpecStatusScreen'
 // mode, giving users a way back to the top-level route (title/servers/schemas).
 const OVERVIEW_NAV_ID = '__apidoc_overview__'
 
+// One-time guard so the reference-mode `tryItLayout` warning fires at most once
+// per session instead of on every render/instance.
+let warnedTryItLayoutIgnored = false
+
 export function OpenApiSpec({
   spec,
   theme,
@@ -57,7 +61,9 @@ export function OpenApiSpec({
   downloadLink,
   layout = 'sidebar',
   sidebarPosition = 'left',
-  tryItLayout = 'inline',
+  // Default `panel` (docked side column). Non-breaking: the prop was dead until
+  // inline was implemented, so `panel` matches every consumer's current Try-It.
+  tryItLayout = 'panel',
   defaultExpandOperations = false,
   displayMode,
   schemaStyle,
@@ -245,6 +251,25 @@ export function OpenApiSpec({
 
   const resolvedDisplayMode = displayMode ?? 'compact'
   const resolvedSchemaStyle = resolveSchemaStyle(schemaStyle, pro?.advancedSchemaStyles ?? false)
+
+  // `tryItLayout` only affects compact mode; reference mode owns its own Try-It
+  // placement. Warn once (dev only) if a consumer set `inline` in reference
+  // mode so the no-op is discoverable without spamming the console in prod.
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      resolvedDisplayMode === 'reference' &&
+      tryItLayout === 'inline' &&
+      !warnedTryItLayoutIgnored
+    ) {
+      warnedTryItLayoutIgnored = true
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[omnispec] `tryItLayout: 'inline'` is ignored in reference display mode — " +
+          'reference mode renders Try-It as its own right-column tab.',
+      )
+    }
+  }, [resolvedDisplayMode, tryItLayout])
 
   const { route, navigateToOperation, navigateToOverview } = useSegmentedRouter()
 

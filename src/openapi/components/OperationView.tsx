@@ -13,6 +13,7 @@ import type { OpenApiOperation } from '@openapi/types/openapi.types'
 import { MethodBar } from '@core/components/common/MethodBar'
 import { ResponsiveColumns } from '@core/components/common/ResponsiveColumns'
 import { TryItPanel } from '@core/components/TryIt/TryItPanel'
+import { InlineTryIt } from '@core/components/TryIt/InlineTryIt'
 import { generateExample } from '@core/components/SchemaViewer/schema-utils'
 import { OperationDetail } from '@openapi/components/OperationDetail'
 import { useConfig } from '@core/context/ConfigContext'
@@ -29,7 +30,7 @@ interface OperationViewProps {
 }
 
 export function OperationView({ operation, serverUrl, onBack, tagName }: OperationViewProps) {
-  const { allowTryIt, displayMode } = useConfig()
+  const { allowTryIt, displayMode, tryItLayout } = useConfig()
   const title = operation.summary || operation.operationId || operation.path
 
   const tryItParams: ParameterDef[] = operation.parameters.map((p) => {
@@ -58,6 +59,19 @@ export function OperationView({ operation, serverUrl, onBack, tagName }: Operati
   const defaultBodyExample = defaultBodySchema
     ? JSON.stringify(generateExample(defaultBodySchema as Record<string, unknown>), null, 2)
     : undefined
+
+  // Shared Try-It props — identical whether docked in the side column
+  // (`tryItLayout: 'panel'`) or expanded inline below the operation.
+  const tryItPanelProps = {
+    method: operation.method,
+    path: operation.path,
+    serverUrl,
+    parameters: tryItParams,
+    requestBodyContentTypes,
+    defaultRequestBody: defaultBodyExample,
+    requestBodySchema: defaultBodySchema as Record<string, unknown> | undefined,
+    xCodeSamples: operation.xCodeSamples,
+  }
 
   return (
     <div className={containerStyle}>
@@ -95,34 +109,19 @@ export function OperationView({ operation, serverUrl, onBack, tagName }: Operati
                 responses={operation.responses}
               />
             }
-            tryIt={allowTryIt ? (
-              <TryItPanel
-                method={operation.method}
-                path={operation.path}
-                serverUrl={serverUrl}
-                parameters={tryItParams}
-                requestBodyContentTypes={requestBodyContentTypes}
-                defaultRequestBody={defaultBodyExample}
-                requestBodySchema={defaultBodySchema as Record<string, unknown> | undefined}
-                xCodeSamples={operation.xCodeSamples}
-              />
-            ) : <div />}
+            tryIt={allowTryIt ? <TryItPanel {...tryItPanelProps} /> : <div />}
           />
+        ) : tryItLayout === 'inline' ? (
+          // Inline (compact only): operation detail full-width, Try-It console in
+          // a collapsed-by-default disclosure below it.
+          <>
+            <OperationDetail operation={operation} />
+            {allowTryIt && <InlineTryIt {...tryItPanelProps} />}
+          </>
         ) : (
           <ResponsiveColumns
             left={<OperationDetail operation={operation} />}
-            right={allowTryIt ? (
-              <TryItPanel
-                method={operation.method}
-                path={operation.path}
-                serverUrl={serverUrl}
-                parameters={tryItParams}
-                requestBodyContentTypes={requestBodyContentTypes}
-                defaultRequestBody={defaultBodyExample}
-                requestBodySchema={defaultBodySchema as Record<string, unknown> | undefined}
-                xCodeSamples={operation.xCodeSamples}
-              />
-            ) : undefined}
+            right={allowTryIt ? <TryItPanel {...tryItPanelProps} /> : undefined}
             rightLabel="Try It"
           />
         )}

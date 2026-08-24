@@ -101,7 +101,7 @@ The imperative property always wins over an attribute when both are set.
 | `navigation-mode` | `'grouped' \| 'segmented'` | Nav grouping. |
 | `layout` | `'sidebar' \| 'stacked'` | Page layout. |
 | `sidebar-position` | `'left' \| 'right'` | Sidebar placement. |
-| `try-it-layout` | `'inline' \| 'panel'` | Try-It panel layout. |
+| `try-it-layout` | `'inline' \| 'panel'` | Try-It position in compact mode (default `panel`). `panel` = sticky right column; `inline` = collapsed below the operation. Ignored in reference mode. |
 | `schema-style` | `'lines' \| 'tokens' \| 'chain' \| 'table' \| 'card'` | Schema tree style. `table` and `card` require Pro. |
 | `allow-try-it` | boolean | Enable Try-It. |
 | `interactive-oauth` | boolean | Opt out of the Pro interactive OAuth flow with `"false"` (forces manual token paste). No effect without Pro. |

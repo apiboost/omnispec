@@ -210,15 +210,11 @@ See [External Refs Guide](./external-refs.md) for the full security model and co
 
 ## Try-It Layout
 
-### Inline (default)
+`tryItLayout` controls where the Try-It console appears in **compact** display
+mode. In `reference` mode Try-It is always its own right-column tab, so
+`tryItLayout` is ignored there.
 
-Try-It panel renders below each expanded operation:
-
-```tsx
-<OpenApiSpec spec={url} tryItLayout="inline" />
-```
-
-### Panel
+### Panel (default)
 
 Try-It renders in a sticky right column beside the operation documentation, similar to Stripe's API reference:
 
@@ -231,6 +227,16 @@ a 65 / 35 split (content-heavy left, Try-It on the right). The divider is
 draggable, and the chosen width is remembered:
 - **Left (~65%)**: Parameters, request body schema, response codes
 - **Right (~35%)**: Sticky Try-It panel with forms, send button, response viewer
+
+### Inline
+
+Try-It is collapsed behind a full-width "Try it" button below each operation and
+expands in place — ideal for narrow or embedded layouts. Entered parameters,
+auth, and the last response are preserved when it's collapsed:
+
+```tsx
+<OpenApiSpec spec={url} tryItLayout="inline" />
+```
 
 ## Try-It Modes
 

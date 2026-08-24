@@ -9,11 +9,14 @@
  */
 
 import { useState } from 'react'
+import { css } from '@core/styles/css'
+import { mq } from '@core/styles/breakpoints'
 import type { OpenApiOperation } from '@openapi/types/openapi.types'
 import { ExpandableCard } from '@core/components/common/ExpandableCard'
 import { MethodBar } from '@core/components/common/MethodBar'
 import { ResponsiveColumns } from '@core/components/common/ResponsiveColumns'
 import { TryItPanel } from '@core/components/TryIt/TryItPanel'
+import { InlineTryIt } from '@core/components/TryIt/InlineTryIt'
 import { generateExample } from '@core/components/SchemaViewer/schema-utils'
 import { OperationDetail } from '@openapi/components/OperationDetail'
 import { useConfig } from '@core/context/ConfigContext'
@@ -31,7 +34,7 @@ interface EndpointCardProps {
 }
 
 export function EndpointCard({ operation, serverUrl, id, expandAll, expandGeneration }: EndpointCardProps) {
-  const { allowTryIt, displayMode } = useConfig()
+  const { allowTryIt, displayMode, tryItLayout } = useConfig()
   const title = operation.summary || operation.operationId || operation.path
 
   const paramCount = operation.parameters.length + (operation.requestBody ? 1 : 0)
@@ -86,6 +89,22 @@ export function EndpointCard({ operation, serverUrl, id, expandAll, expandGenera
     ? JSON.stringify(generateExample(defaultBodySchema as Record<string, unknown>), null, 2)
     : undefined
 
+  // Shared Try-It props — identical whether the panel docks in the side column
+  // (`tryItLayout: 'panel'`) or expands inline below the operation
+  // (`tryItLayout: 'inline'`).
+  const tryItPanelProps = {
+    method: operation.method,
+    path: operation.path,
+    serverUrl,
+    parameters: tryItParams,
+    requestBodyContentTypes,
+    defaultRequestBody: defaultBodyExample,
+    requestBodySchema: defaultBodySchema as Record<string, unknown> | undefined,
+    requestBodySchemas,
+    security: operation.security,
+    xCodeSamples: operation.xCodeSamples,
+  }
+
   return (
     <ExpandableCard
       id={id}
@@ -125,21 +144,21 @@ export function EndpointCard({ operation, serverUrl, id, expandAll, expandGenera
               responses={operation.responses}
             />
           }
-          tryIt={allowTryIt ? (
-            <TryItPanel
-              method={operation.method}
-              path={operation.path}
-              serverUrl={serverUrl}
-              parameters={tryItParams}
-              requestBodyContentTypes={requestBodyContentTypes}
-              defaultRequestBody={defaultBodyExample}
-              requestBodySchema={defaultBodySchema as Record<string, unknown> | undefined}
-              requestBodySchemas={requestBodySchemas}
-              security={operation.security}
-              xCodeSamples={operation.xCodeSamples}
-            />
-          ) : <div />}
+          tryIt={allowTryIt ? <TryItPanel {...tryItPanelProps} /> : <div />}
         />
+      ) : tryItLayout === 'inline' ? (
+        // Inline (compact only): operation detail spans full width, with the
+        // Try-It console in a collapsed-by-default disclosure below it.
+        <div className={inlineWrapperStyle}>
+          <OperationDetail
+            operation={operation}
+            paramExampleSelections={paramExampleSelections}
+            onParamExampleSelect={(key, name) =>
+              setParamExampleSelections((prev) => ({ ...prev, [key]: name }))
+            }
+          />
+          {allowTryIt && <InlineTryIt {...tryItPanelProps} />}
+        </div>
       ) : (
         <ResponsiveColumns
           left={
@@ -151,26 +170,23 @@ export function EndpointCard({ operation, serverUrl, id, expandAll, expandGenera
               }
             />
           }
-          right={allowTryIt ? (
-            <TryItPanel
-              method={operation.method}
-              path={operation.path}
-              serverUrl={serverUrl}
-              parameters={tryItParams}
-              requestBodyContentTypes={requestBodyContentTypes}
-              defaultRequestBody={defaultBodyExample}
-              requestBodySchema={defaultBodySchema as Record<string, unknown> | undefined}
-              requestBodySchemas={requestBodySchemas}
-              security={operation.security}
-              xCodeSamples={operation.xCodeSamples}
-            />
-          ) : undefined}
+          right={allowTryIt ? <TryItPanel {...tryItPanelProps} /> : undefined}
           rightLabel="Try It"
         />
       )}
     </ExpandableCard>
   )
 }
+
+// Full-width inline layout: mirrors ResponsiveColumns' single-column padding so
+// the operation detail lines up whether the Try-It docks or expands inline.
+const inlineWrapperStyle = css({
+  padding: '0.75rem 0',
+  minWidth: 0,
+  [mq.desktop]: {
+    padding: '1rem 1.25rem',
+  },
+})
 
 /**
  * Resolves the effective example value for a parameter given a selected named

@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { css } from '@core/styles/css'
+import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
 import type { TryItRequest, TryItResponse } from '@core/types/try-it.types'
 import { useAuth } from '@core/context/AuthContext'
@@ -44,6 +44,13 @@ interface TryItPanelProps {
   /** Security requirement groups (scheme-name lists) — used to block Send until a required scheme is applied. */
   security?: string[][]
   xCodeSamples?: XCodeSample[]
+  /**
+   * Whether the panel is docked in a side column (`tryItLayout: 'panel'`, the
+   * default). Docked panels stick to the viewport and cap their own height. In
+   * the inline layout the panel flows full-width below the operation, so pass
+   * `docked={false}` to disable the sticky/maxHeight/overflow behavior.
+   */
+  docked?: boolean
   onRequest?: (request: TryItRequest) => void
   onResponse?: (response: TryItResponse) => void
 }
@@ -59,6 +66,7 @@ export function TryItPanel({
   requestBodySchemas,
   security,
   xCodeSamples,
+  docked = true,
   onRequest,
   onResponse,
 }: TryItPanelProps) {
@@ -350,7 +358,7 @@ export function TryItPanel({
   }, [request, hasBodyMethods, schemaBody, contentType])
 
   return (
-    <div className={`omnispec-tryit ${containerStyle}`}>
+    <div className={cx('omnispec-tryit', docked && dockedContainerStyle)}>
       <div className={titleRowStyle}>
         <h4 className={titleStyle}>Try it</h4>
         <div className={statusRowStyle}>
@@ -451,7 +459,10 @@ export function TryItPanel({
   )
 }
 
-const containerStyle = css({
+// Docked (side-column) placement only. In the inline layout the panel flows
+// full-width below the operation, so this sticky/maxHeight/overflow block is
+// gated behind `docked` (see TryItPanel's `docked` prop).
+const dockedContainerStyle = css({
   position: 'sticky',
   top: 'calc(var(--omnispec-offset-top, 0px) + 1.25rem)',
   [mq.desktop]: {

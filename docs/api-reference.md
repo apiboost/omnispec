@@ -12,7 +12,7 @@ All spec renderers accept these common props:
 | `allowTryIt` | `boolean` | `true` | Show or hide the Try-It panels |
 | `layout` | `'sidebar' \| 'stacked'` | `'sidebar'` | Layout mode. Sidebar shows navigation; stacked is content-only |
 | `sidebarPosition` | `'left' \| 'right'` | `'left'` | Which side the navigation sidebar appears on |
-| `tryItLayout` | `'inline' \| 'panel'` | `'inline'` | Try-It position. Inline renders below the operation; panel renders in a sticky right column |
+| `tryItLayout` | `'inline' \| 'panel'` | `'panel'` | Try-It position in **compact** display mode (ignored in `reference` mode). `panel` docks it in a sticky right column; `inline` collapses it behind a "Try it" button below the operation |
 | `sidebarNav` | `SidebarNavConfig` | `undefined` | Custom navigation items in the sidebar. See [Sidebar Navigation](./template_customization/sidebar.md) |
 | `slots` | `SlotOverrides` | `{}` | Custom content injected into layout slots. See [Slots](./template_customization/slots.md) |
 | `defaultExpandOperations` | `boolean` | `false` | Expand all operations on initial render |

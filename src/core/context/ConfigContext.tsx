@@ -54,7 +54,10 @@ const defaultConfig: ConfigContextValue = {
   allowTryIt: true,
   layout: 'sidebar',
   sidebarPosition: 'left',
-  tryItLayout: 'inline',
+  // Default `panel` (docked side column) — the historical effective behavior.
+  // The prop was dead until inline was implemented, so `panel` keeps existing
+  // consumers (e.g. the `ui/` portal) on their current Try-It placement.
+  tryItLayout: 'panel',
   defaultExpandOperations: false,
   displayMode: 'compact',
   schemaStyle: DEFAULT_SCHEMA_STYLE,
