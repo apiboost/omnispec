@@ -256,7 +256,10 @@ export default function DemoConfigPanel({
       <p className={styles.hint}>
         Theme follows the site&apos;s light/dark toggle. Full white-label theming and{' '}
         <code>table</code>/<code>card</code> schema styles are{' '}
-        <a href="https://apiboost.com/omnispec">OmniSpec Pro</a> features.
+        <a href="https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=demo&utm_campaign=pro">
+          OmniSpec Pro
+        </a>{' '}
+        features.
       </p>
     </div>
   );

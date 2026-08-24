@@ -104,7 +104,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://apiboost.com/omnispec',
+          href: 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=navbar&utm_campaign=pro',
           label: 'Pro',
           position: 'right',
         },
@@ -131,10 +131,10 @@ const config: Config = {
         {
           title: 'Apiboost',
           items: [
-            {label: 'OmniSpec Pro', href: 'https://apiboost.com/omnispec'},
-            {label: 'Apiboost', href: 'https://apiboost.com'},
+            {label: 'OmniSpec Pro', href: 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=footer&utm_campaign=pro'},
+            {label: 'Apiboost', href: 'https://apiboost.com?utm_source=omnispec&utm_medium=footer&utm_campaign=corporate'},
             {label: 'LinkedIn', href: 'https://www.linkedin.com/company/apiboost'},
-            {label: 'Contact', href: 'https://apiboost.com/contact'},
+            {label: 'Contact', href: 'https://apiboost.com/contact?utm_source=omnispec&utm_medium=footer&utm_campaign=contact'},
           ],
         },
       ],

@@ -284,7 +284,7 @@ repository. Each has its own `README.md` with run instructions:
 :::info[Pro]
 Pro renderers (GraphQL, SOAP/WSDL, gRPC), full white-label theming
 (`theme.overrides`), and interactive OAuth require
-**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, the
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, the
 `<omnispec-renderer>` element renders OpenAPI and AsyncAPI specs with the base
 light/dark/auto theme and CSS-variable overrides. A parallel Pro Web Component
 is not shipped today — Pro features are available through the React component.

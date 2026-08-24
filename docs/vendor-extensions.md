@@ -9,7 +9,7 @@ description: OpenAPI/AsyncAPI vendor extensions supported by @apiboost/omnispec.
 
 OpenAPI and AsyncAPI specs can carry vendor extensions (`x-` properties) that tools use for enhanced rendering. In the **free core** (`@apiboost/omnispec`), the single supported vendor extension is **`x-logo`**, documented in full below.
 
-The premium documentation extensions popularized by Redocly, Scalar, and RapiDoc — `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, and `x-enumDescriptions` — along with the OAuth Try-It extensions `x-flowVariables` and `x-tokenEndpointAuthMethod`, are part of **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. See [Pro vendor extensions](#pro-vendor-extensions) below.
+The premium documentation extensions popularized by Redocly, Scalar, and RapiDoc — `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, and `x-enumDescriptions` — along with the OAuth Try-It extensions `x-flowVariables` and `x-tokenEndpointAuthMethod`, are part of **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. See [Pro vendor extensions](#pro-vendor-extensions) below.
 
 Any `x-` extension the renderer does not understand is safely ignored, so a spec authored for another tool renders without modification — you just get the free feature set unless Pro is installed.
 
@@ -63,14 +63,14 @@ Auto-generated samples respect:
 - Path and query parameters
 
 :::info[Pro]
-Supplying your own hand-written code samples per operation (the `x-codeSamples` / `x-code-samples` extension) requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, every operation still gets the auto-generated 6-language samples described above.
+Supplying your own hand-written code samples per operation (the `x-codeSamples` / `x-code-samples` extension) requires **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, every operation still gets the auto-generated 6-language samples described above.
 :::
 
 ---
 
 ## Pro vendor extensions
 
-The following documentation and OAuth Try-It extensions are part of **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core they are parsed as unknown `x-` properties and ignored, so specs that use them still render — just without the Pro-only behavior.
+The following documentation and OAuth Try-It extensions are part of **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core they are parsed as unknown `x-` properties and ignored, so specs that use them still render — just without the Pro-only behavior.
 
 | Extension | What it does |
 |-----------|--------------|
@@ -84,7 +84,7 @@ The following documentation and OAuth Try-It extensions are part of **[Apiboost 
 | `x-tokenEndpointAuthMethod` | Presets the client-authentication method (header vs. request body) the interactive OAuth Try-It panel uses at the token endpoint. |
 
 :::info[Pro]
-The vendor extensions listed above require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, `x-logo` is the only supported vendor extension and every operation gets auto-generated code samples; the extensions above are safely ignored. See [apiboost.com](https://apiboost.com/omnispec) for the full Pro documentation.
+The vendor extensions listed above require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, `x-logo` is the only supported vendor extension and every operation gets auto-generated code samples; the extensions above are safely ignored. See [apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) for the full Pro documentation.
 :::
 
 ---
@@ -114,6 +114,6 @@ GraphQL, SOAP/WSDL, and gRPC specs (Pro renderers) do not use the `x-` extension
 Migrating from Redoc/Redocly, Scalar, or RapiDoc requires **zero spec changes**. Your existing `x-` extensions are read where supported and safely ignored otherwise:
 
 - The free core renders **`x-logo`** and auto-generates code samples for every operation.
-- The premium extensions those tools use (`x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions`) are supported with **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**.
+- The premium extensions those tools use (`x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions`) are supported with **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
 
 Swagger UI has no built-in vendor-extension rendering, so there is nothing to migrate — `x-logo` is picked up automatically.

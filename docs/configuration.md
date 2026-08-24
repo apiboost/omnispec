@@ -163,7 +163,7 @@ section — across every spec type.
 **Tier gating.** `lines` and `tokens` are available in the free core.
 
 :::info[Pro]
-The `table` and `card` schema styles require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec)**. In the free core, requesting `table` or `card` **gracefully falls back to `lines`** — no error is thrown and nothing is logged, so a spec authored for a Pro portal degrades cleanly when viewed in a free build.
+The `table` and `card` schema styles require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, requesting `table` or `card` **gracefully falls back to `lines`** — no error is thrown and nothing is logged, so a spec authored for a Pro portal degrades cleanly when viewed in a free build.
 :::
 
 ```tsx
