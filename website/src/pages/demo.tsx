@@ -43,25 +43,79 @@ function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
   )
 }
 
-// Live demo of the free-tier <OmniSpecRenderer> with an interactive config rail.
-// Runs client-only via BrowserOnly because the renderer relies on browser APIs
-// (DOM, fetch, IntersectionObserver) that don't exist during the static build.
+function GearIcon(): React.ReactNode {
+  return (
+    <svg
+      className={styles.fabIcon}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+// Live demo of the free-tier <OmniSpecRenderer>. The renderer fills the stage;
+// a floating "Configure" button opens a slide-up sheet of live settings, so the
+// controls never crowd the rendered docs. Runs client-only via BrowserOnly
+// because the renderer relies on browser APIs (DOM, fetch, IntersectionObserver)
+// that don't exist during the static build.
 export default function Demo(): React.ReactNode {
   const [config, setConfig] = useState<DemoConfig>(DEFAULT_DEMO_CONFIG)
+  const [open, setOpen] = useState(false)
 
   return (
     <Layout
       title="Live Demo"
       description="A live, interactive OmniSpec renderer — adjust the settings and watch it update in real time."
     >
-      <div className={styles.stageRow}>
-        <aside className={styles.rail}>
-          <DemoConfigPanel config={config} onChange={setConfig} />
-        </aside>
+      <div className={styles.stageWrap}>
         <div className={styles.stage}>
           <BrowserOnly fallback={<div className={styles.loading}>Loading the live renderer…</div>}>
             {() => <LiveRenderer config={config} />}
           </BrowserOnly>
+        </div>
+
+        <button
+          type="button"
+          className={`${styles.fab} ${open ? styles.fabHidden : ''}`}
+          onClick={() => setOpen(true)}
+          aria-expanded={open}
+          aria-controls="demo-config-sheet"
+        >
+          <GearIcon />
+          Configure
+        </button>
+
+        <div
+          id="demo-config-sheet"
+          className={`${styles.sheet} ${open ? styles.sheetOpen : ''}`}
+          role="dialog"
+          aria-label="Live demo configuration"
+          aria-hidden={!open}
+        >
+          <div className={styles.sheetHeader}>
+            <h2 className={styles.sheetTitle}>Live configuration</h2>
+            <button
+              type="button"
+              className={styles.close}
+              onClick={() => setOpen(false)}
+              aria-label="Close configuration"
+            >
+              ×
+            </button>
+          </div>
+          <div className={styles.sheetBody}>
+            <div className={styles.sheetInner}>
+              <DemoConfigPanel config={config} onChange={setConfig} />
+            </div>
+          </div>
         </div>
       </div>
     </Layout>

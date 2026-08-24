@@ -119,8 +119,7 @@ export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps
 
   return (
     <div className={styles.panel}>
-      <div className={styles.group}>
-        <h3 className={styles.groupTitle}>Specification</h3>
+      <div className={styles.grid}>
         <SelectField
           id="spec"
           label="Spec"
@@ -133,10 +132,6 @@ export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps
             </option>
           ))}
         </SelectField>
-      </div>
-
-      <div className={styles.group}>
-        <h3 className={styles.groupTitle}>Layout</h3>
         <SelectField
           id="layout"
           label="Layout"
@@ -175,10 +170,6 @@ export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps
           <option value="grouped">Grouped by tag</option>
           <option value="segmented">Segmented</option>
         </SelectField>
-      </div>
-
-      <div className={styles.group}>
-        <h3 className={styles.groupTitle}>Schema &amp; Try-It</h3>
         <SelectField
           id="schemaStyle"
           label="Schema style"
@@ -207,8 +198,7 @@ export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps
         </SelectField>
       </div>
 
-      <div className={styles.group}>
-        <h3 className={styles.groupTitle}>Options</h3>
+      <div className={styles.checkboxRow}>
         <CheckboxField
           id="allowTryIt"
           label="Enable Try-It"
@@ -229,19 +219,20 @@ export default function DemoConfigPanel({config, onChange}: DemoConfigPanelProps
         />
       </div>
 
-      <button
-        type="button"
-        className={styles.reset}
-        onClick={() => onChange(DEFAULT_DEMO_CONFIG)}
-      >
-        Reset to defaults
-      </button>
-
-      <p className={styles.hint}>
-        Theme follows the site&apos;s light/dark toggle. Full white-label theming and{' '}
-        <code>table</code>/<code>card</code> schema styles are{' '}
-        <a href="https://apiboost.com/omnispec">OmniSpec Pro</a> features.
-      </p>
+      <div className={styles.footer}>
+        <button
+          type="button"
+          className={styles.reset}
+          onClick={() => onChange(DEFAULT_DEMO_CONFIG)}
+        >
+          Reset to defaults
+        </button>
+        <p className={styles.hint}>
+          Theme follows the site&apos;s light/dark toggle. Full white-label theming and{' '}
+          <code>table</code>/<code>card</code> schema styles are{' '}
+          <a href="https://apiboost.com/omnispec">OmniSpec Pro</a> features.
+        </p>
+      </div>
     </div>
   );
 }
