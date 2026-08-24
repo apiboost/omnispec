@@ -7,12 +7,15 @@
 # See LICENSE.md and LICENSING.md in the project root for license information.
 name: Deploy Docs to GitHub Pages
 
-# DORMANT until launch: manual trigger only. At go-live, add the push trigger:
-#   push:
-#     branches: [main]
-#     paths: ['docs/**', 'website/**', '.github/workflows/pages.yml']
-# and enable Pages in repo settings with "GitHub Actions" as the source.
+# Auto-deploys on pushes to main that touch the docs, the site, or this
+# workflow. workflow_dispatch is kept for manual re-runs.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'website/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
