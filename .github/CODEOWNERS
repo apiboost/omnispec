@@ -1,0 +1,23 @@
+# Default owner for everything
+*                          @apiboost/omnispec-oss-maintainers
+
+# Anything that can execute code or ship a release: admins only
+/.github/                  @apiboost/omnispec-oss-admins
+/.github/workflows/        @apiboost/omnispec-oss-admins
+/.github/CODEOWNERS        @apiboost/omnispec-oss-admins
+/scripts/                  @apiboost/omnispec-oss-admins
+
+# Dependency and build surface
+/package.json              @apiboost/omnispec-oss-admins
+/pnpm-lock.yaml            @apiboost/omnispec-oss-admins
+/pnpm-workspace.yaml       @apiboost/omnispec-oss-admins
+/.npmrc                    @apiboost/omnispec-oss-admins
+/rollup.config.ts          @apiboost/omnispec-oss-admins
+/webpack.wc.config.ts      @apiboost/omnispec-oss-admins
+
+# Legal and licensing boundary
+/LICENSE.md                @apiboost/omnispec-oss-admins
+/LICENSING.md              @apiboost/omnispec-oss-admins
+/TRADEMARKS.md             @apiboost/omnispec-oss-admins
+/COPYRIGHT.md              @apiboost/omnispec-oss-admins
+/SECURITY.md               @apiboost/omnispec-oss-admins
