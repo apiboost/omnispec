@@ -149,7 +149,9 @@ el.sidebarNav = { items: [/* ... */] }
 
 See [docs/web-component.md](./docs/web-component.md) for the full guide, the
 complete attribute/property/event API, shadow-DOM notes, and framework recipes.
-Runnable integrations live in [`examples/`](./examples).
+For React, Vue, Angular, and plain-HTML integration recipes see the
+[Framework Integration guide](./docs/framework-integration.md), and try the
+settings live in the [interactive demo](https://apiboost.github.io/omnispec/demo).
 
 ## Documentation
 
