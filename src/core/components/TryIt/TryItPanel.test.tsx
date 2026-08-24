@@ -10,7 +10,7 @@
 
 import { useEffect } from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 
 afterEach(cleanup)
 import { TryItPanel } from '@core/components/TryIt/TryItPanel'
@@ -68,5 +68,20 @@ describe('TryItPanel Send authorization gating', () => {
   it('never blocks operations without security requirements', () => {
     renderPanel(undefined)
     expect(screen.getByRole('button', { name: /send/i })).toBeEnabled()
+  })
+})
+
+describe('TryItPanel Reset', () => {
+  it('clears applied authorization (resets the Authorization panel state)', () => {
+    renderPanel([['oauth2AuthCode']], { ...oidcCredential, schemeId: 'oauth2AuthCode' })
+    // Precondition: credential applied → Send enabled, no "Authorization required".
+    expect(screen.getByRole('button', { name: /send/i })).toBeEnabled()
+    expect(screen.queryByText(/Authorization required/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /reset/i }))
+
+    // After Reset, the applied credential is gone → Send blocks again.
+    expect(screen.getByRole('button', { name: /send/i })).toBeDisabled()
+    expect(screen.getByText(/Authorization required/)).toBeInTheDocument()
   })
 })

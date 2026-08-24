@@ -63,7 +63,7 @@ export function TryItPanel({
   onResponse,
 }: TryItPanelProps) {
   const { allowTryIt, proxyUrl, proxyHeaders, specKey, tryItPersistTtl } = useConfig()
-  const { getAuthHeaders, appliedAuth, openAuthPanel, hasAuth } = useAuth()
+  const { getAuthHeaders, appliedAuth, openAuthPanel, hasAuth, clearAuth } = useAuth()
 
   // Reflect whether any credential has been applied so the header button
   // toggles between its "Authorize" (open lock) and "Authorized" (closed lock) states.
@@ -166,6 +166,10 @@ export function TryItPanel({
     setContentType(requestBodyContentTypes?.[0] ?? 'application/json')
     setMultipartFields({})
     setCustomHeaders([])
+    // Also return the Authorization panel to its pristine state — clear every
+    // applied credential (and its persisted copy). Auth is global, so this
+    // resets authorization across the whole spec, not just this operation.
+    clearAuth()
   }
 
   const handleParamChange = useCallback((name: string, value: string) => {
@@ -370,7 +374,7 @@ export function TryItPanel({
               type="button"
               onClick={handleReset}
               className={headerBtnStyle}
-              title="Clear saved inputs for this operation"
+              title="Reset Try-It inputs for this operation and clear all applied authorization"
             >
               <Icon name="rotate-ccw" size="0.875rem" />
               Reset
