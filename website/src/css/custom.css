@@ -60,3 +60,14 @@
 .navbar__logo {
   height: 2.5rem;
 }
+
+/* The footer is always dark (style: 'dark'). In light mode it would otherwise
+   inherit the deep-navy brand primary for link hover, which is invisible on the
+   dark background — and the default link/copyright grays read too dim. Pin
+   legible light-on-dark values regardless of the active theme. */
+.footer--dark {
+  --ifm-footer-link-color: #c7ccd3;
+  --ifm-footer-link-hover-color: #ffffff;
+  --ifm-footer-title-color: #ffffff;
+  --ifm-footer-color: #b4bbc5;
+}

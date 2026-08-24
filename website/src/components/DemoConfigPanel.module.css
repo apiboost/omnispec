@@ -26,6 +26,34 @@
   grid-column: 1 / -1;
 }
 
+/* Input + Render button sit on one row; the input flexes, the button hugs. */
+.specRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.specRow .select {
+  flex: 1 1 auto;
+}
+
+.specSubmit {
+  flex: 0 0 auto;
+  padding: 0.4375rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: var(--ifm-color-primary);
+  border: 1px solid var(--ifm-color-primary);
+  border-radius: var(--ifm-global-radius);
+  cursor: pointer;
+}
+
+.specSubmit:hover {
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
+}
+
 .field {
   display: flex;
   flex-direction: column;

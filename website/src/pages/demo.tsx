@@ -37,7 +37,6 @@ function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
       displayMode={config.displayMode}
       navigationMode={config.navigationMode || undefined}
       schemaStyle={config.schemaStyle}
-      tryItLayout={config.tryItLayout}
       allowTryIt={config.allowTryIt}
       downloadLink={config.downloadLink}
       defaultExpandOperations={config.defaultExpandOperations}

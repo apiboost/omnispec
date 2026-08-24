@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import type {ReactNode} from 'react';
+import {useEffect, useMemo, useState, type ReactNode} from 'react';
 import styles from './DemoConfigPanel.module.css';
 
 /**
@@ -25,7 +25,6 @@ export interface DemoConfig {
   displayMode: 'compact' | 'reference';
   navigationMode: '' | 'grouped' | 'segmented';
   schemaStyle: 'lines' | 'tokens' | 'chain';
-  tryItLayout: 'inline' | 'panel';
   allowTryIt: boolean;
   downloadLink: boolean;
   defaultExpandOperations: boolean;
@@ -46,7 +45,6 @@ export const DEFAULT_DEMO_CONFIG: DemoConfig = {
   displayMode: 'compact',
   navigationMode: '',
   schemaStyle: 'lines',
-  tryItLayout: 'inline',
   allowTryIt: true,
   downloadLink: true,
   defaultExpandOperations: false,
@@ -123,6 +121,20 @@ export default function DemoConfigPanel({
   const set = <K extends keyof DemoConfig>(key: K, value: DemoConfig[K]) =>
     onChange({...config, [key]: value});
 
+  // The spec input is a draft: typing/pasting must NOT fetch on every keystroke
+  // (an incomplete or empty URL would flash "Unable to detect specification
+  // type"). We only commit on submit. Picking a preset is unambiguous, so it
+  // applies immediately. Keep the draft in sync when the spec changes elsewhere
+  // (e.g. the header "Reset to defaults").
+  const [specDraft, setSpecDraft] = useState(config.spec);
+  useEffect(() => setSpecDraft(config.spec), [config.spec]);
+  const presetValues = useMemo(() => new Set(specOptions.map((s) => s.value)), [specOptions]);
+
+  const submitSpec = () => {
+    const next = specDraft.trim();
+    if (next && next !== config.spec) set('spec', next);
+  };
+
   return (
     <div className={styles.panel}>
       <div className={styles.grid}>
@@ -130,16 +142,32 @@ export default function DemoConfigPanel({
           <label className={styles.label} htmlFor="demo-spec">
             Spec
           </label>
-          <input
-            id="demo-spec"
-            className={styles.select}
-            type="text"
-            list="demo-spec-presets"
-            value={config.spec}
-            spellCheck={false}
-            placeholder="Paste a spec URL or pick a preset"
-            onChange={(e) => set('spec', e.target.value)}
-          />
+          <form
+            className={styles.specRow}
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitSpec();
+            }}
+          >
+            <input
+              id="demo-spec"
+              className={styles.select}
+              type="text"
+              list="demo-spec-presets"
+              value={specDraft}
+              spellCheck={false}
+              placeholder="Paste a spec URL or pick a preset, then Render"
+              onChange={(e) => {
+                const value = e.target.value;
+                setSpecDraft(value);
+                // A preset chosen from the dropdown is complete — apply at once.
+                if (presetValues.has(value)) set('spec', value);
+              }}
+            />
+            <button type="submit" className={styles.specSubmit}>
+              Render
+            </button>
+          </form>
           <datalist id="demo-spec-presets">
             {specOptions.map((s) => (
               <option key={s.value} value={s.value}>
@@ -201,16 +229,6 @@ export default function DemoConfigPanel({
           <option value="card" disabled>
             Card (Pro)
           </option>
-        </SelectField>
-        <SelectField
-          id="tryItLayout"
-          label="Try-It layout"
-          value={config.tryItLayout}
-          disabled={!config.allowTryIt}
-          onChange={(v) => set('tryItLayout', v as DemoConfig['tryItLayout'])}
-        >
-          <option value="inline">Inline</option>
-          <option value="panel">Panel</option>
         </SelectField>
       </div>
 
