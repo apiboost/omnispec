@@ -200,6 +200,21 @@ function extractServers(api: OpenAPIDocument, isSwagger2: boolean): OpenApiServe
   return [{ url: '/' }]
 }
 
+/**
+ * Ids of Postman "No Auth" schemes (type: http, scheme: noauth). A security
+ * requirement referencing only these means "no authentication required".
+ */
+function collectNoAuthSchemeIds(api: OpenAPIDocument, isSwagger2: boolean): Set<string> {
+  const defs = isSwagger2 ? api.securityDefinitions : api.components?.securitySchemes
+  const ids = new Set<string>()
+  if (defs) {
+    for (const [id, def] of Object.entries(defs)) {
+      if (def.type === 'http' && (def as { scheme?: string }).scheme === 'noauth') ids.add(id)
+    }
+  }
+  return ids
+}
+
 function extractSecuritySchemes(api: OpenAPIDocument, isSwagger2: boolean): AuthScheme[] {
   const schemes: AuthScheme[] = []
   const defs = isSwagger2
@@ -230,6 +245,11 @@ function pickXExtensions(obj: Record<string, unknown>): Record<string, unknown> 
 }
 
 function convertSecurityScheme(id: string, def: SecuritySchemeObject): AuthScheme | null {
+  // Postman exports "No Auth" as a scheme with type `http` / scheme `noauth`.
+  // It represents no credential, so don't surface it as an auth form.
+  if (def.type === 'http' && (def as { scheme?: string }).scheme === 'noauth') {
+    return null
+  }
   switch (def.type) {
     case 'apiKey':
       return {
@@ -315,7 +335,10 @@ function extractTaggedOperations(api: OpenAPIDocument, isSwagger2: boolean): Ope
 
   // Root-level security applies to every operation unless the operation
   // declares its own `security` (including an explicit empty array).
-  const globalSecurity = api.security?.map((s) => Object.keys(s))
+  const noAuthSchemeIds = collectNoAuthSchemeIds(api, isSwagger2)
+  const globalSecurity = api.security?.map((s) =>
+    Object.keys(s).filter((name) => !noAuthSchemeIds.has(name)),
+  )
 
   // Process all paths and operations
   for (const [path, pathItem] of Object.entries(api.paths)) {
@@ -326,7 +349,7 @@ function extractTaggedOperations(api: OpenAPIDocument, isSwagger2: boolean): Ope
       const operation = pathItem[method] as OperationObject | undefined
       if (!operation) continue
 
-      const op = convertOperation(method, path, operation, isSwagger2, pathLevelParams, globalSecurity)
+      const op = convertOperation(method, path, operation, isSwagger2, pathLevelParams, globalSecurity, noAuthSchemeIds)
       if (op.xInternal) continue
       const opTags = op.tags.length > 0 ? op.tags : ['default']
 
@@ -357,6 +380,7 @@ function convertOperation(
   isSwagger2: boolean,
   pathLevelParams?: ParameterObject[],
   globalSecurity?: string[][],
+  noAuthSchemeIds?: Set<string>,
 ): OpenApiOperation {
   // Merge path-level params with operation params; operation-level overrides by name+in
   const mergedRawParams = mergeParameters(pathLevelParams, op.parameters)
@@ -392,9 +416,15 @@ function convertOperation(
     : []
 
   // Operation-level security overrides global (an explicit [] disables auth).
-  const security = op.security
+  // Drop Postman "No Auth" schemes (type: http, scheme: noauth) from each
+  // requirement group: they represent no authentication, so leaving them in
+  // would make Try-It block Send on a credential that can never be applied.
+  const rawSecurity = op.security
     ? op.security.map((s) => Object.keys(s))
     : globalSecurity
+  const security = noAuthSchemeIds
+    ? rawSecurity?.map((group) => group.filter((name) => !noAuthSchemeIds.has(name)))
+    : rawSecurity
 
   return {
     operationId: op.operationId,

@@ -14,7 +14,7 @@ import { isBinaryContentType, bytesToBase64 } from './binary-response'
 export async function sendDirectRequest(
   request: TryItRequest,
 ): Promise<TryItResponse> {
-  const url = buildTargetUrl(request)
+  const url = upgradeMixedContent(buildTargetUrl(request))
 
   const init: RequestInit = {
     method: request.method,
@@ -57,6 +57,24 @@ export async function sendDirectRequest(
     contentType,
     duration,
   }
+}
+
+/**
+ * Upgrade an `http://` target to `https://` when the page itself is served over
+ * https. Browsers block plain-http requests from an https page as mixed content
+ * (the fetch never leaves the browser), and many specs still declare a stale
+ * `http://` server URL. Only upgrades on secure pages — on an http page a real
+ * http-only API (e.g. a local dev server) must still be reachable.
+ */
+export function upgradeMixedContent(url: string): string {
+  if (
+    typeof window !== 'undefined' &&
+    window.location?.protocol === 'https:' &&
+    url.startsWith('http://')
+  ) {
+    return `https://${url.slice('http://'.length)}`
+  }
+  return url
 }
 
 function buildTargetUrl(request: TryItRequest): string {

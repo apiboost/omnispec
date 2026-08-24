@@ -28,6 +28,18 @@
   color: var(--ifm-color-emphasis-600);
 }
 
+/* The renderer's docked Try-It panel caps its own height at 100vh — correct for
+ * a full-page embed. Here it lives inside .stage, a scroll area only
+ * viewport-minus-navbar tall, so 100vh is a navbar-height too tall and the
+ * panel's bottom falls below the fold (you'd have to scroll the whole stage to
+ * reach it). Cap it to the stage's real height so it scrolls independently.
+ * Matches the library's own desktop breakpoint (min-width: 1024px). */
+@media (min-width: 1024px) {
+  .stage :global(.omnispec-tryit) {
+    max-height: calc(100vh - var(--ifm-navbar-height) - 2.5rem);
+  }
+}
+
 /* Floating "Configure" pill, bottom-center — anchors the sheet that rises from
  * the bottom. Hidden while the sheet is open. */
 .fab {

@@ -54,6 +54,55 @@ describe('parseOpenApiSpec', () => {
     expect(apiKey!.name).toBe('X-API-Key')
   })
 
+  it('treats Postman "No Auth" schemes as no authentication (does not block Try-It)', async () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'NoAuth Test', version: '1.0.0' },
+      components: {
+        securitySchemes: {
+          noauthAuth: { type: 'http', scheme: 'noauth' },
+          apiKeyAuth: { type: 'apiKey', in: 'header', name: 'X-API-KEY' },
+        },
+      },
+      security: [{ apiKeyAuth: [] }],
+      paths: {
+        '/public': {
+          get: {
+            operationId: 'getPublic',
+            tags: ['t'],
+            security: [{ noauthAuth: [] }],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+        '/private': {
+          get: {
+            operationId: 'getPrivate',
+            tags: ['t'],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+
+    const result = await parseOpenApiSpec(spec)
+
+    // The no-auth scheme is not surfaced as an auth form; the real one is.
+    expect(result.securitySchemes.find((s) => s.id === 'noauthAuth')).toBeUndefined()
+    expect(result.securitySchemes.find((s) => s.id === 'apiKeyAuth')).toBeDefined()
+
+    const ops = result.tags.flatMap((t) => t.operations)
+    const pub = ops.find((o) => o.operationId === 'getPublic')!
+    const priv = ops.find((o) => o.operationId === 'getPrivate')!
+
+    // The public op must not require the no-auth scheme (no Send-blocking group).
+    const pubGroups = pub.security ?? []
+    expect(pubGroups.flat()).not.toContain('noauthAuth')
+    expect(pubGroups.every((g) => g.length === 0)).toBe(true)
+
+    // A normally-secured op still inherits the global API-key requirement.
+    expect(priv.security).toEqual([['apiKeyAuth']])
+  })
+
   it('carries raw oauth x-* extensions generically at scheme and flow level', async () => {
     const spec = {
       openapi: '3.0.0',

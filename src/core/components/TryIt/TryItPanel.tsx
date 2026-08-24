@@ -311,12 +311,12 @@ export function TryItPanel({
     const request = buildRequest()
     onRequest?.(request)
 
-    try {
-      const fullRequest: TryItRequest = {
-        ...request,
-        url: serverUrl + request.url,
-      }
+    const fullRequest: TryItRequest = {
+      ...request,
+      url: serverUrl + request.url,
+    }
 
+    try {
       // Use proxy if configured, otherwise send directly from the browser
       const res = proxyUrl
         ? await sendProxiedRequest(proxyUrl, fullRequest, proxyHeaders)
@@ -327,7 +327,16 @@ export function TryItPanel({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Request failed'
       if (!proxyUrl && message.includes('Failed to fetch')) {
-        setError(`${message}. This may be a CORS issue — consider configuring a proxyUrl to route requests through your backend.`)
+        // A browser fetch that fails without a response is opaque — it could be
+        // CORS, mixed content, or a plain-http server URL. Give the most likely
+        // cause: a stale `http://` server URL (blocked from https pages, and
+        // often un-followable to https because the redirect lacks CORS headers)
+        // is a common culprit and has a concrete fix.
+        const isHttpTarget = /^http:\/\//i.test(fullRequest.url)
+        const hint = isHttpTarget
+          ? "The spec's server URL uses http://, which browsers block from an https page and often can't follow to https (the redirect carries no CORS headers). Use an https:// server URL, or route requests through a proxyUrl."
+          : 'This is usually a CORS restriction — the API does not allow browser cross-origin requests. Configure a proxyUrl to route requests through your backend.'
+        setError(`${message}. ${hint}`)
       } else {
         setError(message)
       }
