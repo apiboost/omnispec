@@ -60,7 +60,7 @@ export default function DocsPage() {
 }
 ```
 
-The renderer is SSR-safe with `renderToString` — the Try-It panel and mobile drawer hydrate on the client. For a server-rendered Express + React setup, see the SSR section of [Getting Started](./getting-started.md#express-ssr).
+The renderer is client-rendered: under SSR/SSG it emits only a themed shell and renders the documentation on the client after hydration (no server-rendered content). It won't crash `renderToString`, but mount it in a client-only boundary (`'use client'` or `dynamic(..., { ssr: false })`) to avoid a hydration mismatch. See [Getting Started → Server-side rendering](./getting-started.md#server-side-rendering).
 
 ## Vue
 

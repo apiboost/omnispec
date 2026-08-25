@@ -147,21 +147,16 @@ import '@apiboost/omnispec/wc'
 See [Web Component](./web-component.md) for the full attribute and property
 reference plus working Vue, Angular, and Svelte examples.
 
-### Express SSR
+### Server-side rendering
 
-For server-rendered React apps, the renderer works with `renderToString`. The Try-It panel and mobile drawer hydrate on the client.
+OmniSpec is a **client-rendered** component — it parses the spec and renders the documentation in the browser after mount. It does not crash under `renderToString` or static builds, but the server output is only a themed shell: the API documentation renders (and hydrates) on the client, so there is no server-rendered content for SEO or no-JS clients. Mount it inside a **client-only boundary** in SSR/SSG frameworks:
 
-```tsx
-// Server
-import { renderToString } from 'react-dom/server'
-import { OmniSpecRenderer } from '@apiboost/omnispec'
+- **Next.js:** add `'use client'`, or use `dynamic(() => import('@apiboost/omnispec').then((m) => m.OmniSpecRenderer), { ssr: false })`.
+- **Docusaurus and other static-site generators:** wrap it in a client-only boundary (e.g. Docusaurus's `<BrowserOnly>`) to avoid a hydration mismatch.
 
-const html = renderToString(
-  <OmniSpecRenderer spec={specUrl} theme={{ base: 'light' }} />
-)
-```
+### Try-It proxy (Express)
 
-To enable Try-It proxy for CORS-restricted APIs, mount the built-in Express middleware:
+To route Try-It requests for CORS-restricted APIs through your backend, mount the built-in Express middleware:
 
 ```js
 import { createProxyRouter } from '@apiboost/omnispec/server'
