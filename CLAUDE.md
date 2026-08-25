@@ -21,6 +21,20 @@ Bare **"OmniSpec"** is acceptable in ordinary prose and headings once context is
 
 Do **not** present OmniSpec as an independent brand (a "House of Brands" pattern) — no naming or lockup that divorces it from Apiboost.
 
+## Free vs Pro in the Docs
+
+This is the **OSS core** package and its public docs site. **Document only what ships in the Apache-2.0 core.** Pro (GraphQL, SOAP/WSDL, gRPC renderers, `theme.overrides`, interactive OAuth, etc.) appears in exactly two forms:
+
+1. **A callout** — an inline `:::info[Pro]` note where a core feature has a Pro extension, always stating the free fallback, plus the single `free-vs-pro.md` page.
+2. **A comparison table** — the Free-vs-Pro table (on `free-vs-pro.md`, and the short one on the intro page).
+
+Do **not** add:
+
+- Dedicated pages that document a Pro feature (e.g. a GraphQL/SOAP/gRPC "how it renders" page).
+- Pro feature names in **SEO/meta** — page `keywords`, `og:*`/`twitter:*` tags, the `og:image` graphic, or the site tagline. These must reflect the core (OpenAPI/Swagger + AsyncAPI) so shared links and search never imply Pro renderers ship in the free package.
+
+Rationale: legal clarity (the Apache-2.0 package must not be marketed as containing proprietary renderers) and honest positioning. Pro is sold and documented at apiboost.com/omnispec.
+
 ## Quick Reference
 
 ```bash

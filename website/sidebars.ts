@@ -64,11 +64,6 @@ const sidebars: SidebarsConfig = {
       label: 'Advanced',
       items: ['security'],
     },
-    {
-      type: 'category',
-      label: 'Pro renderers',
-      items: ['graphql-support', 'soap-support', 'grpc-support'],
-    },
   ],
 };
 

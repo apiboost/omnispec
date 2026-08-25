@@ -2,17 +2,13 @@
 id: introduction
 title: What is OmniSpec?
 sidebar_label: What is OmniSpec?
-description: OmniSpec is an open-source React renderer for interactive OpenAPI/Swagger and AsyncAPI documentation — with a built-in Try-It console and code samples. OmniSpec Pro adds GraphQL, SOAP/WSDL, and gRPC.
+description: OmniSpec is an open-source React renderer for interactive OpenAPI/Swagger and AsyncAPI documentation — with a built-in Try-It console, auto-generated code samples, and a framework-agnostic Web Component.
 keywords:
   - OmniSpec
   - open source API documentation
   - OpenAPI
   - Swagger
   - AsyncAPI
-  - GraphQL
-  - SOAP
-  - WSDL
-  - gRPC
   - React API docs renderer
   - Try-It console
   - Redoc alternative
@@ -20,7 +16,7 @@ keywords:
 
 # What is OmniSpec?
 
-**OmniSpec is an open-source React renderer that turns your API specifications into interactive, branded documentation — with a built-in Try-It console and auto-generated code samples.** The free core renders **OpenAPI/Swagger** and **AsyncAPI**; **OmniSpec Pro** extends it to **GraphQL**, **SOAP/WSDL**, and **gRPC** — one component for your entire API surface.
+**OmniSpec is an open-source React renderer that turns your OpenAPI/Swagger and AsyncAPI specifications into interactive, branded documentation — with a built-in Try-It console and auto-generated code samples.**
 
 Drop in a spec — a URL, a raw string, or a parsed object — and OmniSpec auto-detects the type and renders a full reference site: sidebar navigation, schema viewers, code samples, and a live Try-It panel. It runs anywhere React does, and ships a framework-agnostic [Web Component](./web-component.md) for everything else.
 
@@ -30,7 +26,7 @@ Apiboost is an API developer-platform company, and for years we kept building �
 
 Eventually the pattern was impossible to ignore: **API specification sprawl is real.** Teams describe their APIs in whatever format fits the protocol — REST in OpenAPI, event streams in AsyncAPI, internal services in gRPC, legacy integrations in SOAP — and then stitch together a patchwork of renderers, each with its own look, its own quirks, and its own maintenance burden.
 
-We already solve gateway sprawl for our customers. So why not solve spec sprawl too? That is OmniSpec: **one renderer for every spec type**, instead of a drawer full of half-fitting tools.
+We already solve gateway sprawl for our customers. So why not solve spec sprawl too? The open-source core renders **OpenAPI and AsyncAPI**; **[OmniSpec Pro](./free-vs-pro.md)** extends the same renderer to GraphQL, SOAP/WSDL, and gRPC — one tool for your whole API surface, instead of a drawer full of half-fitting ones.
 
 ## Security shouldn't be a premium feature
 

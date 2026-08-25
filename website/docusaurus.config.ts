@@ -87,14 +87,14 @@ const config: Config = {
       {
         name: 'keywords',
         content:
-          'OmniSpec, OpenAPI, Swagger, AsyncAPI, GraphQL, SOAP, WSDL, gRPC, API documentation, React API docs renderer, Try-It, code samples, Web Component, open source, Redoc and SwaggerUI alternative',
+          'OmniSpec, OpenAPI, Swagger, AsyncAPI, API documentation, React API docs renderer, Try-It, code samples, Web Component, open source, Redoc and SwaggerUI alternative',
       },
       { property: 'og:type', content: 'website' },
       { property: 'og:image:width', content: '1200' },
       { property: 'og:image:height', content: '630' },
       {
         property: 'og:image:alt',
-        content: 'Apiboost OmniSpec — the open-source renderer for every API spec',
+        content: 'Apiboost OmniSpec — open-source renderer for OpenAPI and AsyncAPI documentation',
       },
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
