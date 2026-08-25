@@ -17,7 +17,18 @@ const sidebars: SidebarsConfig = {
       label: 'Integrations',
       items: [
         'integrations-overview',
-        'integrations/docusaurus',
+        {
+          type: 'category',
+          label: 'Docs-site frameworks',
+          items: [
+            'integrations/docusaurus',
+            'integrations/vitepress',
+            'integrations/nextra',
+            'integrations/astro-starlight',
+            'integrations/mkdocs',
+            'integrations/plain-html',
+          ],
+        },
         'framework-integration',
         'web-component',
       ],
