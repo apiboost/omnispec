@@ -76,6 +76,7 @@ for framework setup (Vite, Next.js, Web Component, SSR) and every configuration 
 - **Try-It** — send requests directly from the browser or through an optional backend proxy
 - **Authentication** — API key, Basic, Bearer, and OAuth 2.0 flow details with manual token entry
 - **Code samples** in 6 languages
+- **Vendor extensions** — `x-logo`, `x-badges`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-internal`, `x-enumDescriptions`
 - **Light / dark / auto themes** with 40+ customizable `--omnispec-*` CSS design tokens
 - **Configurable layouts** — sidebar (left/right), stacked, and docked or inline Try-It
 - **Sidebar navigation, slots, and display modes** for embedding in your own portal
@@ -88,7 +89,7 @@ Full prop and configuration reference:
 [Theming](https://apiboost.github.io/omnispec/docs/theming).
 
 > **Pro** adds GraphQL, SOAP/WSDL, and gRPC renderers; full white-label theming
-> (`theme.overrides` across 70+ tokens); premium vendor extensions; and the
+> (`theme.overrides` across 70+ tokens); the `table`/`card` schema styles; and the
 > interactive OAuth 2.0 Authorization Code + PKCE "Get Token" flow with OpenID
 > Connect discovery. See [Free vs Pro](#free-vs-pro).
 
@@ -130,9 +131,12 @@ open-source core. Apiboost also offers a commercial **Pro** edition that builds
 on this core and adds:
 
 - **GraphQL, SOAP/WSDL, and gRPC** renderers
-- **Full white-label theming** (`theme.overrides`, 70+ tokens)
-- **Premium vendor extensions** (`x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions`)
+- **Full white-label theming** (`theme.overrides`, 70+ tokens) and the `table`/`card` schema styles
 - **Interactive OAuth 2.0** (Authorization Code + PKCE "Get Token") and **OpenID Connect** discovery
+
+The documentation vendor extensions (`x-logo`, `x-badges`, `x-codeSamples`,
+`x-tagGroups`, `x-displayName`, `x-internal`, `x-enumDescriptions`) are supported
+in the **free** core.
 
 Using the open-source core never requires Pro. See [LICENSING.md](./LICENSING.md)
 and [apiboost.com/omnispec](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=readme&utm_campaign=pro).
