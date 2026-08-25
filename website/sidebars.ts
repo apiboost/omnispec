@@ -10,17 +10,16 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Introduction',
       collapsed: false,
-      items: ['getting-started', 'free-vs-pro'],
+      items: ['getting-started', 'concepts', 'free-vs-pro'],
     },
     {
       type: 'category',
-      label: 'Guides',
+      label: 'Integrations',
       items: [
+        'integrations-overview',
+        'integrations/docusaurus',
         'framework-integration',
         'web-component',
-        'try-it',
-        'backend-integration',
-        'migration',
       ],
     },
     {
@@ -35,8 +34,19 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Try-It & Backend',
+      items: ['try-it', 'backend-integration'],
+    },
+    {
+      type: 'category',
       label: 'Reference',
-      items: ['api-reference', 'vendor-extensions', 'external-refs', 'troubleshooting'],
+      items: [
+        'api-reference',
+        'vendor-extensions',
+        'external-refs',
+        'migration',
+        'troubleshooting',
+      ],
     },
     {
       type: 'category',
