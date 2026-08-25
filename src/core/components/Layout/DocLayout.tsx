@@ -302,9 +302,10 @@ const globalHtmlStyles = {
     fontFamily: 'var(--omnispec-font-mono)',
     overflow: 'auto',
     maxWidth: '100%',
-    padding: '0.5rem 1rem',
+    padding: '0.25rem 0.5rem',
     // Legible multi-line code with spacing between lines.
     lineHeight: 1.2,
+    margin: 0,
   },
   '& pre code': {
     backgroundColor: 'transparent',
