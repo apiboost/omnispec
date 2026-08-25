@@ -268,17 +268,6 @@ If you already use React, prefer the React component — there is no benefit to
 wrapping it in a custom element. The `<omnispec-renderer>` element exists for
 non-React stacks.
 
-## Working examples
-
-Runnable examples for each framework live under
-[`examples/`](https://github.com/apiboost/omnispec/tree/main/examples) in the
-repository. Each has its own `README.md` with run instructions:
-
-- `examples/vanilla-html/` — single-file demo, no build step
-- `examples/vue/` — Vue 3 + Vite
-- `examples/angular/` — Angular 18+ standalone component
-- `examples/svelte/` — Svelte 5 + Vite (runes mode)
-
 ## Pro features in the Web Component
 
 :::info[Pro]

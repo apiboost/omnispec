@@ -29,6 +29,7 @@ const emptyAttrs = {
   layout: null,
   sidebarPosition: null,
   tryItLayout: null,
+  schemaStyle: null,
   allowTryIt: null,
   interactiveOAuth: null,
   defaultExpandOperations: null,
@@ -165,6 +166,27 @@ describe('buildRendererProps', () => {
       tryItLayout: 'panel',
     })
   })
+
+  it('maps schema-style="chain" to schemaStyle: chain', () => {
+    const result = buildRendererProps({
+      ...emptyAttrs,
+      specUrl: '/openapi.json',
+      schemaStyle: 'chain',
+    })
+    expect(result?.schemaStyle).toBe('chain')
+  })
+
+  it.each(['lines', 'tokens', 'chain', 'table', 'card'] as const)(
+    'maps schema-style="%s" through',
+    (style) => {
+      const result = buildRendererProps({
+        ...emptyAttrs,
+        specUrl: '/openapi.json',
+        schemaStyle: style,
+      })
+      expect(result?.schemaStyle).toBe(style)
+    },
+  )
 
   it('ignores invalid enum values', () => {
     const result = buildRendererProps({

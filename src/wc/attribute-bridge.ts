@@ -123,7 +123,7 @@ export interface RawAttributes {
   sidebarPosition: string | null
   /** `try-it-layout` attribute: `'inline' | 'panel'`. */
   tryItLayout: string | null
-  /** `schema-style` attribute: `'lines' | 'table' | 'card' | 'tokens'`. */
+  /** `schema-style` attribute: `'lines' | 'tokens' | 'chain' | 'table' | 'card'`. */
   schemaStyle: string | null
   /** `allow-try-it` attribute. */
   allowTryIt: string | null
@@ -178,7 +178,7 @@ export function buildRendererProps(raw: RawAttributes): OmniSpecRendererProps | 
   const tryItLayout = readEnumAttr(raw.tryItLayout, ['inline', 'panel'] as const)
   if (tryItLayout) props.tryItLayout = tryItLayout
 
-  const schemaStyle = readEnumAttr(raw.schemaStyle, ['lines', 'table', 'card', 'tokens'] as const)
+  const schemaStyle = readEnumAttr(raw.schemaStyle, ['lines', 'tokens', 'chain', 'table', 'card'] as const)
   if (schemaStyle) props.schemaStyle = schemaStyle
 
   const allowTryIt = parseBooleanAttr(raw.allowTryIt)

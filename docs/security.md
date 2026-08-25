@@ -75,7 +75,7 @@ A per-IP limit (default **60 requests/minute**) throttles abuse. When [`express-
 
 ### Timeout and body-size enforcement
 
-Requests are capped at `maxTimeout` (default 30s), preventing slow-loris style hangs. Request and response bodies exceeding `maxBodySize` (default 1 MB) are rejected with a `413`.
+Requests are capped at `maxTimeout` (default 30s), preventing slow-loris style hangs. A request body exceeding `maxBodySize` (default 1 MB) is rejected with a `413`; an oversized upstream **response** is rejected with a `502`.
 
 ### Domain allow-listing
 
@@ -94,12 +94,12 @@ If you implement the proxy yourself in another language (PHP, Go, etc.), you own
 Specs split across multiple files reference each other with `$ref`. The renderer resolves these with the same security-first posture as the proxy.
 
 - **Same-origin refs** (relative paths, or absolute paths on the spec's origin) resolve automatically.
-- **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
+- **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Matching is **exact** — each allowed origin must be listed in full (`scheme://host[:port]`); wildcard subdomains are not supported. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
 
 ```tsx
 <OmniSpecRenderer
   spec="https://docs.example.com/openapi.yaml"
-  externalRefOrigins={['https://schemas.example.com', '*.trusted-cdn.io']}
+  externalRefOrigins={['https://schemas.example.com', 'https://cdn.trusted.io']}
 />
 ```
 

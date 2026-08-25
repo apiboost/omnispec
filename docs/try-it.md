@@ -287,11 +287,7 @@ access token obtained out of band.
 ### OpenID Connect
 
 An `openIdConnect` security scheme declares only a discovery URL
-(`openIdConnectUrl`) rather than explicit flow URLs. OmniSpec fetches the
-OpenID configuration from that URL and maps the discovered
-`authorization_endpoint`, `token_endpoint`, and `scopes_supported` into the
-OAuth2 flow model, so the panel renders identically to an equivalent `oauth2`
-scheme:
+(`openIdConnectUrl`) rather than explicit flow URLs.
 
 ```yaml
 components:
@@ -301,10 +297,16 @@ components:
       openIdConnectUrl: https://idp.example.com/.well-known/openid-configuration
 ```
 
-- **Free and Pro:** the discovered flow details plus manual access-token paste.
-- **Discovery failure** (unreachable IdP, malformed document, or an endpoint on
-  a disallowed origin) degrades gracefully to a themed error and manual token
-  paste — the panel never breaks.
+- **Free:** the panel shows the scheme description and the discovery URL as a
+  clickable link, plus manual access-token paste. The free core does **not**
+  fetch the OpenID configuration document — there is no network request to the
+  IdP.
+- **Pro:** OmniSpec fetches the OpenID configuration from that URL and maps the
+  discovered `authorization_endpoint`, `token_endpoint`, and `scopes_supported`
+  into the interactive Get Token flow, so the panel drives the OAuth exchange
+  like an equivalent `oauth2` scheme. Discovery failure (unreachable IdP,
+  malformed document, or an endpoint on a disallowed origin) degrades gracefully
+  to a themed error and manual token paste — the panel never breaks.
 
 :::info[Pro]
 
@@ -318,10 +320,17 @@ paste.
 
 ### Multi-environment token endpoints (relative flow URLs)
 
-`tokenUrl`, `authorizationUrl`, and `refreshUrl` may be **relative**. A relative
-flow URL resolves against the **currently selected server** (from the server
-dropdown), so a single spec with several `servers` — e.g. local, staging,
-production — sends the token request to whichever environment you pick:
+:::info[Pro]
+
+Relative-flow-URL resolution is a **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** interactive-flow behavior. The free manual panel renders the declared flow URLs **verbatim** and does not rebase them.
+
+:::
+
+With Pro's interactive Get Token flow, `tokenUrl`, `authorizationUrl`, and
+`refreshUrl` may be **relative**. A relative flow URL resolves against the
+**currently selected server** (from the server dropdown), so a single spec with
+several `servers` — e.g. local, staging, production — sends the token request to
+whichever environment you pick:
 
 ```yaml
 servers:
@@ -333,7 +342,7 @@ components:
       type: oauth2
       flows:
         clientCredentials:
-          tokenUrl: /oauth/token   # follows the selected server
+          tokenUrl: /oauth/token   # follows the selected server (Pro)
           scopes: {}
 ```
 
@@ -349,12 +358,19 @@ default server is `/`).
 
 ### Templated token endpoints (`x-flowVariables`)
 
-When the environment isn't distinguished by the server URL — for example a
-third-party IdP whose host varies by environment (`https://{env}.auth.example.com`)
-or a per-tenant token path — declare the [`x-flowVariables`](vendor-extensions.md)
-extension on the flow. Each variable renders one control in the Authorize panel
-(a dropdown when it lists an `enum`, otherwise a text input), placed just under
-the **Token URL**, and its value substitutes into the `{name}` placeholders:
+:::info[Pro]
+
+`x-flowVariables` templating (the variable controls plus placeholder substitution) is a **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** feature. The free core carries the extension through but does **not** interpret it — no variable controls are rendered and no substitution runs.
+
+:::
+
+With Pro, when the environment isn't distinguished by the server URL — for
+example a third-party IdP whose host varies by environment
+(`https://{env}.auth.example.com`) or a per-tenant token path — declare the
+[`x-flowVariables`](vendor-extensions.md) extension on the flow. Each variable
+renders one control in the Authorize panel (a dropdown when it lists an `enum`,
+otherwise a text input), placed just under the **Token URL**, and its value
+substitutes into the `{name}` placeholders:
 
 ```yaml
 components:
@@ -375,9 +391,8 @@ Substitution runs **before** the relative-URL resolution described above, so the
 two compose: a templated *relative* URL like `/{tenant}/oauth/token` first has
 `{tenant}` filled in, then resolves against the selected server. The displayed
 Token URL reflects the substituted, resolved value, and your selection persists
-across close/reopen. This is spec-authored behavior that works on every tier;
-the interactive **Get Token** that consumes the resulting URL is a Pro feature
-(see below).
+across close/reopen. The interactive **Get Token** that consumes the resulting
+URL is also a Pro feature (see below).
 
 ### Interactive Get Token (Pro)
 
@@ -513,14 +528,11 @@ Code samples automatically include:
 
 ### Custom Code Samples (`x-codeSamples`)
 
-:::info[Pro]
-
 Overriding the auto-generated snippets with your own per-operation samples via
-the `x-codeSamples` vendor extension requires
-**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, the
-six auto-generated language samples above are always shown.
-
-:::
+the `x-codeSamples` / `x-code-samples` vendor extension is supported in the
+**free core**. When present, your samples replace the auto-generated snippet for
+matching languages; any language you don't supply still shows its auto-generated
+sample.
 
 See the [Vendor Extensions](vendor-extensions.md) guide for details.
 

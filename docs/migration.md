@@ -32,11 +32,14 @@ Switching to `@apiboost/omnispec` from another renderer. Each section covers one
 | Full white-label theming (`theme.overrides`, 70+ tokens) | Pro | Limited (Pro) | — | — | — |
 | Auto theme (system preference) | Free | — | — | — | Free |
 | Built-in CORS proxy (SSRF-safe) | Free | — | — | — | — |
-| `x-tagGroups`, `x-codeSamples`, etc. | Pro | Pro | — | — | Free |
+| `x-tagGroups`, `x-codeSamples`, etc. | Free | Pro | — | — | Free |
 
 `@apiboost/omnispec` renders OpenAPI 2.0, 3.0.x, and 3.1, plus AsyncAPI 2.x and
-3.x, in a single component — all free. GraphQL, SOAP/WSDL, and gRPC renderers,
-full white-label theming, and the premium vendor extensions are part of
+3.x, in a single component — all free, including the documentation vendor
+extensions (`x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`,
+`x-badges`, `x-internal`, `x-enumDescriptions`). GraphQL, SOAP/WSDL, and gRPC
+renderers, full white-label theming, and the interactive-OAuth extensions are
+part of
 [Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro).
 
 ---
@@ -168,17 +171,15 @@ Your existing Redoc vendor extensions carry over without spec changes:
 | Extension | Status |
 |---|---|
 | `x-logo` | Supported (free) |
-| `x-tagGroups` | Supported (Pro) |
-| `x-displayName` | Supported (Pro) |
-| `x-codeSamples` / `x-code-samples` | Supported (Pro) |
-| `x-enumDescriptions` | Supported (Pro) |
-| `x-internal` | Supported (Pro) |
+| `x-tagGroups` | Supported (free) |
+| `x-displayName` | Supported (free) |
+| `x-codeSamples` / `x-code-samples` | Supported (free) |
+| `x-enumDescriptions` | Supported (free) |
+| `x-internal` | Supported (free) |
 
-The free core renders `x-logo` and all OpenAPI + AsyncAPI content. The premium
-vendor extensions (`x-tagGroups`, `x-codeSamples`, `x-displayName`,
-`x-enumDescriptions`, `x-internal`) are part of
-[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) — the same set you would have used
-Redoc Pro for.
+The free core renders these documentation vendor extensions along with all
+OpenAPI + AsyncAPI content — the same set you would have used Redoc Pro for — at
+no cost.
 
 ### Display Mode
 
@@ -562,11 +563,12 @@ Specs using Scalar-specific extensions are partially supported. Standard extensi
 
 | Scalar extension | Status in `@apiboost/omnispec` |
 |---|---|
-| `x-codeSamples` | Supported (Pro) |
-| `x-tagGroups` | Supported (Pro) |
-| `x-displayName` | Supported (Pro) |
-| `x-enumDescriptions` | Supported (Pro) |
-| `x-internal` / `x-scalar-ignore` | Supported (Pro) |
+| `x-codeSamples` | Supported (free) |
+| `x-tagGroups` | Supported (free) |
+| `x-displayName` | Supported (free) |
+| `x-enumDescriptions` | Supported (free) |
+| `x-internal` | Supported (free) |
+| `x-scalar-ignore` | Not rendered (safely ignored) |
 | `x-scalar-environments` | Not rendered (safely ignored) |
 | `x-scalar-stability` | Not rendered (safely ignored) |
 

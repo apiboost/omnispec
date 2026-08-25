@@ -22,7 +22,7 @@ Render interactive OpenAPI, Swagger, and AsyncAPI documentation in your React ap
 | Package | Specs | Install |
 |---------|-------|---------|
 | `@apiboost/omnispec` | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec` |
-| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, vendor extensions | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
+| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, interactive OAuth | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
 
 **Peer dependencies:** React 18 or 19 (`react`, `react-dom`). Everything else, including `@emotion/css` for styling, is bundled as a normal dependency — no separate install needed. (Pro additionally requires `@apiboost/omnispec` as a peer, shown above.)
 
@@ -281,14 +281,14 @@ Inject your app's navigation, branding, or custom content:
 | Extension | What it does | Package |
 |-----------|-------------|---------|
 | `x-logo` | API logo in sidebar (supports light/dark variants) | Free |
-| `x-codeSamples` | Custom code samples per operation | Pro |
-| `x-tagGroups` | Group tags into sidebar categories | Pro |
-| `x-displayName` | Human-friendly tag names | Pro |
-| `x-badges` | Color-coded labels (Beta, Rate Limited) | Pro |
-| `x-internal` | Hide internal operations | Pro |
-| `x-enumDescriptions` | Descriptions for enum values | Pro |
+| `x-codeSamples` | Custom code samples per operation | Free |
+| `x-tagGroups` | Group tags into sidebar categories | Free |
+| `x-displayName` | Human-friendly tag names | Free |
+| `x-badges` | Color-coded labels (Beta, Rate Limited) | Free |
+| `x-internal` | Hide internal operations | Free |
+| `x-enumDescriptions` | Descriptions for enum values | Free |
 
-Specs authored for Redocly, Scalar, or RapiDoc work without modification when Pro is installed. See [Vendor Extensions](./vendor-extensions.md) for full documentation.
+These seven extensions (`x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions`) are honored by the free core, so specs authored for Redocly, Scalar, or RapiDoc render without modification. See [Vendor Extensions](./vendor-extensions.md) for full documentation.
 
 ## Code Samples
 
