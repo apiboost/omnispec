@@ -1,8 +1,8 @@
 ---
 id: introduction
-title: What is OmniSpec?
+title: What is Apiboost OmniSpec?
 sidebar_label: What is OmniSpec?
-description: OmniSpec is an open-source React renderer for interactive OpenAPI/Swagger and AsyncAPI documentation — with a built-in Try-It console, auto-generated code samples, and a framework-agnostic Web Component.
+description: Apiboost OmniSpec is an open-source React renderer for interactive OpenAPI/Swagger and AsyncAPI documentation — with a built-in Try-It console, auto-generated code samples, and a framework-agnostic Web Component.
 keywords:
   - OmniSpec
   - open source API documentation
@@ -14,9 +14,9 @@ keywords:
   - Redoc alternative
 ---
 
-# What is OmniSpec?
+# What is Apiboost OmniSpec?
 
-**OmniSpec is an open-source React renderer that turns your OpenAPI/Swagger and AsyncAPI specifications into interactive, branded documentation — with a built-in Try-It console and auto-generated code samples.**
+**Apiboost OmniSpec is an open-source React renderer that turns your OpenAPI/Swagger and AsyncAPI specifications into interactive, branded documentation — with a built-in Try-It console and auto-generated code samples.**
 
 Drop in a spec — a URL, a raw string, or a parsed object — and OmniSpec auto-detects the type and renders a full reference site: sidebar navigation, schema viewers, code samples, and a live Try-It panel. It runs anywhere React does, and ships a framework-agnostic [Web Component](./web-component.md) for everything else.
 
