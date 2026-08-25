@@ -1,12 +1,19 @@
 # @apiboost/omnispec
 
+[![npm](https://img.shields.io/npm/v/@apiboost/omnispec)](https://www.npmjs.com/package/@apiboost/omnispec)
+[![CI](https://github.com/apiboost/omnispec/actions/workflows/ci.yml/badge.svg)](https://github.com/apiboost/omnispec/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE.md)
+[![Docs](https://img.shields.io/badge/docs-live-023E8A.svg)](https://apiboost.github.io/omnispec/)
+
 React components for rendering **OpenAPI** and **AsyncAPI** documentation — with
 Try-It request execution, authentication, theming, code samples, an optional
 backend proxy, and a framework-agnostic Web Component.
 
-This is the **open-source core** (Apache-2.0). Additional renderers and premium
-features are available in the commercial **Pro** edition — see
-[Free vs Pro](#free-vs-pro).
+This is the **open-source core** (Apache-2.0). GraphQL, SOAP/WSDL, and gRPC
+renderers plus other premium features live in the commercial **Pro** edition —
+see [Free vs Pro](#free-vs-pro).
+
+📖 **[Full documentation & guides](https://apiboost.github.io/omnispec/)** · ▶️ **[Live demo](https://apiboost.github.io/omnispec/demo)**
 
 ## Supported specifications
 
@@ -16,11 +23,12 @@ features are available in the commercial **Pro** edition — see
 | AsyncAPI | `<AsyncApiSpec>` | 2.x, 3.x | **Free** |
 | GraphQL | `<GraphqlSpec>` | SDL + Introspection | Pro |
 | SOAP / WSDL | `<SoapSpec>` | WSDL 1.1 | Pro |
-| gRPC / Protobuf | `<GrpcSpec>` | proto3 | Pro |
+| gRPC / Protobuf | `<GrpcSpec>` | proto2, proto3 | Pro |
 
 A unified `<OmniSpecRenderer>` auto-detects the spec type and renders the correct
 viewer. With only the free package installed it renders OpenAPI and AsyncAPI; for
-other spec types it shows an upgrade prompt until [Pro](https://www.apiboost.com)
+other spec types it shows an upgrade prompt until
+[Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=readme&utm_campaign=pro)
 is added.
 
 ## Installation
@@ -30,30 +38,37 @@ npm install @apiboost/omnispec
 # or: pnpm add @apiboost/omnispec
 ```
 
-Requires **React 18 or 19** and **`@emotion/css`** as peer dependencies.
+Requires **React 18 or 19** (`react`, `react-dom`) as peer dependencies.
+Everything else — including `@emotion/css` for styling — is bundled, so there is
+nothing else to install. (If you use the backend proxy, also add `express` and
+`express-rate-limit`.)
 
 ## Quick start
 
 ```tsx
-import { OpenApiSpec } from '@apiboost/omnispec/openapi'
+import { OmniSpecRenderer } from '@apiboost/omnispec'
 
 function Docs() {
   return (
-    <OpenApiSpec
-      spec="https://your-backend.com/api/specs/petstore.json"
-      theme={{ base: 'light' }}
+    <OmniSpecRenderer
+      spec="https://petstore3.swagger.io/api/v3/openapi.json"
+      theme={{ base: 'auto' }}
     />
   )
 }
 ```
 
-Or let the renderer auto-detect the spec type:
+`<OmniSpecRenderer>` auto-detects the spec type. You can also import a specific
+renderer or the Express proxy middleware directly:
 
 ```tsx
-import { OmniSpecRenderer } from '@apiboost/omnispec'
-
-<OmniSpecRenderer spec={specUrl} theme={{ base: 'dark' }} />
+import { OpenApiSpec } from '@apiboost/omnispec/openapi'
+import { AsyncApiSpec } from '@apiboost/omnispec/asyncapi'
+import { createProxyRouter } from '@apiboost/omnispec/server'
 ```
+
+See the [Getting Started guide](https://apiboost.github.io/omnispec/docs/getting-started)
+for framework setup (Vite, Next.js, Web Component, SSR) and every configuration option.
 
 ## Features
 
@@ -61,68 +76,29 @@ import { OmniSpecRenderer } from '@apiboost/omnispec'
 - **Try-It** — send requests directly from the browser or through an optional backend proxy
 - **Authentication** — API key, Basic, Bearer, and OAuth 2.0 flow details with manual token entry
 - **Code samples** in 6 languages
+- **Vendor extensions** — `x-logo`, `x-badges`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-internal`, `x-enumDescriptions`
 - **Light / dark / auto themes** with 40+ customizable `--omnispec-*` CSS design tokens
-- **Configurable layouts** — sidebar (left/right), stacked, Try-It inline or side panel
+- **Configurable layouts** — sidebar (left/right), stacked, and docked or inline Try-It
 - **Sidebar navigation, slots, and display modes** for embedding in your own portal
 - **Framework-agnostic Web Component** (`<omnispec-renderer>`) for Vue, Angular, Svelte, or vanilla HTML
 - **Zero Node.js dependencies** in the browser (no polyfills needed)
 
+Full prop and configuration reference:
+[API Reference](https://apiboost.github.io/omnispec/docs/api-reference) ·
+[Configuration](https://apiboost.github.io/omnispec/docs/configuration) ·
+[Theming](https://apiboost.github.io/omnispec/docs/theming).
+
 > **Pro** adds GraphQL, SOAP/WSDL, and gRPC renderers; full white-label theming
-> (`theme.overrides` across 70+ tokens); premium vendor extensions; and the
+> (`theme.overrides` across 70+ tokens); the `table`/`card` schema styles; and the
 > interactive OAuth 2.0 Authorization Code + PKCE "Get Token" flow with OpenID
 > Connect discovery. See [Free vs Pro](#free-vs-pro).
-
-## Configuration
-
-```tsx
-<OpenApiSpec
-  spec={specUrl}
-  theme={{ base: 'dark' }}
-  layout="sidebar"
-  sidebarPosition="left"
-  tryItLayout="panel"
-  proxyUrl="/api/proxy"
-  allowTryIt={true}
-  slots={{
-    sidebarHeader: <MyNavigation />,
-    header: <MyAppHeader />,
-  }}
-  onSpecLoaded={(info) => console.log(info.title)}
-/>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `spec` | `string \| object` | required | URL, raw content, or parsed object |
-| `theme` | `{ base, overrides? }` | `{ base: 'light' }` | `base` is Free; full `overrides` require Pro |
-| `layout` | `'sidebar' \| 'stacked'` | `'sidebar'` | Navigation layout |
-| `sidebarPosition` | `'left' \| 'right'` | `'left'` | Sidebar placement |
-| `tryItLayout` | `'inline' \| 'panel'` | `'inline'` | Try-It below operation or in a right panel |
-| `proxyUrl` | `string` | — | Route Try-It through a backend proxy |
-| `allowTryIt` | `boolean` | `true` | Enable/disable Try-It |
-| `slots` | `SlotOverrides` | — | Inject custom content (header, footer, sidebarHeader, sidebarFooter) |
-
-Free tier supports theming via `theme.base` and raw `--omnispec-*` CSS variables
-set on the host. The `theme.overrides` prop (arbitrary token overrides for full
-white-labeling) is a Pro feature.
-
-## Tree-shakeable imports
-
-Import only what you need:
-
-```tsx
-import { OpenApiSpec } from '@apiboost/omnispec/openapi'
-import { AsyncApiSpec } from '@apiboost/omnispec/asyncapi'
-import { createProxyRouter } from '@apiboost/omnispec/server' // Express proxy middleware
-```
 
 ## Web Component
 
 A framework-agnostic Web Component (`<omnispec-renderer>`) ships in the same
-package. It mounts the React renderer internally and isolates styles inside an
-open shadow root, so it works in Vue, Angular, Svelte, or vanilla HTML.
-
-### Vanilla HTML (no build step)
+package — it mounts the React renderer internally and isolates styles in an open
+shadow root, so it works in Vue, Angular, Svelte, or vanilla HTML. Zero-build
+usage:
 
 ```html
 <script src="https://unpkg.com/@apiboost/omnispec@latest/dist/wc/standalone.js"></script>
@@ -132,41 +108,21 @@ open shadow root, so it works in Vue, Angular, Svelte, or vanilla HTML.
 ></omnispec-renderer>
 ```
 
-### Framework apps (bundler-managed)
-
-```ts
-import '@apiboost/omnispec/wc' // auto-registers <omnispec-renderer>
-```
-
-For complex props, set them imperatively on the element instance:
-
-```ts
-const el = document.querySelector('omnispec-renderer')
-el.spec = parsedSpecObject
-el.theme = { base: 'dark' }
-el.sidebarNav = { items: [/* ... */] }
-```
-
-See [docs/web-component.md](./docs/web-component.md) for the full guide, the
-complete attribute/property/event API, shadow-DOM notes, and framework recipes.
-For React, Vue, Angular, and plain-HTML integration recipes see the
-[Framework Integration guide](./docs/framework-integration.md), and try the
-settings live in the [interactive demo](https://apiboost.github.io/omnispec/demo).
+See the [Web Component guide](https://apiboost.github.io/omnispec/docs/web-component)
+for the full attribute/property/event API and framework recipes.
 
 ## Documentation
 
-Full documentation is published at the project docs site. In this repo:
+Everything is at **[apiboost.github.io/omnispec](https://apiboost.github.io/omnispec/)**:
 
-| Guide | Description |
-|-------|-------------|
-| [Getting Started](./docs/getting-started.md) | Installation, quick start, spec formats |
-| [Configuration](./docs/configuration.md) | Layouts, Try-It modes, slots, callbacks |
-| [Theming](./docs/theming.md) | Design tokens and custom themes |
-| [API Reference](./docs/api-reference.md) | Props for every component |
-| [Backend Integration](./docs/backend-integration.md) | Proxy setup, serving specs, Node/PHP examples |
-| [Try-It](./docs/try-it.md) | Direct vs proxy mode, endpoint contract |
-| [Web Component](./docs/web-component.md) | Web Component API and framework recipes |
-| [Troubleshooting](./docs/troubleshooting.md) | Common issues and FAQ |
+- [Getting Started](https://apiboost.github.io/omnispec/docs/getting-started) — install, quick start, framework setup
+- [Configuration](https://apiboost.github.io/omnispec/docs/configuration) — layouts, Try-It modes, slots, callbacks
+- [Theming](https://apiboost.github.io/omnispec/docs/theming) — design tokens and custom themes
+- [API Reference](https://apiboost.github.io/omnispec/docs/api-reference) — props for every component
+- [Backend Integration](https://apiboost.github.io/omnispec/docs/backend-integration) — proxy setup, serving specs
+- [Try-It](https://apiboost.github.io/omnispec/docs/try-it) — direct vs proxy mode, endpoint contract
+- [Web Component](https://apiboost.github.io/omnispec/docs/web-component) — Web Component API and framework recipes
+- [Troubleshooting](https://apiboost.github.io/omnispec/docs/troubleshooting) — common issues and FAQ
 
 ## Free vs Pro
 
@@ -175,12 +131,15 @@ open-source core. Apiboost also offers a commercial **Pro** edition that builds
 on this core and adds:
 
 - **GraphQL, SOAP/WSDL, and gRPC** renderers
-- **Full white-label theming** (`theme.overrides`, 70+ tokens)
-- **Premium vendor extensions** (`x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions`)
+- **Full white-label theming** (`theme.overrides`, 70+ tokens) and the `table`/`card` schema styles
 - **Interactive OAuth 2.0** (Authorization Code + PKCE "Get Token") and **OpenID Connect** discovery
 
-Using the open-source core never requires Pro. See
-[LICENSING.md](./LICENSING.md) and [https://www.apiboost.com](https://www.apiboost.com).
+The documentation vendor extensions (`x-logo`, `x-badges`, `x-codeSamples`,
+`x-tagGroups`, `x-displayName`, `x-internal`, `x-enumDescriptions`) are supported
+in the **free** core.
+
+Using the open-source core never requires Pro. See [LICENSING.md](./LICENSING.md)
+and [apiboost.com/omnispec](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=readme&utm_campaign=pro).
 
 ## Development
 
