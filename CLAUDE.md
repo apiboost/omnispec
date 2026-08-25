@@ -11,6 +11,16 @@ A "Try it now" feature supports standard authorization headers for interactive A
 
 Out of box there are two pre-defined themes: Dark and Light themes. The theme layer is customizable via design tokens for white-labelling.
 
+## Brand & Naming
+
+Apiboost follows a **Branded House** brand architecture: one master brand (**Apiboost**) with products named descriptively beneath it. The product's full name is therefore **"Apiboost OmniSpec"** — OmniSpec is a product *of* Apiboost, not a standalone sub-brand.
+
+**When writing the tool name on any brand, meta, or marketing surface, use the full "Apiboost OmniSpec":** social/SEO meta (`og:*`, `twitter:*`), image/logo `alt` text, page titles and the site tagline, the footer trademark (`Apiboost OmniSpec™`), and README/marketing headings.
+
+Bare **"OmniSpec"** is acceptable in ordinary prose and headings once context is established (e.g. "OmniSpec auto-detects the spec type"). The npm package is always `@apiboost/omnispec`; the trademark form is `Apiboost OmniSpec™`.
+
+Do **not** present OmniSpec as an independent brand (a "House of Brands" pattern) — no naming or lockup that divorces it from Apiboost.
+
 ## Quick Reference
 
 ```bash
