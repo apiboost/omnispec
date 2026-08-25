@@ -77,16 +77,26 @@ const config: Config = {
   ],
 
   themeConfig: {
+    // Default social-card image for og:image / twitter:image. Docusaurus resolves
+    // this to an absolute URL (url + baseUrl) so pasted links render a real card.
+    // Pages can override per-page with frontmatter `image`.
+    image: 'img/og-image.png',
     // Site-wide SEO/social meta. Per-page frontmatter `description` overrides the
     // tagline-derived description; these add keywords and Open Graph/Twitter tags.
     metadata: [
       {
         name: 'keywords',
         content:
-          'OpenAPI, Swagger, AsyncAPI, API documentation, React, API docs renderer, Try-It, code samples, Web Component, open source, Redoc alternative',
+          'OmniSpec, OpenAPI, Swagger, AsyncAPI, GraphQL, SOAP, WSDL, gRPC, API documentation, React API docs renderer, Try-It, code samples, Web Component, open source, Redoc alternative',
       },
       {property: 'og:type', content: 'website'},
-      {name: 'twitter:card', content: 'summary'},
+      {property: 'og:image:width', content: '1200'},
+      {property: 'og:image:height', content: '630'},
+      {
+        property: 'og:image:alt',
+        content: 'OmniSpec — the open-source renderer for every API spec',
+      },
+      {name: 'twitter:card', content: 'summary_large_image'},
     ],
     colorMode: {
       respectPrefersColorScheme: true,
