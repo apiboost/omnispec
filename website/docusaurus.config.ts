@@ -94,7 +94,7 @@ const config: Config = {
       {property: 'og:image:height', content: '630'},
       {
         property: 'og:image:alt',
-        content: 'OmniSpec — the open-source renderer for every API spec',
+        content: 'Apiboost OmniSpec — the open-source renderer for every API spec',
       },
       {name: 'twitter:card', content: 'summary_large_image'},
     ],
