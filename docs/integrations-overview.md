@@ -28,11 +28,11 @@ wrapping it in a custom element.
 | You are building | Use | Guide |
 |---|---|---|
 | A Docusaurus docs site | React component in `<BrowserOnly>` | [Docusaurus](./integrations/docusaurus.md) |
-| Another docs-site framework | see the guides below | [Docs-site frameworks](#docs-site-frameworks) |
+| Another docs-site framework | see the guides below | [Docs-as-Code](#docs-as-code) |
 | A React app (Vite, Next.js, CRA, …) | `<OmniSpecRenderer>` | [App-framework recipes](./framework-integration.md) |
 | Vue, Angular, Svelte, or vanilla HTML | `<omnispec-renderer>` | [Web Component](./web-component.md) |
 
-## Docs-site frameworks
+## Docs-as-Code
 
 Copy-paste embedding guides for the common documentation generators. Each one
 picks the right entry point for its stack and handles the client-only mount,

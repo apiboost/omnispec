@@ -19,7 +19,7 @@ const sidebars: SidebarsConfig = {
         'integrations-overview',
         {
           type: 'category',
-          label: 'Docs-site frameworks',
+          label: 'Docs-as-Code',
           items: [
             'integrations/docusaurus',
             'integrations/vitepress',
