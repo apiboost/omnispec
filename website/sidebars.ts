@@ -66,8 +66,8 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Pro',
-      items: ['grpc-support'],
+      label: 'Pro renderers',
+      items: ['graphql-support', 'soap-support', 'grpc-support'],
     },
   ],
 };
