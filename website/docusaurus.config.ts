@@ -1,6 +1,6 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
+import { themes as prismThemes } from 'prism-react-renderer'
+import type { Config } from '@docusaurus/types'
+import type * as Preset from '@docusaurus/preset-classic'
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -87,16 +87,16 @@ const config: Config = {
       {
         name: 'keywords',
         content:
-          'OmniSpec, OpenAPI, Swagger, AsyncAPI, GraphQL, SOAP, WSDL, gRPC, API documentation, React API docs renderer, Try-It, code samples, Web Component, open source, Redoc alternative',
+          'OmniSpec, OpenAPI, Swagger, AsyncAPI, GraphQL, SOAP, WSDL, gRPC, API documentation, React API docs renderer, Try-It, code samples, Web Component, open source, Redoc and SwaggerUI alternative',
       },
-      {property: 'og:type', content: 'website'},
-      {property: 'og:image:width', content: '1200'},
-      {property: 'og:image:height', content: '630'},
+      { property: 'og:type', content: 'website' },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
       {
         property: 'og:image:alt',
         content: 'Apiboost OmniSpec — the open-source renderer for every API spec',
       },
-      {name: 'twitter:card', content: 'summary_large_image'},
+      { name: 'twitter:card', content: 'summary_large_image' },
     ],
     colorMode: {
       respectPrefersColorScheme: true,
@@ -140,25 +140,25 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            {label: 'Getting Started', to: '/docs/getting-started'},
-            {label: 'Configuration', to: '/docs/configuration'},
-            {label: 'API Reference', to: '/docs/api-reference'},
+            { label: 'Getting Started', to: '/docs/getting-started' },
+            { label: 'Configuration', to: '/docs/configuration' },
+            { label: 'API Reference', to: '/docs/api-reference' },
           ],
         },
         {
           title: 'Project',
           items: [
-            {label: 'GitHub', href: 'https://github.com/apiboost/omnispec'},
-            {label: 'npm', href: 'https://www.npmjs.com/package/@apiboost/omnispec'},
+            { label: 'GitHub', href: 'https://github.com/apiboost/omnispec' },
+            { label: 'npm', href: 'https://www.npmjs.com/package/@apiboost/omnispec' },
           ],
         },
         {
           title: 'Apiboost',
           items: [
-            {label: 'OmniSpec Pro', href: 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=footer&utm_campaign=pro'},
-            {label: 'Apiboost', href: 'https://apiboost.com?utm_source=omnispec&utm_medium=footer&utm_campaign=corporate'},
-            {label: 'LinkedIn', href: 'https://www.linkedin.com/company/apiboost'},
-            {label: 'Contact', href: 'https://apiboost.com/contact?utm_source=omnispec&utm_medium=footer&utm_campaign=contact'},
+            { label: 'OmniSpec Pro', href: 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=footer&utm_campaign=pro' },
+            { label: 'Apiboost', href: 'https://apiboost.com?utm_source=omnispec&utm_medium=footer&utm_campaign=corporate' },
+            { label: 'LinkedIn', href: 'https://www.linkedin.com/company/apiboost' },
+            { label: 'Contact', href: 'https://apiboost.com/contact?utm_source=omnispec&utm_medium=footer&utm_campaign=contact' },
           ],
         },
       ],
@@ -169,6 +169,6 @@ const config: Config = {
       darkTheme: prismThemes.dracula,
     },
   } satisfies Preset.ThemeConfig,
-};
+}
 
-export default config;
+export default config
