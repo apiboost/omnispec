@@ -281,7 +281,7 @@ paths:
                       life_span: 12 to 15 years
                       breed_group: Sporting
                   categories: []
-  /images/BkIEhN3pG:
+  /images/{image_id}/analysis:
     get:
       tags:
         - Images
@@ -290,6 +290,12 @@ paths:
       security:
         - noauthAuth: []
       parameters:
+        - name: image_id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: BkIEhN3pG
         - name: x-api-key
           in: header
           schema:

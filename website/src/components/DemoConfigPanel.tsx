@@ -55,7 +55,7 @@ export const DEFAULT_DEMO_CONFIG: DemoConfig = {
   schemaStyle: 'lines',
   allowTryIt: true,
   downloadLink: true,
-  defaultExpandOperations: false,
+  defaultExpandOperations: true,
 };
 
 interface SelectFieldProps<K extends keyof DemoConfig> {
