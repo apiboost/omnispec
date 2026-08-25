@@ -10,14 +10,25 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Introduction',
       collapsed: false,
-      items: ['getting-started', 'concepts', 'free-vs-pro'],
+      items: ['introduction', 'getting-started', 'concepts', 'free-vs-pro'],
     },
     {
       type: 'category',
       label: 'Integrations',
       items: [
         'integrations-overview',
-        'integrations/docusaurus',
+        {
+          type: 'category',
+          label: 'Docs-as-Code',
+          items: [
+            'integrations/docusaurus',
+            'integrations/vitepress',
+            'integrations/nextra',
+            'integrations/astro-starlight',
+            'integrations/mkdocs',
+            'integrations/plain-html',
+          ],
+        },
         'framework-integration',
         'web-component',
       ],
@@ -52,11 +63,6 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Advanced',
       items: ['security'],
-    },
-    {
-      type: 'category',
-      label: 'Pro',
-      items: ['grpc-support'],
     },
   ],
 };

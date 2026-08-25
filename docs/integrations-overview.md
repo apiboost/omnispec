@@ -28,8 +28,24 @@ wrapping it in a custom element.
 | You are building | Use | Guide |
 |---|---|---|
 | A Docusaurus docs site | React component in `<BrowserOnly>` | [Docusaurus](./integrations/docusaurus.md) |
+| Another docs-site framework | see the guides below | [Docs-as-Code](#docs-as-code) |
 | A React app (Vite, Next.js, CRA, …) | `<OmniSpecRenderer>` | [App-framework recipes](./framework-integration.md) |
 | Vue, Angular, Svelte, or vanilla HTML | `<omnispec-renderer>` | [Web Component](./web-component.md) |
+
+## Docs-as-Code
+
+Copy-paste embedding guides for the common documentation generators. Each one
+picks the right entry point for its stack and handles the client-only mount,
+theme sync, and sizing.
+
+| Framework | Entry point | Guide |
+|---|---|---|
+| Docusaurus | React component | [Docusaurus](./integrations/docusaurus.md) |
+| VitePress | Web Component (Vue) | [VitePress](./integrations/vitepress.md) |
+| Nextra | React component (Next.js) | [Nextra](./integrations/nextra.md) |
+| Astro / Starlight | Web Component or React island | [Astro / Starlight](./integrations/astro-starlight.md) |
+| MkDocs | Web Component (no build) | [MkDocs](./integrations/mkdocs.md) |
+| Plain HTML | Web Component (no build) | [Plain HTML](./integrations/plain-html.md) |
 
 ## The client-only gotcha
 
