@@ -22,9 +22,9 @@ The public documentation site fully documents everything the free core does. Pro
 | **Renderers** | OpenAPI 2.0 / 3.0 / 3.1, AsyncAPI 2.x / 3.x | + GraphQL (SDL + introspection), SOAP / WSDL, gRPC / Protobuf |
 | **Try-It** | Yes — direct (browser) and proxied | Inherited from Free |
 | **Authentication** | API key, Basic, Bearer, OAuth2 with **manual token paste** | + Interactive OAuth: Authorization Code + PKCE "Get Token", OpenID Connect, the `oauth` prop |
-| **Code samples** | 6 languages (cURL, JavaScript, Python, Go, Java, C#) | Inherited from Free; customizable with `x-codeSamples` |
+| **Code samples** | 6 languages (cURL, JavaScript, Python, Go, Java, C#), customizable with `x-codeSamples` | Inherited from Free |
 | **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 70+ design tokens |
-| **Vendor extensions** | `x-logo` | + `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions` |
+| **Vendor extensions** | `x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions` | + `x-flowVariables`, `x-tokenEndpointAuthMethod` (interactive-OAuth Try-It extensions) |
 | **Schema rendering** | Tree view with cross-links | + `schemaStyle` `'table'` / `'card'` layouts |
 | **Try-It proxy** | Express middleware (`@apiboost/omnispec/server`) with SSRF guard, rate limiting, allow-listing | Inherited from Free |
 | **External `$ref`** | Same-origin auto-resolve; cross-origin allow-list with SSRF + fetch limits | Inherited from Free |
@@ -39,7 +39,7 @@ The free core is designed to degrade gracefully — it never crashes when it enc
 - **Unsupported spec types** (GraphQL, SOAP, gRPC) display a styled upgrade prompt instead of the document.
 - **`theme.overrides`** passed to the free core is ignored; set the same design tokens as raw `--omnispec-*` CSS variables on `.omnispec-root` to achieve the same white-labeling in Free.
 - **OAuth2 security schemes** are rendered with the flow details visible and a manual token-paste field; the interactive "Get Token" button is a Pro capability.
-- **Pro vendor extensions** in a spec are simply not acted upon — the document still renders. Only `x-logo` is honored by the free core.
+- **Vendor extensions** honored by the free core are `x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, and `x-enumDescriptions`. The Pro-only interactive-OAuth extensions `x-flowVariables` and `x-tokenEndpointAuthMethod` are carried through but not interpreted without Pro — the document still renders.
 
 ## When you need Pro
 
@@ -48,7 +48,6 @@ Reach for [Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnis
 - Render **GraphQL, SOAP/WSDL, or gRPC** APIs alongside your OpenAPI/AsyncAPI docs.
 - Ship a **fully white-labeled** portal via structured `theme.overrides` rather than hand-authored CSS variables.
 - Give consumers **one-click OAuth** (Authorization Code + PKCE) or **OpenID Connect** discovery in the Try-It panel instead of pasting tokens manually.
-- Use premium vendor extensions authored for Redocly, Scalar, or RapiDoc — `x-codeSamples`, `x-tagGroups`, `x-badges`, and more — without modifying your specs.
 - Get **commercial support** with response-time commitments.
 
 Upgrading is a package swap: import `OmniSpecRenderer` from `@apiboost/omnispec-pro` instead of `@apiboost/omnispec`, and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.

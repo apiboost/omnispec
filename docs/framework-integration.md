@@ -23,8 +23,6 @@ import '@apiboost/omnispec/wc'
 
 Scalar options are passed as **kebab-case attributes** (`spec-url`, `theme-base`, `display-mode`); complex objects (parsed specs, theme config, sidebar nav) are set as **properties** on the element reference. See [Web Component](./web-component.md) for the complete attribute, property, and event reference.
 
-Runnable examples for each non-React framework live under [`examples/`](https://github.com/apiboost/omnispec/tree/main/examples) in the repository.
-
 ## React
 
 Import the component directly — no web component needed:
@@ -62,7 +60,7 @@ export default function DocsPage() {
 }
 ```
 
-The renderer is SSR-safe with `renderToString` — the Try-It panel and mobile drawer hydrate on the client. For a server-rendered Express + React setup, see the SSR section of [Getting Started](./getting-started.md#express-ssr).
+The renderer is client-rendered: under SSR/SSG it emits only a themed shell and renders the documentation on the client after hydration (no server-rendered content). It won't crash `renderToString`, but mount it in a client-only boundary (`'use client'` or `dynamic(..., { ssr: false })`) to avoid a hydration mismatch. See [Getting Started → Server-side rendering](./getting-started.md#server-side-rendering).
 
 ## Vue
 
@@ -93,8 +91,6 @@ import '@apiboost/omnispec/wc'
 </template>
 ```
 
-Runnable example: [`examples/vue/`](https://github.com/apiboost/omnispec/tree/main/examples/vue) — Vue 3 + Vite, including imperative property assignment and event binding.
-
 ## Angular
 
 Add `CUSTOM_ELEMENTS_SCHEMA` to the component (or `NgModule`) so the Angular compiler accepts the unknown `<omnispec-renderer>` tag, and import the web component entry once (typically in `main.ts`):
@@ -111,7 +107,7 @@ import '@apiboost/omnispec/wc'
 export class AppComponent {}
 ```
 
-Use a `ViewChild` to set complex properties (`sidebarNav`, `theme`, `spec`) imperatively after view init. Runnable example: [`examples/angular/`](https://github.com/apiboost/omnispec/tree/main/examples/angular) — Angular 18 standalone component.
+Use a `ViewChild` to set complex properties (`sidebarNav`, `theme`, `spec`) imperatively after view init.
 
 ## Svelte
 
@@ -125,7 +121,7 @@ Svelte passes unknown attributes straight through to the DOM, so no compiler con
 <omnispec-renderer spec-url="/openapi.json"></omnispec-renderer>
 ```
 
-Use `bind:this` plus `$effect` (runes mode) to set complex JSON properties imperatively once the element is mounted. Runnable example: [`examples/svelte/`](https://github.com/apiboost/omnispec/tree/main/examples/svelte) — Svelte 5 + Vite.
+Use `bind:this` plus `$effect` (runes mode) to set complex JSON properties imperatively once the element is mounted.
 
 ## Vanilla HTML / CDN
 
@@ -143,8 +139,6 @@ The fastest path is the standalone bundle — a single self-contained `<script>`
   </body>
 </html>
 ```
-
-Runnable example: [`examples/vanilla-html/`](https://github.com/apiboost/omnispec/tree/main/examples/vanilla-html) — a single HTML file with no build step.
 
 ## Next steps
 

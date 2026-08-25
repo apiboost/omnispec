@@ -22,7 +22,7 @@ Render interactive OpenAPI, Swagger, and AsyncAPI documentation in your React ap
 | Package | Specs | Install |
 |---------|-------|---------|
 | `@apiboost/omnispec` | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec` |
-| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, vendor extensions | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
+| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, interactive OAuth | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
 
 **Peer dependencies:** React 18 or 19 (`react`, `react-dom`). Everything else, including `@emotion/css` for styling, is bundled as a normal dependency — no separate install needed. (Pro additionally requires `@apiboost/omnispec` as a peer, shown above.)
 
@@ -147,21 +147,16 @@ import '@apiboost/omnispec/wc'
 See [Web Component](./web-component.md) for the full attribute and property
 reference plus working Vue, Angular, and Svelte examples.
 
-### Express SSR
+### Server-side rendering
 
-For server-rendered React apps, the renderer works with `renderToString`. The Try-It panel and mobile drawer hydrate on the client.
+OmniSpec is a **client-rendered** component — it parses the spec and renders the documentation in the browser after mount. It does not crash under `renderToString` or static builds, but the server output is only a themed shell: the API documentation renders (and hydrates) on the client, so there is no server-rendered content for SEO or no-JS clients. Mount it inside a **client-only boundary** in SSR/SSG frameworks:
 
-```tsx
-// Server
-import { renderToString } from 'react-dom/server'
-import { OmniSpecRenderer } from '@apiboost/omnispec'
+- **Next.js:** add `'use client'`, or use `dynamic(() => import('@apiboost/omnispec').then((m) => m.OmniSpecRenderer), { ssr: false })`.
+- **Docusaurus and other static-site generators:** wrap it in a client-only boundary (e.g. Docusaurus's `<BrowserOnly>`) to avoid a hydration mismatch.
 
-const html = renderToString(
-  <OmniSpecRenderer spec={specUrl} theme={{ base: 'light' }} />
-)
-```
+### Try-It proxy (Express)
 
-To enable Try-It proxy for CORS-restricted APIs, mount the built-in Express middleware:
+To route Try-It requests for CORS-restricted APIs through your backend, mount the built-in Express middleware:
 
 ```js
 import { createProxyRouter } from '@apiboost/omnispec/server'
@@ -281,14 +276,14 @@ Inject your app's navigation, branding, or custom content:
 | Extension | What it does | Package |
 |-----------|-------------|---------|
 | `x-logo` | API logo in sidebar (supports light/dark variants) | Free |
-| `x-codeSamples` | Custom code samples per operation | Pro |
-| `x-tagGroups` | Group tags into sidebar categories | Pro |
-| `x-displayName` | Human-friendly tag names | Pro |
-| `x-badges` | Color-coded labels (Beta, Rate Limited) | Pro |
-| `x-internal` | Hide internal operations | Pro |
-| `x-enumDescriptions` | Descriptions for enum values | Pro |
+| `x-codeSamples` | Custom code samples per operation | Free |
+| `x-tagGroups` | Group tags into sidebar categories | Free |
+| `x-displayName` | Human-friendly tag names | Free |
+| `x-badges` | Color-coded labels (Beta, Rate Limited) | Free |
+| `x-internal` | Hide internal operations | Free |
+| `x-enumDescriptions` | Descriptions for enum values | Free |
 
-Specs authored for Redocly, Scalar, or RapiDoc work without modification when Pro is installed. See [Vendor Extensions](./vendor-extensions.md) for full documentation.
+These seven extensions (`x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions`) are honored by the free core, so specs authored for Redocly, Scalar, or RapiDoc render without modification. See [Vendor Extensions](./vendor-extensions.md) for full documentation.
 
 ## Code Samples
 

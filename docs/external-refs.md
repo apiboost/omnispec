@@ -61,15 +61,18 @@ externalRefOrigins={[
 
 Any ref whose origin is not in the list renders the blocked indicator instead of the schema. No error is thrown.
 
-### Wildcard subdomains
+### Exact-origin matching
 
-To allow all subdomains of a domain, prefix with `*.`:
+Origins are matched **exactly** — wildcard subdomains are not supported. Each origin you want to allow must be listed in full (`scheme://host[:port]`):
 
 ```tsx
-externalRefOrigins={['*.example.com']}
+externalRefOrigins={[
+  'https://schemas.example.com',
+  'https://cdn.example.com',
+]}
 ```
 
-This matches `https://schemas.example.com` and `https://cdn.example.com` but not `https://example.com` itself.
+Here `https://schemas.example.com` and `https://cdn.example.com` are allowed, but `https://example.com` and any other subdomain not listed are not. There is no `*.example.com` shorthand — add each origin you need.
 
 ## Config File Convention
 

@@ -265,7 +265,7 @@ npm dedupe
 pnpm dedupe
 ```
 
-**Fix — Next.js App Router:** The renderer uses browser APIs and cannot run on the server. Add `'use client'` to the file importing it, or use a dynamic import with `ssr: false`:
+**Fix — Next.js App Router:** The renderer is client-rendered — on the server it emits only an empty shell and can cause a hydration mismatch. Add `'use client'` to the file importing it, or use a dynamic import with `ssr: false`:
 
 ```tsx
 import dynamic from 'next/dynamic'
