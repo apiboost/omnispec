@@ -10,7 +10,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Introduction',
       collapsed: false,
-      items: ['getting-started', 'concepts', 'free-vs-pro'],
+      items: ['introduction', 'getting-started', 'concepts', 'free-vs-pro'],
     },
     {
       type: 'category',
