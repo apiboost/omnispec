@@ -2,7 +2,7 @@
   "name": "@apiboost/omnispec",
   "author": "The Apiboost Team",
   "version": "1.2.11",
-  "packageManager": "pnpm@11.0.8",
+  "packageManager": "pnpm@11.24.0",
   "description": "React components for rendering OpenAPI and AsyncAPI documentation, with Try-It, authentication, theming, and a framework-agnostic web component",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
