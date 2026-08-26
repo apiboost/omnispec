@@ -1,9 +1,12 @@
 {
   "name": "@apiboost/omnispec",
-  "author": "The Apiboost Team",
-  "version": "1.2.11",
-  "packageManager": "pnpm@11.24.0",
   "description": "React components for rendering OpenAPI and AsyncAPI documentation, with Try-It, authentication, theming, and a framework-agnostic web component",
+  "author": "The Apiboost Team",
+  "version": "0.0.0-development",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=18"
+  },
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -47,6 +50,7 @@
   ],
   "scripts": {
     "prepare": "husky || true && pnpm run build",
+    "prepublishOnly": "pnpm run build && pnpm run check:licenses && pnpm run verify:pack",
     "check:licenses": "node scripts/check-licenses.mjs",
     "licenses:report": "node scripts/generate-license-report.mjs",
     "verify:pack": "node scripts/verify-tarball.mjs",
@@ -111,6 +115,7 @@
     "react-dom": "^19.2.7",
     "rollup": "^4.62.2",
     "rollup-plugin-esbuild": "^6.2.1",
+    "semantic-release": "^25.0.9",
     "storybook": "^10.4.4",
     "ts-loader": "^9.6.0",
     "ts-node": "^10.9.2",
