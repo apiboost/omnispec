@@ -5,13 +5,13 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE.md)
 [![Docs](https://img.shields.io/badge/docs-live-023E8A.svg)](https://apiboost.github.io/omnispec/)
 
-React components for rendering **OpenAPI** and **AsyncAPI** documentation — with
-Try-It request execution, authentication, theming, code samples, an optional
-backend proxy, and a framework-agnostic Web Component.
+**Apiboost OmniSpec** is the open-source React renderer for **OpenAPI** and
+**AsyncAPI** documentation, with Try-It request execution, authentication,
+theming, code samples, an optional backend proxy, and a framework-agnostic Web
+Component.
 
 This is the **open-source core** (Apache-2.0). GraphQL, SOAP/WSDL, and gRPC
-renderers plus other premium features live in the commercial **Pro** edition —
-see [Free vs Pro](#free-vs-pro).
+renderers plus other premium features live in the commercial **Pro** edition. See [Free vs Pro](#free-vs-pro).
 
 📖 **[Full documentation & guides](https://apiboost.github.io/omnispec/)** · ▶️ **[Live demo](https://apiboost.github.io/omnispec/demo)**
 
@@ -39,7 +39,7 @@ npm install @apiboost/omnispec
 ```
 
 Requires **React 18 or 19** (`react`, `react-dom`) as peer dependencies.
-Everything else — including `@emotion/css` for styling — is bundled, so there is
+Everything else, including `@emotion/css` for styling, is bundled, so there is
 nothing else to install. (If you use the backend proxy, also add `express` and
 `express-rate-limit`.)
 
@@ -73,12 +73,12 @@ for framework setup (Vite, Next.js, Web Component, SSR) and every configuration 
 ## Features
 
 - **OpenAPI (2.0 / 3.0 / 3.1) and AsyncAPI (2 / 3)** rendering, YAML or JSON, auto-detected
-- **Try-It** — send requests directly from the browser or through an optional backend proxy
-- **Authentication** — API key, Basic, Bearer, and OAuth 2.0 flow details with manual token entry
+- **Try-It**: send requests directly from the browser or through an optional backend proxy
+- **Authentication**: API key, Basic, Bearer, and OAuth 2.0 flow details with manual token entry
 - **Code samples** in 6 languages
-- **Vendor extensions** — `x-logo`, `x-badges`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-internal`, `x-enumDescriptions`
-- **Light / dark / auto themes** with 40+ customizable `--omnispec-*` CSS design tokens
-- **Configurable layouts** — sidebar (left/right), stacked, and docked or inline Try-It
+- **Vendor extensions**: `x-logo`, `x-badges`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-internal`, `x-enumDescriptions`
+- **Light / dark / auto themes** with 80+ customizable `--omnispec-*` CSS design tokens
+- **Configurable layouts**: sidebar (left/right), stacked, and docked or inline Try-It
 - **Sidebar navigation, slots, and display modes** for embedding in your own portal
 - **Framework-agnostic Web Component** (`<omnispec-renderer>`) for Vue, Angular, Svelte, or vanilla HTML
 - **Zero Node.js dependencies** in the browser (no polyfills needed)
@@ -89,14 +89,14 @@ Full prop and configuration reference:
 [Theming](https://apiboost.github.io/omnispec/docs/theming).
 
 > **Pro** adds GraphQL, SOAP/WSDL, and gRPC renderers; full white-label theming
-> (`theme.overrides` across 70+ tokens); the `table`/`card` schema styles; and the
+> (`theme.overrides` across 80+ tokens); the `table`/`card` schema styles; and the
 > interactive OAuth 2.0 Authorization Code + PKCE "Get Token" flow with OpenID
 > Connect discovery. See [Free vs Pro](#free-vs-pro).
 
 ## Web Component
 
 A framework-agnostic Web Component (`<omnispec-renderer>`) ships in the same
-package — it mounts the React renderer internally and isolates styles in an open
+package. It mounts the React renderer internally and isolates styles in an open
 shadow root, so it works in Vue, Angular, Svelte, or vanilla HTML. Zero-build
 usage:
 
@@ -115,14 +115,14 @@ for the full attribute/property/event API and framework recipes.
 
 Everything is at **[apiboost.github.io/omnispec](https://apiboost.github.io/omnispec/)**:
 
-- [Getting Started](https://apiboost.github.io/omnispec/docs/getting-started) — install, quick start, framework setup
-- [Configuration](https://apiboost.github.io/omnispec/docs/configuration) — layouts, Try-It modes, slots, callbacks
-- [Theming](https://apiboost.github.io/omnispec/docs/theming) — design tokens and custom themes
-- [API Reference](https://apiboost.github.io/omnispec/docs/api-reference) — props for every component
-- [Backend Integration](https://apiboost.github.io/omnispec/docs/backend-integration) — proxy setup, serving specs
-- [Try-It](https://apiboost.github.io/omnispec/docs/try-it) — direct vs proxy mode, endpoint contract
-- [Web Component](https://apiboost.github.io/omnispec/docs/web-component) — Web Component API and framework recipes
-- [Troubleshooting](https://apiboost.github.io/omnispec/docs/troubleshooting) — common issues and FAQ
+- [Getting Started](https://apiboost.github.io/omnispec/docs/getting-started): install, quick start, framework setup
+- [Configuration](https://apiboost.github.io/omnispec/docs/configuration): layouts, Try-It modes, slots, callbacks
+- [Theming](https://apiboost.github.io/omnispec/docs/theming): design tokens and custom themes
+- [API Reference](https://apiboost.github.io/omnispec/docs/api-reference): props for every component
+- [Backend Integration](https://apiboost.github.io/omnispec/docs/backend-integration): proxy setup, serving specs
+- [Try-It](https://apiboost.github.io/omnispec/docs/try-it): direct vs proxy mode, endpoint contract
+- [Web Component](https://apiboost.github.io/omnispec/docs/web-component): Web Component API and framework recipes
+- [Troubleshooting](https://apiboost.github.io/omnispec/docs/troubleshooting): common issues and FAQ
 
 ## Free vs Pro
 
@@ -131,7 +131,7 @@ open-source core. Apiboost also offers a commercial **Pro** edition that builds
 on this core and adds:
 
 - **GraphQL, SOAP/WSDL, and gRPC** renderers
-- **Full white-label theming** (`theme.overrides`, 70+ tokens) and the `table`/`card` schema styles
+- **Full white-label theming** (`theme.overrides`, 80+ tokens) and the `table`/`card` schema styles
 - **Interactive OAuth 2.0** (Authorization Code + PKCE "Get Token") and **OpenID Connect** discovery
 
 The documentation vendor extensions (`x-logo`, `x-badges`, `x-codeSamples`,
@@ -163,4 +163,4 @@ Certificate of Origin sign-off (`git commit -s`). See
 Apache License 2.0. See [LICENSE.md](./LICENSE.md) for the full text and
 [LICENSING.md](./LICENSING.md) for how the open-source core relates to the
 commercial Pro edition. "Apiboost" and "Apiboost OmniSpec" are trademarks of
-Apiboost, Inc. — see [TRADEMARKS.md](./TRADEMARKS.md).
+Apiboost, Inc. See [TRADEMARKS.md](./TRADEMARKS.md).
