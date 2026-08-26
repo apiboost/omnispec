@@ -46,7 +46,7 @@ See the [`README.md`](./README.md) for full instructions. In brief:
 - Install dependencies with `pnpm install`.
 - Build with `pnpm run build`; type-check with `pnpm run typecheck`.
 - Lint with `pnpm run lint` (zero-warnings policy) and run tests with
-  `pnpm --filter @apiboost/apidocs run test`.
+  `pnpm run test`.
 
 ## Pull request process
 
@@ -54,7 +54,7 @@ See the [`README.md`](./README.md) for full instructions. In brief:
 2. Make your change in focused, logically separate commits.
 3. Add or update **tests** for your change, and make sure the full test suite,
    linter, and type-checker pass.
-4. Update relevant **documentation** (including `docs/client_docs/` for any
+4. Update relevant **documentation** (including `docs/` for any
    user-facing behavior change).
 5. Ensure every commit is **signed off** (see below).
 6. Open a pull request against the default branch, describe the change and its
