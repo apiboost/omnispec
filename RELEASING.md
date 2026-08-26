@@ -10,65 +10,70 @@ See LICENSE.md and LICENSING.md in the project root for license information.
 
 # Releasing `@apiboost/omnispec`
 
-Releases run **in CI** via GitHub Actions so every published version gets npm
-**provenance attestations**, a matching **git tag**, and the license/pack guards.
-Do not publish from a laptop — a manual `npm publish` produces an unattested,
-untagged release.
+Releases are **fully automated with [semantic-release](https://semantic-release.gitbook.io/)**,
+driven by the Conventional Commits we already enforce with commitlint. You do not
+bump the version by hand. Merge to `main`, and CI decides the version, publishes
+to npm with provenance, tags the commit, and writes a GitHub Release.
 
-## One-time setup (maintainers)
+`package.json` shows `0.0.0-development` on purpose: the real version lives in the
+git tags and on npm, which semantic-release manages.
 
-1. **npm token** — in npmjs.com, create a **granular access token** with
-   read+write to the `@apiboost` scope (or a classic **automation** token, which
-   bypasses 2FA). Add it to the repo as the **`NPM_TOKEN`** secret
-   (Settings → Secrets and variables → Actions).
-2. **npm org settings** — ensure the `@apiboost` org allows token publishing with
-   provenance (not "require 2FA and disallow tokens").
-3. **Clean up legacy dist-tags** (one-time — removes the old per-version tags so
-   only real channels remain). Run locally while logged in with publish rights:
-   ```bash
-   npm dist-tag rm @apiboost/omnispec v1.2.11-dev
-   npm dist-tag rm @apiboost/omnispec v1.2.11-dev-1
-   npm dist-tag rm @apiboost/omnispec v1.2.11-dev.1
-   npm dist-tag rm @apiboost/omnispec v1.2.11.dev2
-   # keep: latest (stable), dev (prereleases)
-   npm dist-tag ls @apiboost/omnispec   # verify
-   ```
+## How versions are decided
 
-## Dist-tag channels
+Commit types since the last release tag determine the bump:
 
-| Tag | Meaning | Install |
-|-----|---------|---------|
-| `latest` | Current stable release | `npm i @apiboost/omnispec` |
-| `dev` | Latest dev prerelease (testing only) | `npm i @apiboost/omnispec@dev` |
+| Commit | Bump |
+|--------|------|
+| `fix:` / `hotfix:` | patch (e.g. 1.3.0 to 1.3.1) |
+| `feat:` | minor (e.g. 1.3.0 to 1.4.0) |
+| `feat!:` or a `BREAKING CHANGE:` footer | major (e.g. 1.3.0 to 2.0.0) |
+| `chore:` / `docs:` / `refactor:` / `test:` / `build:` | no release |
 
-## Cutting a stable release (version-in-PR)
+A merge that contains only non-releasing commits publishes nothing.
 
-The published version is whatever is committed in `package.json`, so bump it in a
-PR first — git and npm never drift.
+## Cutting a stable release
 
-1. Open a PR to `main` bumping `version` in `package.json` (e.g. `1.3.0` → `1.3.1`)
-   and updating the changelog. Get it reviewed and merged.
-2. Actions → **Release** → **Run workflow** (from `main`).
-   - Reads the version from `package.json`.
-   - Refuses to run if that version is already on npm or looks like a prerelease.
-   - `npm publish --provenance` (build + `check:licenses` + `verify:pack` run
-     automatically via `prepublishOnly`).
-   - Pushes the `v<version>` git tag.
+1. Merge a PR to `main` whose commits follow Conventional Commits.
+2. The **Release** workflow runs automatically:
+   - analyzes commits, computes the next version,
+   - `npm publish --provenance` (build, `check:licenses`, and `verify:pack` run via `prepublishOnly`),
+   - pushes the `v<version>` tag and creates a GitHub Release with generated notes.
+
+That is the whole flow. No manual version bump, no manual dispatch.
 
 ## Publishing a dev prerelease (for testing a branch)
 
-1. Push your dev branch (bump `package.json` to the intended next version if you
-   want the dev build numbered against it).
-2. Actions → **Release (dev prerelease)** → **Run workflow**, set **ref** to your
-   branch.
-   - Publishes `<version>-dev.<short-sha>` under the **`dev`** dist-tag.
-   - No git tag; `latest` is untouched.
-3. Install it with `npm i @apiboost/omnispec@dev` (or the exact `-dev.<sha>`).
+Push work to the **`dev`** branch. semantic-release publishes a prerelease such as
+`1.4.0-dev.1` under the **`dev`** dist-tag. Install it with:
+
+```bash
+npm i @apiboost/omnispec@dev        # latest dev build
+npm i @apiboost/omnispec@1.4.0-dev.1 # a specific one
+```
+
+`latest` is never touched by dev builds.
+
+## One-time setup (maintainers)
+
+1. **`NPM_TOKEN` secret** — a granular/automation token with publish rights to the
+   `@apiboost` scope (Settings > Secrets and variables > Actions).
+2. **Seed the baseline tag (required once).** semantic-release derives the last
+   version from git tags, and this repo currently has none while npm is at 1.3.0.
+   Create the baseline so the next release continues from 1.3.0:
+   ```bash
+   git checkout main && git pull
+   git tag v1.3.0        # on the current main HEAD
+   git push origin v1.3.0
+   ```
+   Do this **before** the first Release run, or semantic-release will start at 1.0.0.
+3. **Merge this PR as a non-releasing commit** (a `chore:` squash message) so it
+   does not trigger a release on its own. The first real `feat:`/`fix:` after that
+   produces 1.3.1 or 1.4.0.
 
 ## Notes
 
-- **Provenance** requires the CI path (OIDC `id-token: write`); that's the main
-  reason not to publish manually.
-- `prepublishOnly` guards **every** publish path (build → license check → tarball
-  verification), so a stray local `npm publish` still can't ship a broken tarball
-  — but it won't be attested or tagged.
+- `GITHUB_TOKEN` (auto-provided) creates the tag and GitHub Release, so nothing is
+  pushed to the protected `main` branch. There is no committed `CHANGELOG.md`; the
+  changelog is the GitHub Release notes.
+- Provenance requires the CI path (OIDC `id-token: write`); do not publish manually.
+- `prepublishOnly` still guards every publish (build, license check, tarball verify).

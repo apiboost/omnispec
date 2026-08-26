@@ -7,21 +7,33 @@
 # See LICENSE.md and LICENSING.md in the project root for license information.
 name: Release
 
-# Stable release. The version comes from the committed package.json (bump it in a
-# PR to main first), so git and npm stay in lockstep. Run this from main after the
-# version-bump PR merges.
+# Automated release via semantic-release. On a push to main it analyzes the
+# conventional commits since the last release tag, computes the next version,
+# publishes to npm with provenance, tags the commit, and creates a GitHub
+# Release with generated notes. Pushing to the `dev` branch publishes a
+# prerelease under the `dev` dist-tag (install with `@apiboost/omnispec@dev`).
 on:
-  workflow_dispatch:
+  push:
+    branches: [main, dev]
 
 permissions:
-  contents: write # push the git tag
+  contents: write # create tags + GitHub Releases
+  issues: write # semantic-release success comments
+  pull-requests: write # semantic-release success comments
   id-token: write # npm provenance (OIDC)
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # semantic-release needs full history + tags
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
           version: 11.0.8
@@ -31,34 +43,11 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
-
-      - name: Read version from package.json
-        id: v
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Guard — reject prereleases and duplicates
-        run: |
-          VERSION="${{ steps.v.outputs.version }}"
-          if [[ "$VERSION" == *-* ]]; then
-            echo "::error::$VERSION is a prerelease. Use the 'Release (dev prerelease)' workflow for -dev builds."
-            exit 1
-          fi
-          if npm view "@apiboost/omnispec@$VERSION" version >/dev/null 2>&1; then
-            echo "::error::@apiboost/omnispec@$VERSION is already published. Bump the version in a PR to main first."
-            exit 1
-          fi
-
       # build + check:licenses + verify:pack run automatically via the
-      # prepublishOnly lifecycle script, so any publish path is guarded.
-      - name: Publish to npm
-        run: npm publish --access public --provenance
+      # prepublishOnly lifecycle script when semantic-release runs `npm publish`.
+      - name: Release
+        run: pnpm exec semantic-release
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Tag the release
-        run: |
-          VERSION="${{ steps.v.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v$VERSION"
-          git push origin "v$VERSION"
+          NPM_CONFIG_PROVENANCE: "true"
