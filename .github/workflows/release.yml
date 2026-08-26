@@ -7,16 +7,15 @@
 # See LICENSE.md and LICENSING.md in the project root for license information.
 name: Release
 
+# Stable release. The version comes from the committed package.json (bump it in a
+# PR to main first), so git and npm stay in lockstep. Run this from main after the
+# version-bump PR merges.
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to publish (e.g. 1.2.11)"
-        required: true
 
 permissions:
-  contents: write
-  id-token: write # required for npm provenance
+  contents: write # push the git tag
+  id-token: write # npm provenance (OIDC)
 
 jobs:
   publish:
@@ -32,16 +31,34 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
-      - run: npm version ${{ inputs.version }} --no-git-tag-version
-      - run: pnpm run build
-      - run: pnpm run check:licenses
-      - run: pnpm run verify:pack
-      - run: npm publish --access public --provenance
+
+      - name: Read version from package.json
+        id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Guard — reject prereleases and duplicates
+        run: |
+          VERSION="${{ steps.v.outputs.version }}"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "::error::$VERSION is a prerelease. Use the 'Release (dev prerelease)' workflow for -dev builds."
+            exit 1
+          fi
+          if npm view "@apiboost/omnispec@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@apiboost/omnispec@$VERSION is already published. Bump the version in a PR to main first."
+            exit 1
+          fi
+
+      # build + check:licenses + verify:pack run automatically via the
+      # prepublishOnly lifecycle script, so any publish path is guarded.
+      - name: Publish to npm
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Tag the release
         run: |
+          VERSION="${{ steps.v.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
