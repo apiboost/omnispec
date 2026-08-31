@@ -69,6 +69,12 @@ const config: Config = {
           editUrl: 'https://github.com/apiboost/omnispec/tree/main/docs/',
         },
         blog: false,
+        // Google Analytics 4 (gtag.js). The built-in plugin injects the gtag
+        // snippet and tracks SPA route changes, so no manual <script> is needed.
+        gtag: {
+          trackingID: 'G-H1GDEHW6BL',
+          anonymizeIP: true,
+        },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -84,6 +90,11 @@ const config: Config = {
     // Site-wide SEO/social meta. Per-page frontmatter `description` overrides the
     // tagline-derived description; these add keywords and Open Graph/Twitter tags.
     metadata: [
+      // Google Search Console site-ownership verification (HTML tag method).
+      {
+        name: 'google-site-verification',
+        content: 'UKCMxisfB1KkcRbPbZbFImvf7SxD3MVoSnJ4pFhoyiU',
+      },
       {
         name: 'keywords',
         content:
