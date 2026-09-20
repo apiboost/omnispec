@@ -13,7 +13,8 @@ asyncapi/
 ├── components/
 │   ├── AsyncOverview.tsx     Title, description, contact, license, externalDocs
 │   ├── ServerList.tsx        Servers: URL (with highlighted {variables}), protocol,
-│   │                         variables (default/enum/description), security, bindings
+│   │                         variables (default/enum/description), security, bindings;
+│   │                         a tab selector picks one server when several are defined
 │   ├── ChannelDetail.tsx     Channel card: params, operations, messages, bindings, reply
 │   ├── BindingsSection.tsx   Generic protocol-binding renderer (all protocols)
 │   ├── SecuritySchemesSection.tsx  components.securitySchemes (all scheme types)
@@ -46,6 +47,8 @@ AsyncAPI 3.x decoupled operations from channels — operations are now top-level
 Components consume the normalized model. **Never branch on AsyncAPI version inside components** — push the normalization into the parser.
 
 The internal action vocabulary deliberately keeps both 2.x and 3.x labels because they have slightly different semantics (`publish`/`subscribe` is producer-side; `send`/`receive` is consumer-side).
+
+Because the model is channel-centric, the sidebar groups by channel by default. A **"Group by: Channel | Operation"** toggle (`AsyncApiSpec.tsx`) offers the operation-first index that 3.x users expect — operation-mode entries navigate to the owning channel's card (expanding it via `useHashScroll`/`onExpandRequest`). Main content stays channel-centric in both modes.
 
 ---
 
