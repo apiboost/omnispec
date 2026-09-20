@@ -56,6 +56,12 @@ export interface AsyncApiOperation {
   operationId?: string
   summary?: string
   description?: string
+  /**
+   * All messages an operation can carry. In 2.x this is the `message.oneOf`
+   * list (or a single message); in 3.x it is the resolved `messages` array.
+   * `message` is retained as an alias for `messages[0]`.
+   */
+  messages: AsyncApiMessage[]
   message?: AsyncApiMessage
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>

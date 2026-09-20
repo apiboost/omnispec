@@ -8,9 +8,10 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
+import { useState } from 'react'
 import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
-import type { AsyncApiChannel } from '../types/asyncapi.types'
+import type { AsyncApiChannel, AsyncApiOperation, AsyncApiMessage } from '../types/asyncapi.types'
 import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
 import { SchemaTree } from '@core/components/SchemaViewer/SchemaTree'
 import { schemaToNodes, generateExample } from '@core/components/SchemaViewer/schema-utils'
@@ -18,6 +19,7 @@ import { CodeBlock } from '@core/components/CodeBlock/CodeBlock'
 import { Tabs } from '@core/components/common/Tabs'
 import { ExpandableCard } from '@core/components/common/ExpandableCard'
 import { MethodBar } from '@core/components/common/MethodBar'
+import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -110,53 +112,130 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
               </div>
             )}
 
-            {op.message && (
-              <div className={sectionStyle}>
-                <h4 className={sectionTitleStyle}>
-                  Message
-                  {op.message.title && <span className={messageTitleStyle}> — {op.message.title}</span>}
-                </h4>
-                {op.message.summary && (
-                  <p className={messageSummaryStyle}>{op.message.summary}</p>
-                )}
-                {op.message.contentType && (
-                  <code className={contentTypeStyle}>{op.message.contentType}</code>
-                )}
-
-                {op.message.payload && (
-                  <Tabs
-                    tabs={[
-                      {
-                        id: `schema-${idx}`,
-                        label: 'Payload Schema',
-                        content: <SchemaTree nodes={schemaToNodes(op.message.payload as Record<string, unknown>)} />,
-                      },
-                      {
-                        id: `example-${idx}`,
-                        label: 'Example',
-                        content: (
-                          <CodeBlock
-                            code={JSON.stringify(generateExample(op.message.payload as Record<string, unknown>), null, 2)}
-                            language="json"
-                          />
-                        ),
-                      },
-                    ]}
-                  />
-                )}
-
-                {op.message.headers && (
-                  <div className={headersWrapStyle}>
-                    <h4 className={sectionTitleStyle}>Headers</h4>
-                    <SchemaTree nodes={schemaToNodes(op.message.headers as Record<string, unknown>)} />
-                  </div>
-                )}
-              </div>
-            )}
+            <OperationMessages operation={op} idx={idx} />
           </div>
         ))}
       </div>
     </ExpandableCard>
+  )
+}
+
+function messageLabel(message: AsyncApiMessage, index: number): string {
+  return message.title ?? message.name ?? `Message ${index + 1}`
+}
+
+/**
+ * Renders the message(s) an operation carries. AsyncAPI allows more than one
+ * possible message (2.x `oneOf`, 3.x `messages` array); when there is more than
+ * one, a selector switches between them so none are silently dropped.
+ */
+function OperationMessages({ operation, idx }: { operation: AsyncApiOperation; idx: number }) {
+  const messages = operation.messages ?? []
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  if (messages.length === 0) return null
+
+  const active = messages[Math.min(selectedIndex, messages.length - 1)]
+
+  return (
+    <div className={sectionStyle}>
+      {messages.length > 1 && (
+        <div className={messageSelectorStyle}>
+          <label htmlFor={`msg-select-${idx}`} className={messageSelectorLabelStyle}>Message</label>
+          <select
+            id={`msg-select-${idx}`}
+            className={messageSelectStyle}
+            value={selectedIndex}
+            onChange={(e) => setSelectedIndex(Number(e.target.value))}
+          >
+            {messages.map((m, i) => (
+              <option key={i} value={i}>{messageLabel(m, i)}</option>
+            ))}
+          </select>
+          <span className={messageCountStyle}>{messages.length} messages</span>
+        </div>
+      )}
+      <MessageView message={active} idx={idx} />
+    </div>
+  )
+}
+
+function MessageView({ message, idx }: { message: AsyncApiMessage; idx: number }) {
+  return (
+    <div>
+      <h4 className={sectionTitleStyle}>
+        Message
+        {(message.title ?? message.name) && (
+          <span className={messageTitleStyle}> — {message.title ?? message.name}</span>
+        )}
+      </h4>
+      {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
+      {message.contentType && <code className={contentTypeStyle}>{message.contentType}</code>}
+
+      {message.payload && (
+        <Tabs
+          tabs={[
+            {
+              id: `schema-${idx}`,
+              label: 'Payload Schema',
+              content: <SchemaTree nodes={schemaToNodes(message.payload as Record<string, unknown>)} />,
+            },
+            {
+              id: `example-${idx}`,
+              label: 'Example',
+              content: <MessageExample message={message} />,
+            },
+          ]}
+        />
+      )}
+
+      {message.correlationId && (
+        <div className={correlationIdStyle}>
+          <span className={correlationIdLabelStyle}>correlationId</span>
+          <code className={correlationIdLocationStyle}>{message.correlationId.location}</code>
+          {message.correlationId.description && (
+            <span className={correlationIdDescStyle}>{message.correlationId.description}</span>
+          )}
+        </div>
+      )}
+
+      {message.headers && (
+        <div className={headersWrapStyle}>
+          <h4 className={sectionTitleStyle}>Headers</h4>
+          <SchemaTree nodes={schemaToNodes(message.headers as Record<string, unknown>)} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The Example tab. Prefers the message's declared `examples` (with a selector
+ * when several are named); falls back to synthesizing one from the payload schema.
+ */
+function MessageExample({ message }: { message: AsyncApiMessage }) {
+  const named: NamedExample[] = (message.examples ?? [])
+    .filter((ex) => ex.payload !== undefined)
+    .map((ex, i) => ({
+      name: ex.name ?? `example ${i + 1}`,
+      summary: ex.summary,
+      value: ex.payload,
+    }))
+
+  const [selectedName, setSelectedName] = useState(named[0]?.name ?? '')
+  const active = named.find((ex) => ex.name === selectedName) ?? named[0]
+
+  const code = active?.value !== undefined
+    ? JSON.stringify(active.value, null, 2)
+    : message.payload
+      ? JSON.stringify(generateExample(message.payload as Record<string, unknown>), null, 2)
+      : '{}'
+
+  return (
+    <>
+      <ExampleSelector examples={named} selectedName={selectedName || (named[0]?.name ?? '')} onSelect={setSelectedName} />
+      <CodeBlock code={code} language="json" />
+    </>
   )
 }
 
@@ -274,4 +353,65 @@ const contentTypeStyle = css({
 
 const headersWrapStyle = css({
   marginTop: '16px',
+})
+
+const messageSelectorStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  flexWrap: 'wrap',
+  marginBottom: '0.75rem',
+})
+
+const messageSelectorLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 600,
+  color: 'var(--omnispec-fg-muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  whiteSpace: 'nowrap',
+})
+
+const messageSelectStyle = css({
+  padding: '0.375rem 0.625rem',
+  border: '1px solid var(--omnispec-input-border)',
+  borderRadius: 'var(--omnispec-border-radius)',
+  backgroundColor: 'var(--omnispec-input-bg)',
+  color: 'var(--omnispec-fg-primary)',
+  fontSize: 'var(--omnispec-font-size-sm)',
+  fontFamily: 'var(--omnispec-font-mono)',
+})
+
+const messageCountStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const correlationIdStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  flexWrap: 'wrap',
+  marginTop: '12px',
+})
+
+const correlationIdLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-primary)',
+  fontFamily: 'var(--omnispec-font-mono)',
+})
+
+const correlationIdLocationStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-code)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 6px',
+  borderRadius: '3px',
+})
+
+const correlationIdDescStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-secondary)',
 })

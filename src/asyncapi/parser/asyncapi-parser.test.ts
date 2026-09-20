@@ -145,4 +145,53 @@ describe('parseAsyncApiSpec', () => {
       expect(channel.operations[0].summary).toBe('Notified when a user signs up')
     })
   })
+
+  describe('multiple messages', () => {
+    it('keeps every message from a 2.x oneOf list', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'OneOf', version: '1.0.0' },
+        channels: {
+          orders: {
+            subscribe: {
+              operationId: 'onOrders',
+              message: {
+                oneOf: [
+                  { name: 'OrderCreated', payload: { type: 'object' } },
+                  { name: 'OrderCancelled', payload: { type: 'object' } },
+                ],
+              },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.messages).toHaveLength(2)
+      expect(op.messages.map((m) => m.name)).toEqual(['OrderCreated', 'OrderCancelled'])
+      // `message` remains an alias for the first entry.
+      expect(op.message?.name).toBe('OrderCreated')
+    })
+
+    it('keeps every message from a 3.x messages array', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'V3 multi', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          op: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            messages: [
+              { name: 'A', payload: { type: 'object' } },
+              { name: 'B', payload: { type: 'object' } },
+            ],
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.messages.map((m) => m.name)).toEqual(['A', 'B'])
+    })
+  })
 })
