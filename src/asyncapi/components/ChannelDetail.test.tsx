@@ -80,6 +80,32 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('$message.header#/correlationId')).toBeInTheDocument()
   })
 
+  it('renders channel, operation, and message protocol bindings', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      bindings: { kafka: { topic: 'orders-topic' } },
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          bindings: { kafka: { groupId: 'order-consumers' } },
+          messages: [
+            {
+              name: 'Order',
+              payload: { type: 'object' },
+              bindings: { kafka: { key: 'order-key' } },
+            },
+          ],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('orders-topic')).toBeInTheDocument()
+    expect(screen.getByText('order-consumers')).toBeInTheDocument()
+    expect(screen.getByText('order-key')).toBeInTheDocument()
+  })
+
   it('offers a selector when an operation carries multiple messages', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',

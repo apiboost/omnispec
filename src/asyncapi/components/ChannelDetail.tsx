@@ -20,6 +20,7 @@ import { Tabs } from '@core/components/common/Tabs'
 import { ExpandableCard } from '@core/components/common/ExpandableCard'
 import { MethodBar } from '@core/components/common/MethodBar'
 import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
+import { BindingsSection } from './BindingsSection'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -91,6 +92,9 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
           </div>
         )}
 
+        {/* Channel-level protocol bindings */}
+        <BindingsSection bindings={channel.bindings} title="Channel Bindings" />
+
         {/* Operations */}
         {channel.operations.map((op, idx) => (
           <div key={idx} className={operationStyle}>
@@ -113,6 +117,8 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
             )}
 
             <OperationMessages operation={op} idx={idx} />
+
+            <BindingsSection bindings={op.bindings} title="Operation Bindings" />
           </div>
         ))}
       </div>
@@ -205,6 +211,8 @@ function MessageView({ message, idx }: { message: AsyncApiMessage; idx: number }
           <SchemaTree nodes={schemaToNodes(message.headers as Record<string, unknown>)} />
         </div>
       )}
+
+      <BindingsSection bindings={message.bindings} title="Message Bindings" />
     </div>
   )
 }

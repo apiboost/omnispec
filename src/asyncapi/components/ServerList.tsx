@@ -11,6 +11,7 @@
 import { css, cx } from '../../core/styles/css'
 import type { AsyncApiServer } from '../types/asyncapi.types'
 import { ProtocolBadge } from './ProtocolBadge'
+import { BindingsSection } from './BindingsSection'
 
 interface ServerListProps {
   servers: AsyncApiServer[]
@@ -124,6 +125,7 @@ export function ServerList({ servers }: ServerListProps) {
                 ))}
               </div>
             )}
+            <BindingsSection bindings={server.bindings} title="Server Bindings" />
           </div>
         ))}
       </div>
