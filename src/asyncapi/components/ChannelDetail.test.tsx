@@ -106,6 +106,23 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('order-key')).toBeInTheDocument()
   })
 
+  it('renders operation-level security requirements', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'sendOrder',
+          securityNames: ['oauth2Scheme'],
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('oauth2Scheme')).toBeInTheDocument()
+  })
+
   it('offers a selector when an operation carries multiple messages', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',

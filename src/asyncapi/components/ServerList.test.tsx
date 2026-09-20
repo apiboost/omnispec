@@ -30,4 +30,17 @@ describe('ServerList', () => {
     expect(screen.getByText('guest')).toBeInTheDocument()
     expect(screen.getByText('Clean Session')).toBeInTheDocument()
   })
+
+  it('renders server security scheme references', () => {
+    const servers: AsyncApiServer[] = [
+      {
+        name: 'production',
+        url: 'mqtt://broker.example.com',
+        protocol: 'mqtt',
+        securityNames: ['userPass'],
+      },
+    ]
+    render(<ServerList servers={servers} />)
+    expect(screen.getByText('userPass')).toBeInTheDocument()
+  })
 })

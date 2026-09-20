@@ -21,6 +21,7 @@ import { ExpandableCard } from '@core/components/common/ExpandableCard'
 import { MethodBar } from '@core/components/common/MethodBar'
 import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
 import { BindingsSection } from './BindingsSection'
+import { Icon } from '@core/components/common/Icon'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -113,6 +114,18 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
             {op.description && (
               <div className={sectionStyle}>
                 <MarkdownRenderer content={op.description} />
+              </div>
+            )}
+
+            {op.securityNames && op.securityNames.length > 0 && (
+              <div className={securityRowStyle}>
+                <span className={securityLabelStyle}>Security</span>
+                {op.securityNames.map((name) => (
+                  <a key={name} href={`#security-${name}`} className={securityBadgeStyle}>
+                    <Icon name="lock" size="0.625rem" strokeWidth={2.5} />
+                    {name}
+                  </a>
+                ))}
               </div>
             )}
 
@@ -422,4 +435,37 @@ const correlationIdLocationStyle = css({
 const correlationIdDescStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-secondary)',
+})
+
+const securityRowStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  flexWrap: 'wrap',
+  marginBottom: '12px',
+})
+
+const securityLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const securityBadgeStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '5px',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-fg-primary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '3px 10px',
+  borderRadius: '4px',
+  fontWeight: 500,
+  textDecoration: 'none',
+  '&:hover': {
+    textDecoration: 'underline',
+  },
 })

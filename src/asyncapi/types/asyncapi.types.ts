@@ -33,6 +33,8 @@ export interface AsyncApiServer {
   description?: string
   variables?: Record<string, { default?: string; description?: string; enum?: string[] }>
   security?: Record<string, string[]>[]
+  /** Names of security schemes referenced by this server. */
+  securityNames?: string[]
   bindings?: Record<string, unknown>
 }
 
@@ -66,6 +68,8 @@ export interface AsyncApiOperation {
   message?: AsyncApiMessage
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  /** Names of security schemes required by this operation (OR semantics). */
+  securityNames?: string[]
   xBadges?: Array<{ name: string; color?: string; position?: 'before' | 'after' }>
   xInternal?: boolean
 }
@@ -84,7 +88,28 @@ export interface AsyncApiMessage {
   bindings?: Record<string, unknown>
 }
 
+export interface AsyncApiOAuthFlow {
+  authorizationUrl?: string
+  tokenUrl?: string
+  refreshUrl?: string
+  availableScopes?: Record<string, string>
+  scopes?: Record<string, string>
+}
+
+export interface AsyncApiSecurityScheme {
+  type: string
+  description?: string
+  name?: string
+  in?: string
+  scheme?: string
+  bearerFormat?: string
+  openIdConnectUrl?: string
+  flows?: Record<string, AsyncApiOAuthFlow>
+  [key: string]: unknown
+}
+
 export interface AsyncApiComponents {
   schemas: Record<string, Record<string, unknown>>
   messages: Record<string, AsyncApiMessage>
+  securitySchemes: Record<string, AsyncApiSecurityScheme>
 }
