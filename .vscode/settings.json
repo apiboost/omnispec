@@ -1,0 +1,30 @@
+{
+  // ESLint is the ONLY thing that formats JS/TS in this repo.
+  // All stylistic rules live in @stylistic/eslint-plugin (eslint.config.mjs),
+  // so a separate formatter (Prettier / built-in TS formatter) would fight it.
+
+  // Run `eslint --fix` on every save.
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // Turn OFF plain format-on-save globally so no formatter competes with ESLint.
+  "editor.formatOnSave": false,
+
+  // Belt-and-suspenders: disable the built-in TS/JS formatter (double quotes +
+  // semicolons by default) so nothing overrides @stylistic even if invoked.
+  "typescript.format.enable": false,
+  "javascript.format.enable": false,
+
+  // Make ESLint use the flat config (eslint.config.mjs) and lint TS/TSX.
+  "eslint.useFlatConfig": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  // Prefer the workspace TypeScript, not the global/nightly one.
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

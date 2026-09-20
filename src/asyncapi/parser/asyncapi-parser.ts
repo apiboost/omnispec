@@ -187,13 +187,15 @@ function extractChannelsV2(api: AsyncApiDocument): AsyncApiChannel[] {
 }
 
 function convertOperationV2(action: 'publish' | 'subscribe', op: OperationObjectV2): AsyncApiOperation {
-  let message: AsyncApiMessage | undefined
+  const messages: AsyncApiMessage[] = []
 
   if (op.message) {
     if ('oneOf' in op.message) {
-      message = convertMessage(op.message.oneOf[0])
+      for (const m of op.message.oneOf) {
+        messages.push(convertMessage(m))
+      }
     } else {
-      message = convertMessage(op.message as MessageObject)
+      messages.push(convertMessage(op.message as MessageObject))
     }
   }
 
@@ -204,7 +206,8 @@ function convertOperationV2(action: 'publish' | 'subscribe', op: OperationObject
     operationId: op.operationId,
     summary: op.summary,
     description: op.description,
-    message,
+    messages,
+    message: messages[0],
     tags: op.tags,
     bindings: op.bindings,
     xBadges: raw['x-badges'] as AsyncApiOperation['xBadges'],
@@ -288,6 +291,7 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
         action: op.action,
         summary: op.summary,
         description: op.description,
+        messages,
         message: messages[0],
         tags: op.tags,
         bindings: op.bindings,
