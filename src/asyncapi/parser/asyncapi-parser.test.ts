@@ -101,4 +101,48 @@ describe('parseAsyncApiSpec', () => {
     const result = await parseAsyncApiSpec(jsonSpec)
     expect(result.title).toBe('Test')
   })
+
+  describe('AsyncAPI 3.x operation → channel resolution', () => {
+    const v3Spec = {
+      asyncapi: '3.0.0',
+      info: { title: 'V3 API', version: '1.0.0' },
+      channels: {
+        userSignedUp: {
+          address: 'user/signedup',
+          messages: {
+            userSignedUp: { $ref: '#/components/messages/UserSignedUp' },
+          },
+        },
+      },
+      operations: {
+        onUserSignedUp: {
+          action: 'receive',
+          channel: { $ref: '#/channels/userSignedUp' },
+          summary: 'Notified when a user signs up',
+          messages: [{ $ref: '#/channels/userSignedUp/messages/userSignedUp' }],
+        },
+      },
+      components: {
+        messages: {
+          UserSignedUp: {
+            name: 'UserSignedUp',
+            payload: { type: 'object', properties: { id: { type: 'string' } } },
+          },
+        },
+      },
+    }
+
+    it('attaches a 3.x operation to the channel it references via $ref', async () => {
+      const result = await parseAsyncApiSpec(JSON.stringify(v3Spec))
+
+      expect(result.channels).toHaveLength(1)
+      const channel = result.channels[0]
+      expect(channel.address).toBe('user/signedup')
+      // The operation references the channel via `channel: { $ref: ... }`.
+      // It must be attached even though resolveRefs() inlines the $ref.
+      expect(channel.operations).toHaveLength(1)
+      expect(channel.operations[0].action).toBe('receive')
+      expect(channel.operations[0].summary).toBe('Notified when a user signs up')
+    })
+  })
 })

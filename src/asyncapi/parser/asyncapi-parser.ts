@@ -94,7 +94,13 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   const isV3 = majorVersion >= 3
 
   const servers = extractServers(api)
-  const channels = isV3 ? extractChannelsV3(api) : extractChannelsV2(api)
+  // `raw` still holds the original `$ref` pointers (resolveRefs returns a fresh
+  // tree and never mutates its input). 3.x wires operations to channels via
+  // `channel: { $ref: '#/channels/...' }`, and once resolveRefs inlines that
+  // ref the pointer is gone — so channel attachment must read the name from the
+  // pre-resolution document.
+  const rawApi = raw as unknown as AsyncApiDocument
+  const channels = isV3 ? extractChannelsV3(api, rawApi) : extractChannelsV2(api)
   const components = extractComponents(api)
 
   const root = api as unknown as Record<string, unknown>
@@ -206,17 +212,53 @@ function convertOperationV2(action: 'publish' | 'subscribe', op: OperationObject
   }
 }
 
-function extractChannelsV3(api: AsyncApiDocument): AsyncApiChannel[] {
+/**
+ * Extract the channel name a `channel:` reference points at.
+ *
+ * In a resolved document the `$ref` is gone, so we prefer the raw (pre-resolution)
+ * value which still holds `{ $ref: '#/channels/<name>' }`. Falls back to a
+ * still-present `$ref`, then to matching the resolved channel's `address`.
+ */
+function resolveChannelName(
+  rawChannel: OperationObjectV3['channel'] | undefined,
+  resolvedChannel: OperationObjectV3['channel'] | undefined,
+  addressToName: Map<string, string>,
+): string | undefined {
+  const refString =
+    rawChannel && typeof rawChannel === 'object' && '$ref' in rawChannel && typeof rawChannel.$ref === 'string'
+      ? rawChannel.$ref
+      : resolvedChannel && typeof resolvedChannel === 'object' && '$ref' in resolvedChannel && typeof resolvedChannel.$ref === 'string'
+        ? resolvedChannel.$ref
+        : undefined
+
+  if (refString) {
+    // e.g. "#/channels/userSignedUp" -> "userSignedUp"
+    return refString.split('/').pop()
+  }
+
+  // The ref was inlined without a $ref surviving; match on the channel address.
+  const address = (resolvedChannel as ChannelObject | undefined)?.address
+  if (address && addressToName.has(address)) {
+    return addressToName.get(address)
+  }
+
+  return undefined
+}
+
+function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): AsyncApiChannel[] {
   if (!api.channels) return []
 
   const channelMap = new Map<string, AsyncApiChannel>()
+  const addressToName = new Map<string, string>()
 
   // First, register all channels
   for (const [channelName, ch] of Object.entries(api.channels)) {
     const raw = ch as Record<string, unknown>
+    const address = ch.address ?? channelName
+    addressToName.set(address, channelName)
     channelMap.set(channelName, {
       name: channelName,
-      address: ch.address ?? channelName,
+      address,
       description: ch.description,
       operations: [],
       parameters: ch.parameters,
@@ -227,19 +269,16 @@ function extractChannelsV3(api: AsyncApiDocument): AsyncApiChannel[] {
 
   // Then attach operations to channels
   if (api.operations) {
-    for (const [, op] of Object.entries(api.operations)) {
-      const channelRef = op.channel
-      let channelName: string | undefined
-
-      if (channelRef && '$ref' in channelRef && typeof channelRef.$ref === 'string') {
-        // e.g. "#/channels/userSignedUp" -> "userSignedUp"
-        channelName = channelRef.$ref.split('/').pop()
-      }
+    for (const [opKey, op] of Object.entries(api.operations)) {
+      const rawOp = rawApi.operations?.[opKey]
+      const channelName = resolveChannelName(rawOp?.channel, op.channel, addressToName)
 
       const messages: AsyncApiMessage[] = []
       if (op.messages) {
         for (const msg of op.messages) {
-          if ('$ref' in msg) continue
+          // After resolveRefs, message $refs are inlined; a bare `{ $ref }` only
+          // survives if it was unresolvable — skip those, keep resolved messages.
+          if ('$ref' in msg && Object.keys(msg).length === 1) continue
           messages.push(convertMessage(msg as MessageObject))
         }
       }
