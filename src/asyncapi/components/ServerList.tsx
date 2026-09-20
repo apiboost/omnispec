@@ -97,6 +97,20 @@ const varDescStyle = css({
   color: 'var(--omnispec-fg-secondary)',
 })
 
+const varEnumStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-color-info)',
+})
+
+const varTokenStyle = css({
+  color: 'var(--omnispec-color-primary)',
+  backgroundColor: 'color-mix(in srgb, var(--omnispec-color-primary) 12%, transparent)',
+  borderRadius: '3px',
+  padding: '0 2px',
+  '&::before': { content: '"{"' },
+  '&::after': { content: '"}"' },
+})
+
 const securityRowStyle = css({
   display: 'flex',
   alignItems: 'center',
@@ -126,6 +140,16 @@ const securityBadgeStyle = css({
   },
 })
 
+/** Render a server URL with `{variable}` placeholders visually highlighted. */
+function highlightVariables(url: string) {
+  const parts = url.split(/(\{[^}]+\})/g)
+  return parts.map((part, i) =>
+    /^\{[^}]+\}$/.test(part)
+      ? <span key={i} className={varTokenStyle}>{part.slice(1, -1)}</span>
+      : <span key={i}>{part}</span>,
+  )
+}
+
 export function ServerList({ servers }: ServerListProps) {
   if (servers.length === 0) return null
 
@@ -139,7 +163,7 @@ export function ServerList({ servers }: ServerListProps) {
               <span className={serverNameStyle}>{server.name}</span>
               <ProtocolBadge protocol={server.protocol} version={server.protocolVersion} />
             </div>
-            <code className={urlStyle}>{server.url}</code>
+            <code className={urlStyle}>{highlightVariables(server.url)}</code>
             {server.description && (
               <p className={descriptionStyle}>{server.description}</p>
             )}
@@ -149,6 +173,9 @@ export function ServerList({ servers }: ServerListProps) {
                   <div key={name} className={varRowStyle}>
                     <code className={varNameStyle}>{name}</code>
                     {variable.default && <span className={varDefaultStyle}>= {variable.default}</span>}
+                    {variable.enum && variable.enum.length > 0 && (
+                      <span className={varEnumStyle}>enum: {variable.enum.join(' | ')}</span>
+                    )}
                     {variable.description && <span className={varDescStyle}>{variable.description}</span>}
                   </div>
                 ))}

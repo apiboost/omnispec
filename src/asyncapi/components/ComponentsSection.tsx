@@ -21,24 +21,52 @@ interface ComponentsSectionProps {
 
 export function ComponentsSection({ components }: ComponentsSectionProps) {
   const schemas = Object.entries(components.schemas)
-  if (schemas.length === 0) return null
+  const messages = Object.entries(components.messages ?? {})
+  if (schemas.length === 0 && messages.length === 0) return null
 
   return (
-    <div className={`omnispec-async-components ${containerStyle}`} id="schemas">
-      <h2 className={titleStyle}>Schemas</h2>
-      <div className={schemaWrapperStyle}>
-        {schemas.map(([name, schema]) => (
-          <div key={name} className={schemaStyle} id={`schema-${name}`}>
-            <Collapsible
-              title={<code className={schemaNameStyle}>{name}</code>}
-              defaultOpen={false}
-            >
-              <SchemaTree nodes={schemaToNodes(schema)} />
-            </Collapsible>
+    <>
+      {messages.length > 0 && (
+        <div className={`omnispec-async-messages ${containerStyle}`} id="messages">
+          <h2 className={titleStyle}>Messages</h2>
+          <div className={schemaWrapperStyle}>
+            {messages.map(([name, message]) => (
+              <div key={name} className={schemaStyle} id={`message-${name}`}>
+                <Collapsible
+                  title={<code className={schemaNameStyle}>{name}</code>}
+                  defaultOpen={false}
+                >
+                  {message.title && <p className={messageSummaryStyle}>{message.title}</p>}
+                  {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
+                  {message.contentType && <code className={contentTypeStyle}>{message.contentType}</code>}
+                  {message.payload && (
+                    <SchemaTree nodes={schemaToNodes(message.payload as Record<string, unknown>)} />
+                  )}
+                </Collapsible>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+      )}
+
+      {schemas.length > 0 && (
+        <div className={`omnispec-async-components ${containerStyle}`} id="schemas">
+          <h2 className={titleStyle}>Schemas</h2>
+          <div className={schemaWrapperStyle}>
+            {schemas.map(([name, schema]) => (
+              <div key={name} className={schemaStyle} id={`schema-${name}`}>
+                <Collapsible
+                  title={<code className={schemaNameStyle}>{name}</code>}
+                  defaultOpen={false}
+                >
+                  <SchemaTree nodes={schemaToNodes(schema)} />
+                </Collapsible>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -80,4 +108,18 @@ const schemaNameStyle = css({
   '&:hover': {
     textDecoration: 'underline',
   },
+})
+
+const messageSummaryStyle = css({
+  margin: '0 0 8px',
+  fontSize: 'var(--omnispec-font-size-sm)',
+  color: 'var(--omnispec-fg-secondary)',
+})
+
+const contentTypeStyle = css({
+  display: 'block',
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-muted)',
+  marginBottom: '8px',
 })

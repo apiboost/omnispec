@@ -14,7 +14,7 @@ import { mq } from '@core/styles/breakpoints'
 import type { AsyncApiChannel, AsyncApiOperation, AsyncApiMessage } from '../types/asyncapi.types'
 import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
 import { SchemaTree } from '@core/components/SchemaViewer/SchemaTree'
-import { schemaToNodes, generateExample } from '@core/components/SchemaViewer/schema-utils'
+import { schemaToNodes, generateExample, buildConstraints } from '@core/components/SchemaViewer/schema-utils'
 import { CodeBlock } from '@core/components/CodeBlock/CodeBlock'
 import { Tabs } from '@core/components/common/Tabs'
 import { ExpandableCard } from '@core/components/common/ExpandableCard'
@@ -74,7 +74,11 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
             <h4 className={sectionTitleStyle}>Parameters</h4>
             <div className={paramListStyle}>
               {Object.entries(channel.parameters).map(([name, param]) => {
-                const paramType = (param.schema as Record<string, unknown>)?.type as string | undefined
+                const schema = (param.schema ?? {}) as Record<string, unknown>
+                const paramType = schema.type as string | undefined
+                const paramFormat = schema.format as string | undefined
+                const paramEnum = schema.enum as unknown[] | undefined
+                const constraintBadges = buildConstraints(schema)
                 return (
                   <div key={name} className={paramRowStyle}>
                     <div className={paramHeaderStyle}>
@@ -83,6 +87,17 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
                         <pre className={typeBadgeStyle}>{paramType}</pre>
                       )}
                     </div>
+                    {(paramFormat || constraintBadges.length > 0 || (paramEnum && paramEnum.length > 0)) && (
+                      <div className={paramConstraintsStyle}>
+                        {paramFormat && <span className={paramConstraintBadgeStyle}>{paramFormat}</span>}
+                        {constraintBadges.map((c) => (
+                          <span key={c} className={paramConstraintBadgeStyle}>{c}</span>
+                        ))}
+                        {paramEnum && paramEnum.length > 0 && (
+                          <span className={paramEnumBadgeStyle}>enum: {paramEnum.map(String).join(' | ')}</span>
+                        )}
+                      </div>
+                    )}
                     {param.description && (
                       <p className={paramDescStyle}>{param.description}</p>
                     )}
@@ -322,6 +337,32 @@ const paramDescStyle = css({
   fontSize: 'var(--omnispec-font-size-base)',
   color: 'var(--omnispec-fg-secondary)',
   lineHeight: 1.5,
+})
+
+const paramConstraintsStyle = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.375rem',
+  marginTop: '0.375rem',
+})
+
+const paramConstraintBadgeStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-muted)',
+  backgroundColor: 'var(--omnispec-bg-secondary)',
+  padding: '0.0625rem 0.375rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+})
+
+const paramEnumBadgeStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-color-info)',
+  backgroundColor: 'var(--omnispec-bg-secondary)',
+  padding: '0.0625rem 0.375rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+  wordBreak: 'break-word',
 })
 
 const operationStyle = css({
