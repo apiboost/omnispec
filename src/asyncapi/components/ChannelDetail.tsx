@@ -155,6 +155,15 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
 
             <OperationMessages operation={op} idx={idx} />
 
+            {op.reply && op.reply.messages.length > 0 && (
+              <div className={replyStyle}>
+                <h4 className={replyTitleStyle}>Reply</h4>
+                {op.reply.messages.map((replyMsg, i) => (
+                  <MessageView key={i} message={replyMsg} idx={`${idx}-reply-${i}`} />
+                ))}
+              </div>
+            )}
+
             <BindingsSection bindings={op.bindings} title="Operation Bindings" />
           </div>
         ))}
@@ -203,7 +212,7 @@ function OperationMessages({ operation, idx }: { operation: AsyncApiOperation; i
   )
 }
 
-function MessageView({ message, idx }: { message: AsyncApiMessage; idx: number }) {
+function MessageView({ message, idx }: { message: AsyncApiMessage; idx: string | number }) {
   return (
     <div>
       <h4 className={sectionTitleStyle}>
@@ -248,9 +257,21 @@ function MessageView({ message, idx }: { message: AsyncApiMessage; idx: number }
  * normalized to a JSON-Schema field tree first (via schemaFormat) so they render
  * as real fields instead of the bare wrapper word.
  */
-function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx: number }) {
+function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx: string | number }) {
   const format = detectSchemaFormat(message.schemaFormat)
   const rawPayload = message.payload as Record<string, unknown>
+
+  // An unresolvable $ref survives resolution as a bare `{ $ref }` — surface it
+  // rather than rendering an empty/misleading schema (ABOSPEC-50).
+  if (rawPayload && typeof rawPayload === 'object' && typeof rawPayload.$ref === 'string') {
+    return (
+      <div className={unresolvedRefStyle} role="alert">
+        <Icon name="warning" size="0.875rem" />
+        <span>Unresolved reference: <code className={unresolvedRefCodeStyle}>{rawPayload.$ref}</code></span>
+      </div>
+    )
+  }
+
   const schema = format === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
 
   return (
@@ -514,6 +535,36 @@ const correlationIdLocationStyle = css({
 const correlationIdDescStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-secondary)',
+})
+
+const replyStyle = css({
+  marginTop: '16px',
+  paddingLeft: '12px',
+  borderLeft: '2px solid var(--omnispec-border-color)',
+})
+
+const replyTitleStyle = css({
+  margin: '0 0 8px',
+  fontSize: 'var(--omnispec-font-size-md)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-primary)',
+  letterSpacing: '0.02em',
+})
+
+const unresolvedRefStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  padding: '0.5rem 0.75rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+  backgroundColor: 'color-mix(in srgb, var(--omnispec-color-warning) 12%, transparent)',
+  color: 'var(--omnispec-color-warning)',
+  fontSize: 'var(--omnispec-font-size-sm)',
+})
+
+const unresolvedRefCodeStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
 })
 
 const tagChipsStyle = css({

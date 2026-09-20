@@ -73,6 +73,7 @@ interface OperationObjectV3 {
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
   security?: unknown[]
+  reply?: { channel?: unknown; messages?: Array<{ $ref?: string } | MessageObject> }
   traits?: Array<Partial<OperationObjectV3>>
 }
 
@@ -374,15 +375,19 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
       const rawOp = rawApi.operations?.[opKey]
       const channelName = resolveChannelName(rawOp?.channel, op.channel, addressToName)
 
-      const messages: AsyncApiMessage[] = []
-      if (op.messages) {
-        for (const msg of op.messages) {
+      const collectMessages = (list?: Array<{ $ref?: string } | MessageObject>): AsyncApiMessage[] => {
+        const out: AsyncApiMessage[] = []
+        for (const msg of list ?? []) {
           // After resolveRefs, message $refs are inlined; a bare `{ $ref }` only
           // survives if it was unresolvable — skip those, keep resolved messages.
           if ('$ref' in msg && Object.keys(msg).length === 1) continue
-          messages.push(convertMessage(msg as MessageObject))
+          out.push(convertMessage(msg as MessageObject))
         }
+        return out
       }
+
+      const messages = collectMessages(op.messages)
+      const replyMessages = collectMessages(op.reply?.messages)
 
       const raw = op as unknown as Record<string, unknown>
       const operation: AsyncApiOperation = {
@@ -394,6 +399,7 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
         tags: op.tags,
         bindings: op.bindings,
         securityNames: deriveSecurityNames(rawOp?.security, op.security),
+        reply: replyMessages.length > 0 ? { messages: replyMessages } : undefined,
         xBadges: raw['x-badges'] as AsyncApiOperation['xBadges'],
         xInternal: raw['x-internal'] as boolean | undefined,
       }

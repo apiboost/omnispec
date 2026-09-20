@@ -294,6 +294,27 @@ describe('parseAsyncApiSpec', () => {
       expect(result.servers[0].securityNames).toEqual(['apiKey'])
     })
 
+    it('parses a 3.x operation reply (request-reply)', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'Reply', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          ask: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            reply: {
+              messages: [{ name: 'Pong', payload: { type: 'object' } }],
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.reply?.messages).toHaveLength(1)
+      expect(op.reply?.messages[0].name).toBe('Pong')
+    })
+
     it('derives 3.x operation security scheme names from $ref', async () => {
       const spec = {
         asyncapi: '3.0.0',

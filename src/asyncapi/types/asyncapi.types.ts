@@ -70,6 +70,8 @@ export interface AsyncApiOperation {
   bindings?: Record<string, unknown>
   /** Names of security schemes required by this operation (OR semantics). */
   securityNames?: string[]
+  /** AsyncAPI 3.x request-reply: the message(s) sent back in response. */
+  reply?: { messages: AsyncApiMessage[] }
   xBadges?: Array<{ name: string; color?: string; position?: 'before' | 'after' }>
   xInternal?: boolean
 }
