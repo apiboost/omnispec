@@ -59,6 +59,31 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText(/SHIPPED_FROM_EXAMPLE/)).toBeInTheDocument()
   })
 
+  it('renders an Avro payload as a real field tree, not the bare word "record"', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'subscribe',
+          messages: [
+            {
+              name: 'Order',
+              schemaFormat: 'application/vnd.apache.avro',
+              payload: {
+                type: 'record',
+                name: 'Order',
+                fields: [{ name: 'orderId', type: 'string' }],
+              },
+            },
+          ],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('orderId')).toBeInTheDocument()
+  })
+
   it('displays the correlationId', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',

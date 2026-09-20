@@ -22,6 +22,7 @@ import { MethodBar } from '@core/components/common/MethodBar'
 import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
 import { BindingsSection } from './BindingsSection'
 import { Icon } from '@core/components/common/Icon'
+import { avroToJsonSchema, detectSchemaFormat } from '../schema-formats'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -214,22 +215,11 @@ function MessageView({ message, idx }: { message: AsyncApiMessage; idx: number }
       {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
       {message.contentType && <code className={contentTypeStyle}>{message.contentType}</code>}
 
-      {message.payload && (
-        <Tabs
-          tabs={[
-            {
-              id: `schema-${idx}`,
-              label: 'Payload Schema',
-              content: <SchemaTree nodes={schemaToNodes(message.payload as Record<string, unknown>)} />,
-            },
-            {
-              id: `example-${idx}`,
-              label: 'Example',
-              content: <MessageExample message={message} />,
-            },
-          ]}
-        />
+      {message.schemaFormat && (
+        <span className={schemaFormatBadgeStyle}>{message.schemaFormat}</span>
       )}
+
+      {message.payload && <MessagePayload message={message} idx={idx} />}
 
       {message.correlationId && (
         <div className={correlationIdStyle}>
@@ -254,10 +244,38 @@ function MessageView({ message, idx }: { message: AsyncApiMessage; idx: number }
 }
 
 /**
+ * Renders the payload as Schema + Example tabs. Avro and Protobuf payloads are
+ * normalized to a JSON-Schema field tree first (via schemaFormat) so they render
+ * as real fields instead of the bare wrapper word.
+ */
+function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx: number }) {
+  const format = detectSchemaFormat(message.schemaFormat)
+  const rawPayload = message.payload as Record<string, unknown>
+  const schema = format === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
+
+  return (
+    <Tabs
+      tabs={[
+        {
+          id: `schema-${idx}`,
+          label: 'Payload Schema',
+          content: <SchemaTree nodes={schemaToNodes(schema)} />,
+        },
+        {
+          id: `example-${idx}`,
+          label: 'Example',
+          content: <MessageExample message={message} schema={schema} />,
+        },
+      ]}
+    />
+  )
+}
+
+/**
  * The Example tab. Prefers the message's declared `examples` (with a selector
  * when several are named); falls back to synthesizing one from the payload schema.
  */
-function MessageExample({ message }: { message: AsyncApiMessage }) {
+function MessageExample({ message, schema }: { message: AsyncApiMessage; schema?: Record<string, unknown> }) {
   const named: NamedExample[] = (message.examples ?? [])
     .filter((ex) => ex.payload !== undefined)
     .map((ex, i) => ({
@@ -269,10 +287,11 @@ function MessageExample({ message }: { message: AsyncApiMessage }) {
   const [selectedName, setSelectedName] = useState(named[0]?.name ?? '')
   const active = named.find((ex) => ex.name === selectedName) ?? named[0]
 
+  const exampleSchema = schema ?? (message.payload as Record<string, unknown> | undefined)
   const code = active?.value !== undefined
     ? JSON.stringify(active.value, null, 2)
-    : message.payload
-      ? JSON.stringify(generateExample(message.payload as Record<string, unknown>), null, 2)
+    : exampleSchema
+      ? JSON.stringify(generateExample(exampleSchema), null, 2)
       : '{}'
 
   return (
@@ -419,6 +438,17 @@ const contentTypeStyle = css({
   marginBottom: '8px',
   backgroundColor: 'transparent',
   padding: 0,
+})
+
+const schemaFormatBadgeStyle = css({
+  display: 'inline-block',
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 6px',
+  borderRadius: '3px',
+  marginBottom: '8px',
 })
 
 const headersWrapStyle = css({

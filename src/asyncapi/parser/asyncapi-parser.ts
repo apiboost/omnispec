@@ -82,6 +82,7 @@ interface MessageObject {
   summary?: string
   description?: string
   contentType?: string
+  schemaFormat?: string
   payload?: Record<string, unknown>
   headers?: Record<string, unknown>
   correlationId?: { description?: string; location: string }
@@ -416,6 +417,7 @@ function convertMessage(rawMsg: MessageObject): AsyncApiMessage {
     summary: msg.summary,
     description: msg.description,
     contentType: msg.contentType,
+    schemaFormat: msg.schemaFormat,
     payload: msg.payload,
     headers: msg.headers,
     correlationId: msg.correlationId,
