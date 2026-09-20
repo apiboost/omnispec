@@ -167,6 +167,40 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('alerts')).toBeInTheDocument()
   })
 
+  it('renders a request-reply Reply section', () => {
+    const channel: AsyncApiChannel = {
+      name: 'ping',
+      address: 'ping',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'ping',
+          messages: [{ name: 'Ping', payload: { type: 'object' } }],
+          reply: { messages: [{ name: 'Pong', payload: { type: 'object' } }] },
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('Reply')).toBeInTheDocument()
+    expect(screen.getByText(/Pong/)).toBeInTheDocument()
+  })
+
+  it('shows a notice for an unresolved $ref payload instead of failing silently', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'subscribe',
+          messages: [{ name: 'Order', payload: { $ref: '#/components/schemas/Missing' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText(/unresolved reference/i)).toBeInTheDocument()
+    expect(screen.getByText(/#\/components\/schemas\/Missing/)).toBeInTheDocument()
+  })
+
   it('renders operation-level security requirements', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',
