@@ -39,6 +39,7 @@ interface ServerObject {
   description?: string
   variables?: Record<string, { default?: string; description?: string; enum?: string[] }>
   security?: Record<string, string[]>[]
+  bindings?: Record<string, unknown>
 }
 
 interface ChannelObject {
@@ -240,6 +241,7 @@ function extractServers(api: AsyncApiDocument): AsyncApiServer[] {
       description: s.description,
       variables: s.variables,
       security: s.security,
+      bindings: s.bindings,
     }))
   }
 

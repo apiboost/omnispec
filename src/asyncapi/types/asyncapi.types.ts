@@ -33,6 +33,7 @@ export interface AsyncApiServer {
   description?: string
   variables?: Record<string, { default?: string; description?: string; enum?: string[] }>
   security?: Record<string, string[]>[]
+  bindings?: Record<string, unknown>
 }
 
 export interface AsyncApiChannel {
