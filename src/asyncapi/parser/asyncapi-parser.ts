@@ -60,6 +60,7 @@ interface OperationObjectV2 {
   message?: MessageObject | { oneOf: MessageObject[] }
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  traits?: Array<Partial<OperationObjectV2>>
 }
 
 interface OperationObjectV3 {
@@ -70,6 +71,7 @@ interface OperationObjectV3 {
   messages?: Array<{ $ref?: string } | MessageObject>
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  traits?: Array<Partial<OperationObjectV3>>
 }
 
 interface MessageObject {
@@ -84,6 +86,99 @@ interface MessageObject {
   tags?: Array<{ name: string; description?: string }>
   examples?: Array<{ name?: string; summary?: string; payload?: unknown; headers?: unknown }>
   bindings?: Record<string, unknown>
+  traits?: MessageObject[]
+}
+
+type TagList = Array<{ name: string; description?: string }>
+
+/** Union two tag lists by name; the first occurrence wins. */
+function unionTags(a?: TagList, b?: TagList): TagList | undefined {
+  if (!a && !b) return undefined
+  const byName = new Map<string, { name: string; description?: string }>()
+  for (const tag of [...(a ?? []), ...(b ?? [])]) {
+    if (!byName.has(tag.name)) byName.set(tag.name, tag)
+  }
+  return Array.from(byName.values())
+}
+
+/** Merge two JSON-Schema-shaped objects (used for message headers). Override wins. */
+function mergeSchema(
+  base?: Record<string, unknown>,
+  override?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  if (!base) return override
+  if (!override) return base
+  const result: Record<string, unknown> = { ...base, ...override }
+  const baseProps = base.properties as Record<string, unknown> | undefined
+  const overrideProps = override.properties as Record<string, unknown> | undefined
+  if (baseProps || overrideProps) {
+    result.properties = { ...(baseProps ?? {}), ...(overrideProps ?? {}) }
+  }
+  const required = Array.from(
+    new Set([...((base.required as string[]) ?? []), ...((override.required as string[]) ?? [])]),
+  )
+  if (required.length > 0) result.required = required
+  return result
+}
+
+/** Merge one message layer over a base; `override` wins on scalars. */
+function mergeMessageLayer(base: MessageObject, override: MessageObject): MessageObject {
+  const result: MessageObject = { ...base }
+  for (const [key, value] of Object.entries(override)) {
+    if (key === 'traits' || value === undefined) continue
+    if (key === 'tags') {
+      result.tags = unionTags(base.tags, value as TagList)
+    } else if (key === 'headers') {
+      result.headers = mergeSchema(base.headers, value as Record<string, unknown>)
+    } else if (key === 'examples') {
+      result.examples = [...(base.examples ?? []), ...(value as MessageObject['examples'] ?? [])]
+    } else if (key === 'bindings') {
+      result.bindings = { ...(base.bindings ?? {}), ...(value as Record<string, unknown>) }
+    } else {
+      ;(result as Record<string, unknown>)[key] = value
+    }
+  }
+  return result
+}
+
+/**
+ * Apply AsyncAPI message traits. Traits are folded in declaration order, then
+ * the message's own definition is folded last so it wins (per the AsyncAPI spec).
+ * $refs in `traits` are already inlined by resolveRefs.
+ */
+function applyMessageTraits(msg: MessageObject): MessageObject {
+  if (!msg.traits || msg.traits.length === 0) return msg
+  let acc: MessageObject = {}
+  for (const trait of msg.traits) acc = mergeMessageLayer(acc, trait)
+  return mergeMessageLayer(acc, msg)
+}
+
+/** Merge one operation layer over a base; `override` wins on scalars. */
+function mergeOperationLayer<T extends Record<string, unknown>>(base: T, override: T): T {
+  const result: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(override)) {
+    if (key === 'traits' || value === undefined) continue
+    if (key === 'tags') {
+      result.tags = unionTags(base.tags as TagList, value as TagList)
+    } else if (key === 'bindings') {
+      result.bindings = { ...(base.bindings as Record<string, unknown> ?? {}), ...(value as Record<string, unknown>) }
+    } else {
+      result[key] = value
+    }
+  }
+  return result as T
+}
+
+/**
+ * Apply AsyncAPI operation traits. Same fold-then-own-wins semantics as messages.
+ * Preserves operation-shape keys (action, channel, message) since the operation
+ * itself is folded last.
+ */
+function applyOperationTraits<T extends { traits?: Array<Partial<T>> }>(op: T): T {
+  if (!op.traits || op.traits.length === 0) return op
+  let acc = {} as T
+  for (const trait of op.traits) acc = mergeOperationLayer(acc, trait as T)
+  return mergeOperationLayer(acc, op)
 }
 
 export async function parseAsyncApiSpec(specInput: string | Record<string, unknown>): Promise<ParsedAsyncApiSpec> {
@@ -186,7 +281,8 @@ function extractChannelsV2(api: AsyncApiDocument): AsyncApiChannel[] {
   })
 }
 
-function convertOperationV2(action: 'publish' | 'subscribe', op: OperationObjectV2): AsyncApiOperation {
+function convertOperationV2(action: 'publish' | 'subscribe', rawOp: OperationObjectV2): AsyncApiOperation {
+  const op = applyOperationTraits(rawOp)
   const messages: AsyncApiMessage[] = []
 
   if (op.message) {
@@ -272,7 +368,8 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
 
   // Then attach operations to channels
   if (api.operations) {
-    for (const [opKey, op] of Object.entries(api.operations)) {
+    for (const [opKey, resolvedOp] of Object.entries(api.operations)) {
+      const op = applyOperationTraits(resolvedOp)
       const rawOp = rawApi.operations?.[opKey]
       const channelName = resolveChannelName(rawOp?.channel, op.channel, addressToName)
 
@@ -310,7 +407,8 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
   return Array.from(channelMap.values())
 }
 
-function convertMessage(msg: MessageObject): AsyncApiMessage {
+function convertMessage(rawMsg: MessageObject): AsyncApiMessage {
+  const msg = applyMessageTraits(rawMsg)
   return {
     name: msg.name,
     title: msg.title,
