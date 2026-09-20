@@ -111,6 +111,14 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
               {op.summary && <span className={opSummaryStyle}>{op.summary}</span>}
             </div>
 
+            {op.tags && op.tags.length > 0 && (
+              <div className={tagChipsStyle}>
+                {op.tags.map((tag) => (
+                  <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
+                ))}
+              </div>
+            )}
+
             {op.description && (
               <div className={sectionStyle}>
                 <MarkdownRenderer content={op.description} />
@@ -435,6 +443,22 @@ const correlationIdLocationStyle = css({
 const correlationIdDescStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-secondary)',
+})
+
+const tagChipsStyle = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '4px',
+  marginBottom: '8px',
+})
+
+const tagChipStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 8px',
+  borderRadius: '10px',
 })
 
 const securityRowStyle = css({

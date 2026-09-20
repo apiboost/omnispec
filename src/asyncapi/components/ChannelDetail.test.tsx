@@ -106,6 +106,24 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('order-key')).toBeInTheDocument()
   })
 
+  it('renders operation tags as chips', () => {
+    const channel: AsyncApiChannel = {
+      name: 'order-events',
+      address: 'order-events',
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          tags: [{ name: 'orders' }, { name: 'alerts' }],
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('orders')).toBeInTheDocument()
+    expect(screen.getByText('alerts')).toBeInTheDocument()
+  })
+
   it('renders operation-level security requirements', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',
