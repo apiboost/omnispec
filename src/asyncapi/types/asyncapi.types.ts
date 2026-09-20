@@ -80,6 +80,7 @@ export interface AsyncApiMessage {
   summary?: string
   description?: string
   contentType?: string
+  schemaFormat?: string
   payload?: Record<string, unknown>
   headers?: Record<string, unknown>
   correlationId?: { description?: string; location: string }
