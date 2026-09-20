@@ -72,6 +72,7 @@ interface OperationObjectV3 {
   messages?: Array<{ $ref?: string } | MessageObject>
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  security?: unknown[]
   traits?: Array<Partial<OperationObjectV3>>
 }
 
@@ -189,7 +190,7 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   const majorVersion = parseInt(api.asyncapi.split('.')[0], 10)
   const isV3 = majorVersion >= 3
 
-  const servers = extractServers(api)
+  const servers = extractServers(api, raw as unknown as AsyncApiDocument)
   // `raw` still holds the original `$ref` pointers (resolveRefs returns a fresh
   // tree and never mutates its input). 3.x wires operations to channels via
   // `channel: { $ref: '#/channels/...' }`, and once resolveRefs inlines that
@@ -229,23 +230,10 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   }
 }
 
-function extractServers(api: AsyncApiDocument): AsyncApiServer[] {
+function extractServers(api: AsyncApiDocument, rawApi: AsyncApiDocument): AsyncApiServer[] {
   if (!api.servers) return []
 
-  if (Array.isArray(api.servers)) {
-    return api.servers.map((s, idx) => ({
-      name: s.name ?? `server-${idx}`,
-      url: s.host ? `${s.protocol}://${s.host}${s.pathname ?? ''}` : s.url ?? '',
-      protocol: s.protocol,
-      protocolVersion: s.protocolVersion,
-      description: s.description,
-      variables: s.variables,
-      security: s.security,
-      bindings: s.bindings,
-    }))
-  }
-
-  return Object.entries(api.servers).map(([name, s]) => ({
+  const toServer = (s: ServerObject, name: string, rawSecurity?: unknown[]): AsyncApiServer => ({
     name,
     url: s.host ? `${s.protocol}://${s.host}${s.pathname ?? ''}` : s.url ?? '',
     protocol: s.protocol,
@@ -253,7 +241,17 @@ function extractServers(api: AsyncApiDocument): AsyncApiServer[] {
     description: s.description,
     variables: s.variables,
     security: s.security,
-  }))
+    securityNames: deriveSecurityNames(rawSecurity, s.security),
+    bindings: s.bindings,
+  })
+
+  if (Array.isArray(api.servers)) {
+    const rawServers = Array.isArray(rawApi.servers) ? rawApi.servers : []
+    return api.servers.map((s, idx) => toServer(s, s.name ?? `server-${idx}`, rawServers[idx]?.security))
+  }
+
+  const rawServers = (!Array.isArray(rawApi.servers) && rawApi.servers) || {}
+  return Object.entries(api.servers).map(([name, s]) => toServer(s, name, rawServers[name]?.security))
 }
 
 function extractChannelsV2(api: AsyncApiDocument): AsyncApiChannel[] {
@@ -394,6 +392,7 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
         message: messages[0],
         tags: op.tags,
         bindings: op.bindings,
+        securityNames: deriveSecurityNames(rawOp?.security, op.security),
         xBadges: raw['x-badges'] as AsyncApiOperation['xBadges'],
         xInternal: raw['x-internal'] as boolean | undefined,
       }
@@ -427,10 +426,41 @@ function convertMessage(rawMsg: MessageObject): AsyncApiMessage {
 }
 
 function extractComponents(api: AsyncApiDocument): AsyncApiComponents {
+  const components = api.components as Record<string, unknown> | undefined
   return {
     schemas: (api.components?.schemas ?? {}) as Record<string, Record<string, unknown>>,
     messages: (api.components?.messages ?? {}) as Record<string, AsyncApiMessage>,
+    securitySchemes: (components?.securitySchemes ?? {}) as AsyncApiComponents['securitySchemes'],
   }
+}
+
+/**
+ * Derive the security-scheme names for a `security` requirement list, covering:
+ * - 2.x requirement maps `{ schemeName: scopes }` → the map keys;
+ * - 3.x `$ref` entries (resolveRefs inlines them, so read the ref from `raw`);
+ * - 3.x inline scheme objects → the scheme `type` as a fallback label.
+ */
+function deriveSecurityNames(raw?: unknown[], resolved?: unknown[]): string[] | undefined {
+  const rawArr = raw ?? []
+  const resArr = resolved ?? []
+  const count = Math.max(rawArr.length, resArr.length)
+  if (count === 0) return undefined
+
+  const names: string[] = []
+  for (let i = 0; i < count; i++) {
+    const rawEntry = rawArr[i] as Record<string, unknown> | undefined
+    const resEntry = resArr[i] as Record<string, unknown> | undefined
+    if (rawEntry && typeof rawEntry === 'object' && typeof rawEntry.$ref === 'string') {
+      names.push(rawEntry.$ref.split('/').pop() as string)
+    } else if (resEntry && typeof resEntry === 'object') {
+      if (typeof resEntry.type === 'string') {
+        names.push(resEntry.type)
+      } else {
+        names.push(...Object.keys(resEntry))
+      }
+    }
+  }
+  return names.length > 0 ? names : undefined
 }
 
 function parseSpecString(input: string): Record<string, unknown> {

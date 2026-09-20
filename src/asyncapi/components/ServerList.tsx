@@ -97,6 +97,35 @@ const varDescStyle = css({
   color: 'var(--omnispec-fg-secondary)',
 })
 
+const securityRowStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  flexWrap: 'wrap',
+  marginTop: '8px',
+})
+
+const securityLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const securityBadgeStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-fg-primary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '2px 8px',
+  borderRadius: '4px',
+  textDecoration: 'none',
+  '&:hover': {
+    textDecoration: 'underline',
+  },
+})
+
 export function ServerList({ servers }: ServerListProps) {
   if (servers.length === 0) return null
 
@@ -122,6 +151,14 @@ export function ServerList({ servers }: ServerListProps) {
                     {variable.default && <span className={varDefaultStyle}>= {variable.default}</span>}
                     {variable.description && <span className={varDescStyle}>{variable.description}</span>}
                   </div>
+                ))}
+              </div>
+            )}
+            {server.securityNames && server.securityNames.length > 0 && (
+              <div className={securityRowStyle}>
+                <span className={securityLabelStyle}>Security</span>
+                {server.securityNames.map((name) => (
+                  <a key={name} href={`#security-${name}`} className={securityBadgeStyle}>{name}</a>
                 ))}
               </div>
             )}

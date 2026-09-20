@@ -33,6 +33,7 @@ import { AsyncOverview } from './components/AsyncOverview'
 import { ServerList } from './components/ServerList'
 import { ChannelDetail } from './components/ChannelDetail'
 import { ComponentsSection } from './components/ComponentsSection'
+import { SecuritySchemesSection } from './components/SecuritySchemesSection'
 
 export function AsyncApiSpec({
   spec,
@@ -109,6 +110,10 @@ export function AsyncApiSpec({
           label: name,
         })),
       })
+    }
+
+    if (Object.keys(parsedSpec.components.securitySchemes).length > 0) {
+      items.push({ id: 'security', label: 'Security Schemes' })
     }
 
     return items
@@ -225,6 +230,8 @@ export function AsyncApiSpec({
                 </div>
 
                 <ComponentsSection components={parsedSpec.components} />
+
+                <SecuritySchemesSection securitySchemes={parsedSpec.components.securitySchemes} />
               </DocLayout>
             </ErrorBoundary>
           </div>

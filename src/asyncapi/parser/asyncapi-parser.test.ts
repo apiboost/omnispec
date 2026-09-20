@@ -251,4 +251,67 @@ describe('parseAsyncApiSpec', () => {
       expect((op.tags ?? []).map((t) => t.name).sort()).toEqual(['own', 'trait-tag'])
     })
   })
+
+  describe('security', () => {
+    it('extracts component security schemes', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Sec', version: '1.0.0' },
+        channels: {},
+        components: {
+          securitySchemes: {
+            apiKey: { type: 'httpApiKey', name: 'X-Api-Key', in: 'header' },
+            oauth: {
+              type: 'oauth2',
+              flows: {
+                clientCredentials: {
+                  tokenUrl: 'https://example.com/token',
+                  availableScopes: { 'orders:read': 'Read orders' },
+                },
+              },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(Object.keys(result.components.securitySchemes)).toEqual(['apiKey', 'oauth'])
+      expect(result.components.securitySchemes.apiKey.type).toBe('httpApiKey')
+      expect(result.components.securitySchemes.oauth.flows?.clientCredentials.availableScopes)
+        .toEqual({ 'orders:read': 'Read orders' })
+    })
+
+    it('derives server security scheme names from a 2.x requirement map', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Sec2', version: '1.0.0' },
+        servers: {
+          prod: { url: 'mqtt://x', protocol: 'mqtt', security: [{ apiKey: [] }] },
+        },
+        channels: {},
+        components: { securitySchemes: { apiKey: { type: 'httpApiKey', name: 'k', in: 'user' } } },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(result.servers[0].securityNames).toEqual(['apiKey'])
+    })
+
+    it('derives 3.x operation security scheme names from $ref', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'Sec3', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          op: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            security: [{ $ref: '#/components/securitySchemes/oauth' }],
+          },
+        },
+        components: {
+          securitySchemes: { oauth: { type: 'oauth2', flows: {} } },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(result.channels[0].operations[0].securityNames).toEqual(['oauth'])
+    })
+  })
 })
