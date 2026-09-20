@@ -8,6 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
+import { useState } from 'react'
 import { css, cx } from '../../core/styles/css'
 import type { AsyncApiServer } from '../types/asyncapi.types'
 import { ProtocolBadge } from './ProtocolBadge'
@@ -28,10 +29,33 @@ const titleStyle = css({
   fontWeight: 600,
 })
 
-const gridStyle = css({
+const tabStripStyle = css({
   display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
+  flexWrap: 'wrap',
+  gap: '4px',
+  marginBottom: '8px',
+})
+
+const tabStyle = css({
+  padding: '4px 12px',
+  border: 'none',
+  borderRadius: 'var(--omnispec-border-radius)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  color: 'var(--omnispec-fg-secondary)',
+  fontSize: 'var(--omnispec-font-size-sm)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  cursor: 'pointer',
+  '&:hover': {
+    color: 'var(--omnispec-fg-primary)',
+  },
+})
+
+const tabActiveStyle = css({
+  backgroundColor: 'var(--omnispec-color-primary)',
+  color: '#ffffff',
+  '&:hover': {
+    color: '#ffffff',
+  },
 })
 
 const cardStyle = css({
@@ -150,49 +174,74 @@ function highlightVariables(url: string) {
   )
 }
 
+function ServerCard({ server }: { server: AsyncApiServer }) {
+  return (
+    <div className={cardStyle}>
+      <div className={cardHeaderStyle}>
+        <span className={serverNameStyle}>{server.name}</span>
+        <ProtocolBadge protocol={server.protocol} version={server.protocolVersion} />
+      </div>
+      <code className={urlStyle}>{highlightVariables(server.url)}</code>
+      {server.description && (
+        <p className={descriptionStyle}>{server.description}</p>
+      )}
+      {server.variables && Object.entries(server.variables).length > 0 && (
+        <div className={variablesStyle}>
+          {Object.entries(server.variables).map(([name, variable]) => (
+            <div key={name} className={varRowStyle}>
+              <code className={varNameStyle}>{name}</code>
+              {variable.default && <span className={varDefaultStyle}>= {variable.default}</span>}
+              {variable.enum && variable.enum.length > 0 && (
+                <span className={varEnumStyle}>enum: {variable.enum.join(' | ')}</span>
+              )}
+              {variable.description && <span className={varDescStyle}>{variable.description}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {server.securityNames && server.securityNames.length > 0 && (
+        <div className={securityRowStyle}>
+          <span className={securityLabelStyle}>Security</span>
+          {server.securityNames.map((name) => (
+            <a key={name} href={`#security-${name}`} className={securityBadgeStyle}>{name}</a>
+          ))}
+        </div>
+      )}
+      <BindingsSection bindings={server.bindings} title="Server Bindings" />
+    </div>
+  )
+}
+
 export function ServerList({ servers }: ServerListProps) {
+  const [selected, setSelected] = useState(0)
   if (servers.length === 0) return null
+
+  const activeIndex = Math.min(selected, servers.length - 1)
 
   return (
     <div className={cx('omnispec-async-servers', containerStyle)}>
       <h3 className={titleStyle}>Servers</h3>
-      <div className={gridStyle}>
-        {servers.map((server) => (
-          <div key={server.name} className={cardStyle}>
-            <div className={cardHeaderStyle}>
-              <span className={serverNameStyle}>{server.name}</span>
-              <ProtocolBadge protocol={server.protocol} version={server.protocolVersion} />
-            </div>
-            <code className={urlStyle}>{highlightVariables(server.url)}</code>
-            {server.description && (
-              <p className={descriptionStyle}>{server.description}</p>
-            )}
-            {server.variables && Object.entries(server.variables).length > 0 && (
-              <div className={variablesStyle}>
-                {Object.entries(server.variables).map(([name, variable]) => (
-                  <div key={name} className={varRowStyle}>
-                    <code className={varNameStyle}>{name}</code>
-                    {variable.default && <span className={varDefaultStyle}>= {variable.default}</span>}
-                    {variable.enum && variable.enum.length > 0 && (
-                      <span className={varEnumStyle}>enum: {variable.enum.join(' | ')}</span>
-                    )}
-                    {variable.description && <span className={varDescStyle}>{variable.description}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-            {server.securityNames && server.securityNames.length > 0 && (
-              <div className={securityRowStyle}>
-                <span className={securityLabelStyle}>Security</span>
-                {server.securityNames.map((name) => (
-                  <a key={name} href={`#security-${name}`} className={securityBadgeStyle}>{name}</a>
-                ))}
-              </div>
-            )}
-            <BindingsSection bindings={server.bindings} title="Server Bindings" />
+      {servers.length > 1 ? (
+        <>
+          <div className={tabStripStyle} role="tablist" aria-label="Servers">
+            {servers.map((server, idx) => (
+              <button
+                key={server.name}
+                type="button"
+                role="tab"
+                aria-selected={idx === activeIndex}
+                className={cx(tabStyle, idx === activeIndex && tabActiveStyle)}
+                onClick={() => setSelected(idx)}
+              >
+                {server.name}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+          <ServerCard server={servers[activeIndex]} />
+        </>
+      ) : (
+        <ServerCard server={servers[0]} />
+      )}
     </div>
   )
 }
