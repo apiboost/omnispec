@@ -31,6 +31,25 @@ describe('ServerList', () => {
     expect(screen.getByText('Clean Session')).toBeInTheDocument()
   })
 
+  it('highlights server variable placeholders and lists variable enums', () => {
+    const servers: AsyncApiServer[] = [
+      {
+        name: 'production',
+        url: '{scheme}://broker.example.com:{port}',
+        protocol: 'mqtt',
+        variables: {
+          scheme: { default: 'mqtts', enum: ['mqtt', 'mqtts'], description: 'Connection scheme' },
+          port: { default: '8883' },
+        },
+      },
+    ]
+    render(<ServerList servers={servers} />)
+    // Placeholder names are surfaced as distinct highlighted tokens.
+    expect(screen.getAllByText('scheme').length).toBeGreaterThan(0)
+    // The variable enum is listed.
+    expect(screen.getByText(/mqtt \| mqtts/)).toBeInTheDocument()
+  })
+
   it('renders server security scheme references', () => {
     const servers: AsyncApiServer[] = [
       {

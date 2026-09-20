@@ -106,6 +106,24 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('order-key')).toBeInTheDocument()
   })
 
+  it('renders channel parameter format, enum, and constraints — not just type', () => {
+    const channel: AsyncApiChannel = {
+      name: 'streetlight',
+      address: 'smartylighting/{streetlightId}',
+      parameters: {
+        streetlightId: {
+          description: 'The ID of the streetlight.',
+          schema: { type: 'string', format: 'uuid', enum: ['a', 'b'] },
+        },
+      },
+      operations: [],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('streetlightId')).toBeInTheDocument()
+    expect(screen.getByText('uuid')).toBeInTheDocument()
+    expect(screen.getByText(/enum:/)).toBeInTheDocument()
+  })
+
   it('renders operation tags as chips', () => {
     const channel: AsyncApiChannel = {
       name: 'order-events',

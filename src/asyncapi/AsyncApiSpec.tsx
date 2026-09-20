@@ -132,6 +132,17 @@ export function AsyncApiSpec({
       children: channelChildren,
     })
 
+    if (Object.keys(parsedSpec.components.messages ?? {}).length > 0) {
+      items.push({
+        id: 'messages',
+        label: 'Messages',
+        children: Object.keys(parsedSpec.components.messages).map((name) => ({
+          id: `message-${name}`,
+          label: name,
+        })),
+      })
+    }
+
     if (Object.keys(parsedSpec.components.schemas).length > 0) {
       items.push({
         id: 'schemas',
