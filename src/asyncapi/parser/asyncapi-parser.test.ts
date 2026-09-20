@@ -194,4 +194,61 @@ describe('parseAsyncApiSpec', () => {
       expect(op.messages.map((m) => m.name)).toEqual(['A', 'B'])
     })
   })
+
+  describe('trait merging', () => {
+    it('merges message traits into the message, with the message winning', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Traits', version: '1.0.0' },
+        channels: {
+          c: {
+            subscribe: {
+              operationId: 'onC',
+              message: {
+                summary: 'Own summary',
+                payload: { type: 'object' },
+                traits: [
+                  {
+                    contentType: 'application/json',
+                    summary: 'Trait summary',
+                    headers: { type: 'object', properties: { 'X-Trace': { type: 'string' } } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const msg = result.channels[0].operations[0].message!
+      // Trait contributes contentType and a header...
+      expect(msg.contentType).toBe('application/json')
+      expect((msg.headers as { properties: Record<string, unknown> }).properties['X-Trace']).toBeDefined()
+      // ...but the message's own summary wins over the trait's.
+      expect(msg.summary).toBe('Own summary')
+    })
+
+    it('merges operation traits and unions tags', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'OpTraits', version: '1.0.0' },
+        channels: {
+          c: {
+            subscribe: {
+              operationId: 'onC',
+              tags: [{ name: 'own' }],
+              traits: [
+                { summary: 'Trait-provided summary', tags: [{ name: 'trait-tag' }] },
+              ],
+              message: { payload: { type: 'object' } },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.summary).toBe('Trait-provided summary')
+      expect((op.tags ?? []).map((t) => t.name).sort()).toEqual(['own', 'trait-tag'])
+    })
+  })
 })
