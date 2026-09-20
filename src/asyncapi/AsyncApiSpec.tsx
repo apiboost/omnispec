@@ -34,6 +34,8 @@ import { ServerList } from './components/ServerList'
 import { ChannelDetail } from './components/ChannelDetail'
 import { ComponentsSection } from './components/ComponentsSection'
 import { SecuritySchemesSection } from './components/SecuritySchemesSection'
+import { groupChannelsByTag, hasAnyTags } from './tag-grouping'
+import { TagGroupHeader } from './components/TagGroupHeader'
 
 export function AsyncApiSpec({
   spec,
@@ -71,23 +73,52 @@ export function AsyncApiSpec({
     }
   }, [parsedSpec, onSpecLoaded])
 
+  const filteredChannels = useMemo(() => {
+    if (!parsedSpec || !searchQuery.trim()) return parsedSpec?.channels ?? []
+
+    const q = searchQuery.toLowerCase()
+    return parsedSpec.channels.filter((ch) =>
+      ch.address.toLowerCase().includes(q) ||
+      ch.description?.toLowerCase().includes(q) ||
+      ch.operations.some((op) =>
+        op.operationId?.toLowerCase().includes(q) ||
+        op.summary?.toLowerCase().includes(q) ||
+        (op.tags ?? []).some((t) => t.name.toLowerCase().includes(q)),
+      ),
+    )
+  }, [parsedSpec, searchQuery])
+
+  // Group channels by tag when any channel is tagged; otherwise keep a flat list.
+  const grouped = useMemo(() => hasAnyTags(filteredChannels), [filteredChannels])
+  const tagGroups = useMemo(
+    () => (grouped ? groupChannelsByTag(filteredChannels, parsedSpec?.tags) : []),
+    [grouped, filteredChannels, parsedSpec],
+  )
+
   const navItems: NavItem[] = useMemo(() => {
     if (!parsedSpec) return []
 
-    const channelItems: NavItem[] = parsedSpec.channels.map((ch) => {
-      const actionLabels = ch.operations.map((op) =>
-        op.action.toUpperCase(),
-      ).join('/')
-
+    const channelNavItem = (ch: typeof filteredChannels[number], idPrefix: string): NavItem => {
+      const actionLabels = ch.operations.map((op) => op.action.toUpperCase()).join('/')
       return {
-        id: `channel-${ch.name}`,
+        id: `${idPrefix}channel-${ch.name}`,
         label: ch.address,
         badge: actionLabels || undefined,
         badgeColor: ch.operations[0]?.action === 'subscribe' || ch.operations[0]?.action === 'receive'
           ? 'var(--omnispec-color-subscribe)'
           : 'var(--omnispec-color-publish)',
       }
-    })
+    }
+
+    // Derived from filteredChannels so the sidebar tracks the filter input.
+    const channelChildren: NavItem[] = grouped
+      ? tagGroups.map((group) => ({
+        id: `taggroup-${group.label}`,
+        label: group.label,
+        badge: String(group.channels.length),
+        children: group.channels.map((ch) => channelNavItem(ch, `${group.label}-`)),
+      }))
+      : filteredChannels.map((ch) => channelNavItem(ch, ''))
 
     const items: NavItem[] = []
 
@@ -98,7 +129,7 @@ export function AsyncApiSpec({
     items.push({
       id: 'channels',
       label: 'Channels',
-      children: channelItems,
+      children: channelChildren,
     })
 
     if (Object.keys(parsedSpec.components.schemas).length > 0) {
@@ -117,21 +148,7 @@ export function AsyncApiSpec({
     }
 
     return items
-  }, [parsedSpec])
-
-  const filteredChannels = useMemo(() => {
-    if (!parsedSpec || !searchQuery.trim()) return parsedSpec?.channels ?? []
-
-    const q = searchQuery.toLowerCase()
-    return parsedSpec.channels.filter((ch) =>
-      ch.address.toLowerCase().includes(q) ||
-      ch.description?.toLowerCase().includes(q) ||
-      ch.operations.some((op) =>
-        op.operationId?.toLowerCase().includes(q) ||
-        op.summary?.toLowerCase().includes(q),
-      ),
-    )
-  }, [parsedSpec, searchQuery])
+  }, [parsedSpec, grouped, tagGroups, filteredChannels])
 
   const handleNavSelect = useCallback((id: string) => {
     const el = document.getElementById(id)
@@ -218,15 +235,38 @@ export function AsyncApiSpec({
                   <h2 className={css({ margin: '0 0 16px', fontSize: 'var(--omnispec-h2-font-size)', fontWeight: 'var(--omnispec-h2-font-weight)', color: 'var(--omnispec-h2-color)' })}>
                     Channels
                   </h2>
-                  {filteredChannels.map((channel) => (
-                    <ChannelDetail
-                      key={channel.name}
-                      id={`channel-${channel.name}`}
-                      channel={channel}
-                      expandAll={allExpanded}
-                      expandGeneration={expandGeneration}
-                    />
-                  ))}
+                  {filteredChannels.length === 0 ? (
+                    <p className={emptyStateStyle}>
+                      {parsedSpec.channels.length === 0
+                        ? 'No channels are defined for this API.'
+                        : 'No channels match your filter.'}
+                    </p>
+                  ) : grouped ? (
+                    tagGroups.map((group) => (
+                      <section key={group.label} id={`taggroup-${group.label}`} className={tagSectionStyle}>
+                        <TagGroupHeader group={group} />
+                        {group.channels.map((channel) => (
+                          <ChannelDetail
+                            key={`${group.label}-${channel.name}`}
+                            id={`${group.label}-channel-${channel.name}`}
+                            channel={channel}
+                            expandAll={allExpanded}
+                            expandGeneration={expandGeneration}
+                          />
+                        ))}
+                      </section>
+                    ))
+                  ) : (
+                    filteredChannels.map((channel) => (
+                      <ChannelDetail
+                        key={channel.name}
+                        id={`channel-${channel.name}`}
+                        channel={channel}
+                        expandAll={allExpanded}
+                        expandGeneration={expandGeneration}
+                      />
+                    ))
+                  )}
                 </div>
 
                 <ComponentsSection components={parsedSpec.components} />
@@ -240,3 +280,13 @@ export function AsyncApiSpec({
     </ConfigProvider>
   )
 }
+
+const emptyStateStyle = css({
+  fontSize: 'var(--omnispec-font-size-sm)',
+  color: 'var(--omnispec-fg-muted)',
+  fontStyle: 'italic',
+})
+
+const tagSectionStyle = css({
+  marginBottom: '2rem',
+})
