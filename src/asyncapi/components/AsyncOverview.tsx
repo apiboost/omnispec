@@ -17,13 +17,13 @@ interface AsyncOverviewProps {
 }
 
 const containerStyle = css({
-  marginBottom: '32px',
-  paddingBottom: '24px',
+  marginBottom: '2rem',
+  paddingBottom: '1.5rem',
   borderBottom: '1px solid var(--omnispec-border-color)',
 })
 
 const titleStyle = css({
-  margin: '0 0 4px',
+  margin: '0 0 0.25rem',
   fontSize: 'var(--omnispec-h2-font-size)',
   color: 'var(--omnispec-h2-color)',
   fontWeight: 700,
@@ -33,7 +33,7 @@ const titleStyle = css({
 const versionStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
-  marginLeft: '12px',
+  marginLeft: '0.75rem',
   fontFamily: 'var(--omnispec-font-mono)',
 })
 
@@ -41,16 +41,16 @@ const specBadgeStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-color-primary)',
   border: '1px solid var(--omnispec-color-primary)',
-  borderRadius: '4px',
-  padding: '1px 6px',
-  marginLeft: '8px',
+  borderRadius: '0.25rem',
+  padding: '1px 0.375rem',
+  marginLeft: '0.5rem',
   fontFamily: 'var(--omnispec-font-mono)',
 })
 
 const metaStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
-  marginTop: '4px',
+  marginTop: '0.25rem',
 })
 
 const linkStyle = css({

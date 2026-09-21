@@ -19,6 +19,7 @@ describe('TagGroupHeader', () => {
     render(
       <TagGroupHeader
         group={{
+          id: 'orders',
           label: 'orders',
           tag: {
             name: 'orders',
@@ -36,7 +37,7 @@ describe('TagGroupHeader', () => {
   })
 
   it('renders without a description or docs for the untagged group', () => {
-    render(<TagGroupHeader group={{ label: 'Untagged', tag: undefined, channels: [] }} />)
+    render(<TagGroupHeader group={{ id: 'untagged', label: 'Untagged', tag: undefined, channels: [] }} />)
     expect(screen.getByText('Untagged')).toBeInTheDocument()
     expect(screen.queryByRole('link')).toBeNull()
   })

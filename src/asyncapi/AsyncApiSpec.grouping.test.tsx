@@ -58,6 +58,25 @@ describe('AsyncApiSpec tag grouping', () => {
   // TagGroupHeader.test.tsx (the async full-app mount made asserting it here flaky
   // under parallel-suite load).
 
+  it('nests tag groups under x-tagGroups in the sidebar (finding 7)', async () => {
+    const spec = {
+      asyncapi: '2.6.0',
+      info: { title: 'Grouped', version: '1.0.0' },
+      channels: {
+        'orders/placed': {
+          subscribe: { operationId: 'onPlaced', tags: [{ name: 'orders' }], message: { name: 'M', payload: { type: 'object' } } },
+        },
+      },
+      tags: [{ name: 'orders' }],
+      'x-tagGroups': [{ name: 'Commerce', tags: ['orders'] }],
+    }
+    render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} />)
+    const nav = await screen.findByRole('navigation')
+    // The x-tagGroup parent node appears, wrapping the tag group.
+    expect(within(nav).getByText('Commerce')).toBeInTheDocument()
+    expect(within(nav).getByText('orders')).toBeInTheDocument()
+  })
+
   it('filters the sidebar, not just the main content', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} />)
 

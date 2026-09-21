@@ -10,6 +10,7 @@
 
 import { css } from '@core/styles/css'
 import { ProtocolBadge } from './ProtocolBadge'
+import { FieldRows } from './field-display'
 
 interface BindingsSectionProps {
   bindings?: Record<string, unknown>
@@ -51,14 +52,7 @@ export function BindingsSection({ bindings, title = 'Bindings' }: BindingsSectio
                 <ProtocolBadge protocol={protocol} />
               </div>
               {rows.length > 0 ? (
-                <dl className={fieldListStyle}>
-                  {rows.map(([field, value]) => (
-                    <div key={field} className={fieldRowStyle}>
-                      <dt className={fieldNameStyle}>{humanizeField(field)}</dt>
-                      <dd className={fieldValueStyle}>{renderValue(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <FieldRows fields={rows} />
               ) : (
                 <p className={emptyStyle}>No binding fields.</p>
               )}
@@ -70,30 +64,12 @@ export function BindingsSection({ bindings, title = 'Bindings' }: BindingsSectio
   )
 }
 
-/** "cleanSession" / "clean_session" → "Clean Session". */
-function humanizeField(field: string): string {
-  const spaced = field
-    .replace(/[_-]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim()
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
-}
-
-function renderValue(value: unknown) {
-  if (value === null) return <span className={mutedStyle}>null</span>
-  if (typeof value === 'boolean') return <code className={codeStyle}>{value ? 'true' : 'false'}</code>
-  if (typeof value === 'number') return <code className={codeStyle}>{String(value)}</code>
-  if (typeof value === 'string') return <span>{value}</span>
-  // Objects and arrays (e.g. MQTT lastWill, WebSocket query schema).
-  return <code className={jsonStyle}>{JSON.stringify(value)}</code>
-}
-
 const containerStyle = css({
-  marginTop: '16px',
+  marginTop: '1rem',
 })
 
 const titleStyle = css({
-  margin: '0 0 12px',
+  margin: '0 0 0.75rem',
   fontSize: 'var(--omnispec-font-size-md)',
   fontWeight: 700,
   color: 'var(--omnispec-fg-primary)',
@@ -103,58 +79,17 @@ const titleStyle = css({
 const protocolListStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '8px',
+  gap: '0.5rem',
 })
 
 const protocolCardStyle = css({
-  padding: '10px 12px',
+  padding: '0.625rem 0.75rem',
   borderRadius: 'var(--omnispec-border-radius)',
   backgroundColor: 'var(--omnispec-bg-secondary)',
 })
 
 const protocolHeaderStyle = css({
-  marginBottom: '8px',
-})
-
-const fieldListStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'max-content 1fr',
-  gap: '4px 16px',
-  margin: 0,
-})
-
-const fieldRowStyle = css({
-  display: 'contents',
-})
-
-const fieldNameStyle = css({
-  fontSize: 'var(--omnispec-font-size-xs)',
-  fontWeight: 600,
-  color: 'var(--omnispec-fg-secondary)',
-})
-
-const fieldValueStyle = css({
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-primary)',
-  margin: 0,
-  minWidth: 0,
-  wordBreak: 'break-word',
-})
-
-const codeStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-})
-
-const jsonStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-code)',
-  wordBreak: 'break-all',
-})
-
-const mutedStyle = css({
-  color: 'var(--omnispec-fg-muted)',
+  marginBottom: '0.5rem',
 })
 
 const emptyStyle = css({

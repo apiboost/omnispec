@@ -10,10 +10,11 @@
 
 import { css } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
-import type { AsyncApiComponents } from '../types/asyncapi.types'
+import type { AsyncApiComponents } from '@asyncapi/types/asyncapi.types'
 import { Collapsible } from '@core/components/common/Collapsible'
 import { SchemaTree } from '@core/components/SchemaViewer/SchemaTree'
 import { schemaToNodes } from '@core/components/SchemaViewer/schema-utils'
+import { MessagePayload } from './MessagePayload'
 
 interface ComponentsSectionProps {
   components: AsyncApiComponents
@@ -39,8 +40,9 @@ export function ComponentsSection({ components }: ComponentsSectionProps) {
                   {message.title && <p className={messageSummaryStyle}>{message.title}</p>}
                   {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
                   {message.contentType && <code className={contentTypeStyle}>{message.contentType}</code>}
-                  {message.payload && (
-                    <SchemaTree nodes={schemaToNodes(message.payload as Record<string, unknown>)} />
+                  <MessagePayload message={message} idx={`message-${name}`} />
+                  {message.headers && (
+                    <SchemaTree nodes={schemaToNodes(message.headers as Record<string, unknown>)} />
                   )}
                 </Collapsible>
               </div>
@@ -82,7 +84,7 @@ const containerStyle = css({
 })
 
 const titleStyle = css({
-  margin: '0 0 16px',
+  margin: '0 0 1rem',
   fontSize: 'var(--omnispec-h2-font-size)',
   color: 'var(--omnispec-h2-color)',
   fontWeight: 700,
@@ -90,12 +92,12 @@ const titleStyle = css({
 
 const schemaWrapperStyle = css({
   border: '1px solid var(--omnispec-border-color)',
-  borderRadius: '8px',
+  borderRadius: '0.5rem',
   padding: '1.5rem 1rem',
 })
 
 const schemaStyle = css({
-  marginBottom: '8px',
+  marginBottom: '0.5rem',
 })
 
 const schemaNameStyle = css({
@@ -111,7 +113,7 @@ const schemaNameStyle = css({
 })
 
 const messageSummaryStyle = css({
-  margin: '0 0 8px',
+  margin: '0 0 0.5rem',
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
 })
@@ -121,5 +123,5 @@ const contentTypeStyle = css({
   fontFamily: 'var(--omnispec-font-mono)',
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-muted)',
-  marginBottom: '8px',
+  marginBottom: '0.5rem',
 })

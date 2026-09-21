@@ -11,7 +11,8 @@
 import { css } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
 import { Icon } from '@core/components/common/Icon'
-import type { AsyncApiSecurityScheme, AsyncApiOAuthFlow } from '../types/asyncapi.types'
+import type { AsyncApiSecurityScheme, AsyncApiOAuthFlow } from '@asyncapi/types/asyncapi.types'
+import { FieldRows } from './field-display'
 
 interface SecuritySchemesSectionProps {
   securitySchemes: Record<string, AsyncApiSecurityScheme>
@@ -45,22 +46,11 @@ export function SecuritySchemesSection({ securitySchemes }: SecuritySchemesSecti
 
             {scheme.description && <p className={descStyle}>{scheme.description}</p>}
 
-            {(() => {
-              const rows = Object.entries(scheme).filter(
+            <FieldRows
+              fields={Object.entries(scheme).filter(
                 ([key, value]) => !SPECIAL_KEYS.has(key) && value !== undefined && typeof value !== 'object',
-              )
-              if (rows.length === 0) return null
-              return (
-                <dl className={fieldListStyle}>
-                  {rows.map(([field, value]) => (
-                    <div key={field} className={fieldRowStyle}>
-                      <dt className={fieldNameStyle}>{humanizeField(field)}</dt>
-                      <dd className={fieldValueStyle}>{String(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )
-            })()}
+              )}
+            />
 
             {scheme.flows && Object.keys(scheme.flows).length > 0 && (
               <div className={flowsStyle}>
@@ -84,16 +74,7 @@ function OAuthFlow({ name, flow }: { name: string; flow: AsyncApiOAuthFlow }) {
   return (
     <div className={flowCardStyle}>
       <div className={flowNameStyle}>{name}</div>
-      {urls.length > 0 && (
-        <dl className={fieldListStyle}>
-          {urls.map(([field, value]) => (
-            <div key={field} className={fieldRowStyle}>
-              <dt className={fieldNameStyle}>{humanizeField(field)}</dt>
-              <dd className={fieldValueStyle}><code className={urlStyle}>{String(value)}</code></dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      <FieldRows fields={urls} />
       {Object.keys(scopes).length > 0 && (
         <div className={scopesStyle}>
           <span className={scopesLabelStyle}>Scopes</span>
@@ -111,27 +92,18 @@ function OAuthFlow({ name, flow }: { name: string; flow: AsyncApiOAuthFlow }) {
   )
 }
 
-function humanizeField(field: string): string {
-  const spaced = field
-    .replace(/[_-]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim()
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
-}
-
 const containerStyle = css({
-  marginTop: '2rem',
-  paddingTop: '1.5rem',
-  borderTop: '1px solid var(--omnispec-border-color)',
-  [mq.mobile]: {
-    borderTop: 'none',
-    marginTop: '1.5rem',
-    paddingTop: '1rem',
+  marginTop: '1.5rem',
+  paddingTop: '1rem',
+  [mq.desktop]: {
+    marginTop: '2rem',
+    paddingTop: '1.5rem',
+    borderTop: '1px solid var(--omnispec-border-color)',
   },
 })
 
 const titleStyle = css({
-  margin: '0 0 16px',
+  margin: '0 0 1rem',
   fontSize: 'var(--omnispec-h2-font-size)',
   color: 'var(--omnispec-h2-color)',
   fontWeight: 700,
@@ -140,11 +112,11 @@ const titleStyle = css({
 const listStyle = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '12px',
+  gap: '0.75rem',
 })
 
 const cardStyle = css({
-  padding: '12px 14px',
+  padding: '0.75rem 0.875rem',
   borderRadius: 'var(--omnispec-border-radius)',
   backgroundColor: 'var(--omnispec-bg-secondary)',
 })
@@ -152,8 +124,8 @@ const cardStyle = css({
 const headerStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  marginBottom: '6px',
+  gap: '0.5rem',
+  marginBottom: '0.375rem',
 })
 
 const nameStyle = css({
@@ -170,54 +142,25 @@ const typeBadgeStyle = css({
   fontFamily: 'var(--omnispec-font-mono)',
   color: 'var(--omnispec-fg-secondary)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 6px',
-  borderRadius: '3px',
+  padding: '0.0625rem 0.375rem',
+  borderRadius: 'var(--omnispec-border-radius)',
 })
 
 const descStyle = css({
-  margin: '0 0 8px',
+  margin: '0 0 0.5rem',
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
 })
 
-const fieldListStyle = css({
-  display: 'grid',
-  gridTemplateColumns: 'max-content 1fr',
-  gap: '4px 16px',
-  margin: '4px 0 0',
-})
-
-const fieldRowStyle = css({ display: 'contents' })
-
-const fieldNameStyle = css({
-  fontSize: 'var(--omnispec-font-size-xs)',
-  fontWeight: 600,
-  color: 'var(--omnispec-fg-secondary)',
-})
-
-const fieldValueStyle = css({
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-primary)',
-  margin: 0,
-  minWidth: 0,
-  wordBreak: 'break-word',
-})
-
-const urlStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-code)',
-})
-
 const flowsStyle = css({
-  marginTop: '10px',
+  marginTop: '0.625rem',
   display: 'flex',
   flexDirection: 'column',
-  gap: '8px',
+  gap: '0.5rem',
 })
 
 const flowCardStyle = css({
-  padding: '8px 10px',
+  padding: '0.5rem 0.625rem',
   borderRadius: 'var(--omnispec-border-radius)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
 })
@@ -230,7 +173,7 @@ const flowNameStyle = css({
 })
 
 const scopesStyle = css({
-  marginTop: '6px',
+  marginTop: '0.375rem',
 })
 
 const scopesLabelStyle = css({
@@ -243,16 +186,16 @@ const scopesLabelStyle = css({
 
 const scopeListStyle = css({
   listStyle: 'none',
-  margin: '4px 0 0',
+  margin: '0.25rem 0 0',
   padding: 0,
   display: 'flex',
   flexDirection: 'column',
-  gap: '2px',
+  gap: '0.125rem',
 })
 
 const scopeRowStyle = css({
   display: 'flex',
-  gap: '8px',
+  gap: '0.5rem',
   alignItems: 'baseline',
   flexWrap: 'wrap',
 })

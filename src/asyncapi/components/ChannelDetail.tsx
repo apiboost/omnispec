@@ -11,18 +11,16 @@
 import { useState } from 'react'
 import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
-import type { AsyncApiChannel, AsyncApiOperation, AsyncApiMessage } from '../types/asyncapi.types'
+import type { AsyncApiChannel, AsyncApiOperation, AsyncApiMessage } from '@asyncapi/types/asyncapi.types'
 import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
 import { SchemaTree } from '@core/components/SchemaViewer/SchemaTree'
-import { schemaToNodes, generateExample, buildConstraints } from '@core/components/SchemaViewer/schema-utils'
-import { CodeBlock } from '@core/components/CodeBlock/CodeBlock'
-import { Tabs } from '@core/components/common/Tabs'
+import { schemaToNodes, buildConstraints } from '@core/components/SchemaViewer/schema-utils'
+import { SchemaBadge } from '@core/components/SchemaViewer/SchemaPrimitives'
 import { ExpandableCard } from '@core/components/common/ExpandableCard'
 import { MethodBar } from '@core/components/common/MethodBar'
-import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
 import { BindingsSection } from './BindingsSection'
-import { Icon } from '@core/components/common/Icon'
-import { avroToJsonSchema, detectSchemaFormat } from '../schema-formats'
+import { SecurityRequirementBadges } from './SecurityRequirementBadges'
+import { MessagePayload } from './MessagePayload'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -90,12 +88,12 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
                     </div>
                     {(paramFormat || constraintBadges.length > 0 || (paramEnum && paramEnum.length > 0)) && (
                       <div className={paramConstraintsStyle}>
-                        {paramFormat && <span className={paramConstraintBadgeStyle}>{paramFormat}</span>}
+                        {paramFormat && <SchemaBadge variant="constraint">{paramFormat}</SchemaBadge>}
                         {constraintBadges.map((c) => (
-                          <span key={c} className={paramConstraintBadgeStyle}>{c}</span>
+                          <SchemaBadge key={c} variant="constraint">{c}</SchemaBadge>
                         ))}
                         {paramEnum && paramEnum.length > 0 && (
-                          <span className={paramEnumBadgeStyle}>enum: {paramEnum.map(String).join(' | ')}</span>
+                          <SchemaBadge variant="enum">enum: {paramEnum.map(String).join(' | ')}</SchemaBadge>
                         )}
                       </div>
                     )}
@@ -114,7 +112,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
 
         {/* Operations */}
         {channel.operations.map((op, idx) => (
-          <div key={idx} className={operationStyle}>
+          <div key={idx} id={id ? `${id}-op-${idx}` : undefined} className={operationStyle}>
             <div className={opHeaderStyle}>
               <span
                 className={cx(actionBadgeBase, css({
@@ -141,17 +139,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
               </div>
             )}
 
-            {op.securityNames && op.securityNames.length > 0 && (
-              <div className={securityRowStyle}>
-                <span className={securityLabelStyle}>Security</span>
-                {op.securityNames.map((name) => (
-                  <a key={name} href={`#security-${name}`} className={securityBadgeStyle}>
-                    <Icon name="lock" size="0.625rem" strokeWidth={2.5} />
-                    {name}
-                  </a>
-                ))}
-              </div>
-            )}
+            <SecurityRequirementBadges names={op.securityNames} />
 
             <OperationMessages operation={op} idx={idx} />
 
@@ -224,11 +212,7 @@ function MessageView({ message, idx }: { message: AsyncApiMessage; idx: string |
       {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
       {message.contentType && <code className={contentTypeStyle}>{message.contentType}</code>}
 
-      {message.schemaFormat && (
-        <span className={schemaFormatBadgeStyle}>{message.schemaFormat}</span>
-      )}
-
-      {message.payload && <MessagePayload message={message} idx={idx} />}
+      <MessagePayload message={message} idx={idx} />
 
       {message.correlationId && (
         <div className={correlationIdStyle}>
@@ -252,77 +236,6 @@ function MessageView({ message, idx }: { message: AsyncApiMessage; idx: string |
   )
 }
 
-/**
- * Renders the payload as Schema + Example tabs. Avro and Protobuf payloads are
- * normalized to a JSON-Schema field tree first (via schemaFormat) so they render
- * as real fields instead of the bare wrapper word.
- */
-function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx: string | number }) {
-  const format = detectSchemaFormat(message.schemaFormat)
-  const rawPayload = message.payload as Record<string, unknown>
-
-  // An unresolvable $ref survives resolution as a bare `{ $ref }` — surface it
-  // rather than rendering an empty/misleading schema (ABOSPEC-50).
-  if (rawPayload && typeof rawPayload === 'object' && typeof rawPayload.$ref === 'string') {
-    return (
-      <div className={unresolvedRefStyle} role="alert">
-        <Icon name="warning" size="0.875rem" />
-        <span>Unresolved reference: <code className={unresolvedRefCodeStyle}>{rawPayload.$ref}</code></span>
-      </div>
-    )
-  }
-
-  const schema = format === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
-
-  return (
-    <Tabs
-      tabs={[
-        {
-          id: `schema-${idx}`,
-          label: 'Payload Schema',
-          content: <SchemaTree nodes={schemaToNodes(schema)} />,
-        },
-        {
-          id: `example-${idx}`,
-          label: 'Example',
-          content: <MessageExample message={message} schema={schema} />,
-        },
-      ]}
-    />
-  )
-}
-
-/**
- * The Example tab. Prefers the message's declared `examples` (with a selector
- * when several are named); falls back to synthesizing one from the payload schema.
- */
-function MessageExample({ message, schema }: { message: AsyncApiMessage; schema?: Record<string, unknown> }) {
-  const named: NamedExample[] = (message.examples ?? [])
-    .filter((ex) => ex.payload !== undefined)
-    .map((ex, i) => ({
-      name: ex.name ?? `example ${i + 1}`,
-      summary: ex.summary,
-      value: ex.payload,
-    }))
-
-  const [selectedName, setSelectedName] = useState(named[0]?.name ?? '')
-  const active = named.find((ex) => ex.name === selectedName) ?? named[0]
-
-  const exampleSchema = schema ?? (message.payload as Record<string, unknown> | undefined)
-  const code = active?.value !== undefined
-    ? JSON.stringify(active.value, null, 2)
-    : exampleSchema
-      ? JSON.stringify(generateExample(exampleSchema), null, 2)
-      : '{}'
-
-  return (
-    <>
-      <ExampleSelector examples={named} selectedName={selectedName || (named[0]?.name ?? '')} onSelect={setSelectedName} />
-      <CodeBlock code={code} language="json" />
-    </>
-  )
-}
-
 // --- Styles matching OpenAPI OperationDetail ---
 
 const bodyStyle = css({
@@ -333,11 +246,11 @@ const bodyStyle = css({
 })
 
 const sectionStyle = css({
-  marginBottom: '24px',
+  marginBottom: '1.5rem',
 })
 
 const sectionTitleStyle = css({
-  margin: '0 0 12px',
+  margin: '0 0 0.75rem',
   fontSize: 'var(--omnispec-font-size-md)',
   fontWeight: 700,
   color: 'var(--omnispec-fg-primary)',
@@ -350,13 +263,13 @@ const paramListStyle = css({
 })
 
 const paramRowStyle = css({
-  padding: '12px 0',
+  padding: '0.75rem 0',
 })
 
 const paramHeaderStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: '0.5rem',
   flexWrap: 'wrap',
 })
 
@@ -373,7 +286,7 @@ const typeBadgeStyle = css({
 })
 
 const paramDescStyle = css({
-  margin: '4px 0 0',
+  margin: '0.25rem 0 0',
   fontSize: 'var(--omnispec-font-size-base)',
   color: 'var(--omnispec-fg-secondary)',
   lineHeight: 1.5,
@@ -386,46 +299,27 @@ const paramConstraintsStyle = css({
   marginTop: '0.375rem',
 })
 
-const paramConstraintBadgeStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-muted)',
-  backgroundColor: 'var(--omnispec-bg-secondary)',
-  padding: '0.0625rem 0.375rem',
-  borderRadius: 'var(--omnispec-border-radius)',
-})
-
-const paramEnumBadgeStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-color-info)',
-  backgroundColor: 'var(--omnispec-bg-secondary)',
-  padding: '0.0625rem 0.375rem',
-  borderRadius: 'var(--omnispec-border-radius)',
-  wordBreak: 'break-word',
-})
-
 const operationStyle = css({
-  padding: '12px 0',
+  padding: '0.75rem 0',
   borderTop: '1px solid var(--omnispec-border-color)',
 })
 
 const opHeaderStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  marginBottom: '8px',
+  gap: '0.5rem',
+  marginBottom: '0.5rem',
 })
 
 const actionBadgeBase = css({
   display: 'inline-block',
-  padding: '2px 6px',
-  borderRadius: '3px',
-  fontSize: '9px',
+  padding: '0.125rem 0.375rem',
+  borderRadius: '0.1875rem',
+  fontSize: '0.5625rem',
   fontWeight: 700,
   fontFamily: 'var(--omnispec-font-mono)',
   color: '#ffffff',
-  letterSpacing: '0.5px',
+  letterSpacing: '0.0313rem',
 })
 
 const opIdStyle = css({
@@ -446,7 +340,7 @@ const messageTitleStyle = css({
 })
 
 const messageSummaryStyle = css({
-  margin: '0 0 8px',
+  margin: '0 0 0.5rem',
   fontSize: 'var(--omnispec-font-size-base)',
   color: 'var(--omnispec-fg-secondary)',
 })
@@ -456,24 +350,13 @@ const contentTypeStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-muted)',
   display: 'block',
-  marginBottom: '8px',
+  marginBottom: '0.5rem',
   backgroundColor: 'transparent',
   padding: 0,
 })
 
-const schemaFormatBadgeStyle = css({
-  display: 'inline-block',
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  color: 'var(--omnispec-fg-secondary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 6px',
-  borderRadius: '3px',
-  marginBottom: '8px',
-})
-
 const headersWrapStyle = css({
-  marginTop: '16px',
+  marginTop: '1rem',
 })
 
 const messageSelectorStyle = css({
@@ -489,7 +372,7 @@ const messageSelectorLabelStyle = css({
   fontWeight: 600,
   color: 'var(--omnispec-fg-muted)',
   textTransform: 'uppercase',
-  letterSpacing: '0.5px',
+  letterSpacing: '0.0313rem',
   whiteSpace: 'nowrap',
 })
 
@@ -513,7 +396,7 @@ const correlationIdStyle = css({
   alignItems: 'center',
   gap: '0.5rem',
   flexWrap: 'wrap',
-  marginTop: '12px',
+  marginTop: '0.75rem',
 })
 
 const correlationIdLabelStyle = css({
@@ -528,8 +411,8 @@ const correlationIdLocationStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-code)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 6px',
-  borderRadius: '3px',
+  padding: '1px 0.375rem',
+  borderRadius: '0.1875rem',
 })
 
 const correlationIdDescStyle = css({
@@ -538,40 +421,24 @@ const correlationIdDescStyle = css({
 })
 
 const replyStyle = css({
-  marginTop: '16px',
-  paddingLeft: '12px',
-  borderLeft: '2px solid var(--omnispec-border-color)',
+  marginTop: '1rem',
+  paddingLeft: '0.75rem',
+  borderLeft: '0.125rem solid var(--omnispec-border-color)',
 })
 
 const replyTitleStyle = css({
-  margin: '0 0 8px',
+  margin: '0 0 0.5rem',
   fontSize: 'var(--omnispec-font-size-md)',
   fontWeight: 700,
   color: 'var(--omnispec-fg-primary)',
   letterSpacing: '0.02em',
 })
 
-const unresolvedRefStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  padding: '0.5rem 0.75rem',
-  borderRadius: 'var(--omnispec-border-radius)',
-  backgroundColor: 'color-mix(in srgb, var(--omnispec-color-warning) 12%, transparent)',
-  color: 'var(--omnispec-color-warning)',
-  fontSize: 'var(--omnispec-font-size-sm)',
-})
-
-const unresolvedRefCodeStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-})
-
 const tagChipsStyle = css({
   display: 'flex',
   flexWrap: 'wrap',
-  gap: '4px',
-  marginBottom: '8px',
+  gap: '0.25rem',
+  marginBottom: '0.5rem',
 })
 
 const tagChipStyle = css({
@@ -579,39 +446,6 @@ const tagChipStyle = css({
   fontFamily: 'var(--omnispec-font-mono)',
   color: 'var(--omnispec-fg-secondary)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 8px',
-  borderRadius: '10px',
-})
-
-const securityRowStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  flexWrap: 'wrap',
-  marginBottom: '12px',
-})
-
-const securityLabelStyle = css({
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  color: 'var(--omnispec-fg-muted)',
-})
-
-const securityBadgeStyle = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '5px',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  color: 'var(--omnispec-fg-primary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '3px 10px',
-  borderRadius: '4px',
-  fontWeight: 500,
-  textDecoration: 'none',
-  '&:hover': {
-    textDecoration: 'underline',
-  },
+  padding: '1px 0.5rem',
+  borderRadius: '0.625rem',
 })

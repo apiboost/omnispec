@@ -42,4 +42,15 @@ describe('AsyncApiSpec sidebar grouping mode', () => {
     expect(within(nav).getByText('onUserSignup')).toBeInTheDocument()
     expect(within(nav).getByText('sendOrderPlaced')).toBeInTheDocument()
   })
+
+  it('operation-mode nav items point at real DOM anchors, not dead ids (finding 2)', async () => {
+    render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} defaultExpandOperations />)
+    await screen.findByRole('navigation')
+    fireEvent.click(screen.getByRole('button', { name: /group by operation/i }))
+
+    // The operation block carries the same id the operation nav item targets, so
+    // scroll-spy can resolve it (the old synthetic `op::` ids matched nothing).
+    expect(document.getElementById('channel-user/signup-op-0')).not.toBeNull()
+    expect(document.getElementById('channel-order/placed-op-0')).not.toBeNull()
+  })
 })

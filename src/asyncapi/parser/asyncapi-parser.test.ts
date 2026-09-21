@@ -334,5 +334,89 @@ describe('parseAsyncApiSpec', () => {
       const result = await parseAsyncApiSpec(JSON.stringify(spec))
       expect(result.channels[0].operations[0].securityNames).toEqual(['oauth'])
     })
+
+    it('derives 2.x operation-level security scheme names (finding 6)', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Sec2op', version: '1.0.0' },
+        channels: {
+          foo: {
+            publish: {
+              operationId: 'pubFoo',
+              security: [{ apiKey: [] }],
+              message: { payload: { type: 'object' } },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(result.channels[0].operations[0].securityNames).toEqual(['apiKey'])
+    })
+  })
+
+  describe('review fixes', () => {
+    it('decodes JSON-pointer escapes in a 3.x channel $ref (finding 1)', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'Escapes', version: '1.0.0' },
+        channels: { 'user/signedup': { address: 'user/signedup', messages: {} } },
+        operations: {
+          onSignup: {
+            action: 'receive',
+            // "user~1signedup" decodes to "user/signedup"
+            channel: { $ref: '#/channels/user~1signedup' },
+            summary: 'signed up',
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const channel = result.channels.find((c) => c.name === 'user/signedup')!
+      expect(channel.operations).toHaveLength(1)
+      expect(channel.operations[0].summary).toBe('signed up')
+    })
+
+    it('routes component messages through convertMessage — traits merged, schemaFormat kept (finding 3)', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'CompMsg', version: '1.0.0' },
+        channels: {},
+        components: {
+          messages: {
+            LightMeasured: {
+              schemaFormat: 'application/vnd.apache.avro;version=1.9.0',
+              traits: [{ title: 'Light measured' }],
+              payload: { type: 'record', fields: [{ name: 'lumens', type: 'int' }] },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const msg = result.components.messages.LightMeasured
+      expect(msg.title).toBe('Light measured') // trait merged
+      expect(msg.schemaFormat).toBe('application/vnd.apache.avro;version=1.9.0')
+    })
+
+    it('skips unresolvable/circular $ref messages instead of emitting empty ones (finding 4)', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'BadRefs', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          op: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            messages: [
+              { name: 'Real', payload: { type: 'object' } },
+              // unresolvable ref with a sibling key -> must be skipped, not rendered empty
+              { $ref: '#/components/messages/Missing', summary: 'x' },
+            ],
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.messages).toHaveLength(1)
+      expect(op.messages[0].name).toBe('Real')
+    })
   })
 })

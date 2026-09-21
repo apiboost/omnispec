@@ -223,12 +223,23 @@ function parseContent(content: string): JsonObject {
   return parseYaml(trimmed) as JsonObject
 }
 
+/**
+ * Decode a single JSON Pointer reference-token per RFC 6901 (`~1`→`/`, `~0`→`~`)
+ * plus percent-decoding for URI-fragment refs. Shared so every consumer that
+ * derives a name from a `$ref` (e.g. the AsyncAPI parser) decodes identically to
+ * `lookupRef` — otherwise a ref that resolves can still yield a name that matches
+ * no key.
+ */
+export function decodeJsonPointerSegment(segment: string): string {
+  return decodeURIComponent(segment.replace(/~1/g, '/').replace(/~0/g, '~'))
+}
+
 function lookupRef(root: JsonObject, ref: string): JsonValue | undefined {
   const path = ref.replace(/^#\//, '').split('/')
   let current: JsonValue = root
 
   for (const segment of path) {
-    const decoded = decodeURIComponent(segment.replace(/~1/g, '/').replace(/~0/g, '~'))
+    const decoded = decodeJsonPointerSegment(segment)
     if (current === null || typeof current !== 'object' || Array.isArray(current)) {
       return undefined
     }

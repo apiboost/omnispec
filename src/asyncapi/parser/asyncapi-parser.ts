@@ -9,7 +9,7 @@
  */
 
 import { parse as parseYaml } from 'yaml'
-import { resolveRefs } from '../../openapi/parser/ref-resolver'
+import { resolveRefs, decodeJsonPointerSegment } from '../../openapi/parser/ref-resolver'
 import type {
   ParsedAsyncApiSpec,
   AsyncApiServer,
@@ -61,6 +61,7 @@ interface OperationObjectV2 {
   message?: MessageObject | { oneOf: MessageObject[] }
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  security?: Array<Record<string, string[]>>
   traits?: Array<Partial<OperationObjectV2>>
 }
 
@@ -308,6 +309,7 @@ function convertOperationV2(action: 'publish' | 'subscribe', rawOp: OperationObj
     message: messages[0],
     tags: op.tags,
     bindings: op.bindings,
+    securityNames: deriveSecurityNames(undefined, op.security),
     xBadges: raw['x-badges'] as AsyncApiOperation['xBadges'],
     xInternal: raw['x-internal'] as boolean | undefined,
   }
@@ -333,8 +335,11 @@ function resolveChannelName(
         : undefined
 
   if (refString) {
-    // e.g. "#/channels/userSignedUp" -> "userSignedUp"
-    return refString.split('/').pop()
+    // e.g. "#/channels/userSignedUp" -> "userSignedUp". Decode JSON-pointer
+    // escapes (`~1`→`/`, `~0`→`~`, percent-encoding) so the name matches the
+    // channel key exactly as lookupRef resolved it.
+    const last = refString.split('/').pop()
+    return last !== undefined ? decodeJsonPointerSegment(last) : undefined
   }
 
   // The ref was inlined without a $ref surviving; match on the channel address.
@@ -378,9 +383,11 @@ function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): Asy
       const collectMessages = (list?: Array<{ $ref?: string } | MessageObject>): AsyncApiMessage[] => {
         const out: AsyncApiMessage[] = []
         for (const msg of list ?? []) {
-          // After resolveRefs, message $refs are inlined; a bare `{ $ref }` only
-          // survives if it was unresolvable — skip those, keep resolved messages.
-          if ('$ref' in msg && Object.keys(msg).length === 1) continue
+          // After resolveRefs a successfully-resolved message has no `$ref` (its
+          // siblings are merged over the target). A surviving `$ref` means the
+          // ref was unresolvable, or circular (`{ $ref, x-circular }`) — skip it
+          // rather than emit an empty message, regardless of sibling keys.
+          if (msg && typeof msg === 'object' && '$ref' in msg) continue
           out.push(convertMessage(msg as MessageObject))
         }
         return out
@@ -435,9 +442,19 @@ function convertMessage(rawMsg: MessageObject): AsyncApiMessage {
 
 function extractComponents(api: AsyncApiDocument): AsyncApiComponents {
   const components = api.components as Record<string, unknown> | undefined
+
+  // Run component messages through convertMessage() — the same path channel
+  // messages take — so trait-merging, schemaFormat, examples, etc. apply in the
+  // browsable Messages section too, not only inside ChannelDetail.
+  const rawMessages = (api.components?.messages ?? {}) as Record<string, MessageObject>
+  const messages: Record<string, AsyncApiMessage> = {}
+  for (const [name, msg] of Object.entries(rawMessages)) {
+    messages[name] = convertMessage(msg)
+  }
+
   return {
     schemas: (api.components?.schemas ?? {}) as Record<string, Record<string, unknown>>,
-    messages: (api.components?.messages ?? {}) as Record<string, AsyncApiMessage>,
+    messages,
     securitySchemes: (components?.securitySchemes ?? {}) as AsyncApiComponents['securitySchemes'],
   }
 }
@@ -459,7 +476,7 @@ function deriveSecurityNames(raw?: unknown[], resolved?: unknown[]): string[] | 
     const rawEntry = rawArr[i] as Record<string, unknown> | undefined
     const resEntry = resArr[i] as Record<string, unknown> | undefined
     if (rawEntry && typeof rawEntry === 'object' && typeof rawEntry.$ref === 'string') {
-      names.push(rawEntry.$ref.split('/').pop() as string)
+      names.push(decodeJsonPointerSegment(rawEntry.$ref.split('/').pop() as string))
     } else if (resEntry && typeof resEntry === 'object') {
       if (typeof resEntry.type === 'string') {
         names.push(resEntry.type)

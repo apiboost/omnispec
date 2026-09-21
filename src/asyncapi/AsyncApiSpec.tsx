@@ -20,7 +20,7 @@ import { DocLayout } from '@core/components/Layout/DocLayout'
 import { NavTree } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
-import { useHashScroll } from '@core/hooks/useHashScroll'
+import { useHashScroll, requestExpand } from '@core/hooks/useHashScroll'
 import { SearchBar } from '@core/components/Navigation/SearchBar'
 import { buildSidebar } from '@core/components/Navigation/buildSidebar'
 import { LoadingScreen } from '@core/components/common/LoadingScreen'
@@ -35,7 +35,8 @@ import { ServerList } from './components/ServerList'
 import { ChannelDetail } from './components/ChannelDetail'
 import { ComponentsSection } from './components/ComponentsSection'
 import { SecuritySchemesSection } from './components/SecuritySchemesSection'
-import { groupChannelsByTag, hasAnyTags } from './tag-grouping'
+import { groupChannelsByTag, hasAnyTags, type TagGroup } from './tag-grouping'
+import type { ParsedAsyncApiSpec } from './types/asyncapi.types'
 import { TagGroupHeader } from './components/TagGroupHeader'
 
 export function AsyncApiSpec({
@@ -107,7 +108,7 @@ export function AsyncApiSpec({
     if (grouped) {
       for (const group of tagGroups) {
         for (const ch of group.channels) {
-          if (!map.has(ch.name)) map.set(ch.name, `${group.label}-channel-${ch.name}`)
+          if (!map.has(ch.name)) map.set(ch.name, `${group.id}-channel-${ch.name}`)
         }
       }
     } else {
@@ -115,6 +116,22 @@ export function AsyncApiSpec({
     }
     return map
   }, [grouped, tagGroups, filteredChannels])
+
+  // The DOM id of an operation block (rendered inside its channel's first card),
+  // plus a lookup from that id back to the channel card so operation-mode nav can
+  // expand the (collapsed) card before scrolling.
+  const operationDomId = useCallback(
+    (channelName: string, idx: number) => `${channelDomId.get(channelName) ?? `channel-${channelName}`}-op-${idx}`,
+    [channelDomId],
+  )
+  const opToCard = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const ch of filteredChannels) {
+      const card = channelDomId.get(ch.name) ?? `channel-${ch.name}`
+      ch.operations.forEach((_, idx) => map.set(`${card}-op-${idx}`, card))
+    }
+    return map
+  }, [filteredChannels, channelDomId])
 
   const hasOperations = useMemo(
     () => filteredChannels.some((ch) => ch.operations.length > 0),
@@ -137,27 +154,31 @@ export function AsyncApiSpec({
       badgeColor: actionColor(ch.operations[0]?.action ?? ''),
     })
 
-    // Operation-first index: one entry per operation, navigating to its channel card.
+    // Operation-first index: one entry per operation. The id is the operation's
+    // real DOM anchor so scroll-spy can highlight it (finding 2).
     const operationNavItems = (): NavItem[] =>
       filteredChannels.flatMap((ch) =>
         ch.operations.map((op, idx) => ({
-          id: `op::${ch.name}::${idx}`,
+          id: operationDomId(ch.name, idx),
           label: op.operationId ?? op.summary ?? `${actionLabel(op.action)} ${ch.address}`,
           badge: actionLabel(op.action),
           badgeColor: actionColor(op.action),
         })),
       )
 
-    // Derived from filteredChannels so the sidebar tracks the filter input.
+    const tagGroupNavItem = (group: typeof tagGroups[number]): NavItem => ({
+      id: `taggroup-${group.id}`,
+      label: group.label,
+      badge: String(group.channels.length),
+      children: group.channels.map((ch) => channelNavItem(ch, `${group.id}-`)),
+    })
+
+    // Channel mode: flat tags, or — when x-tagGroups is present — tag groups
+    // nested under their x-tagGroup, matching OpenApiSpec (finding 7).
     const channelChildren: NavItem[] = navGrouping === 'operation'
       ? operationNavItems()
       : grouped
-        ? tagGroups.map((group) => ({
-          id: `taggroup-${group.label}`,
-          label: group.label,
-          badge: String(group.channels.length),
-          children: group.channels.map((ch) => channelNavItem(ch, `${group.label}-`)),
-        }))
+        ? nestByTagGroups(tagGroups, parsedSpec.tagGroups, tagGroupNavItem)
         : filteredChannels.map((ch) => channelNavItem(ch, ''))
 
     const items: NavItem[] = []
@@ -199,21 +220,21 @@ export function AsyncApiSpec({
     }
 
     return items
-  }, [parsedSpec, grouped, tagGroups, filteredChannels, navGrouping])
+  }, [parsedSpec, grouped, tagGroups, filteredChannels, navGrouping, operationDomId])
 
   const { navigateTo } = useHashScroll(filteredChannels.length)
 
   const handleNavSelect = useCallback((id: string) => {
-    // Operation-mode items encode the owning channel; resolve to its card anchor
-    // so the (collapsed) card expands and scrolls into view.
-    if (id.startsWith('op::')) {
-      const name = id.slice(4, id.lastIndexOf('::'))
-      const target = channelDomId.get(name)
-      if (target) navigateTo(target)
+    // Operation-mode items point at an operation block inside a (collapsed)
+    // channel card; expand the card first, then scroll to the operation.
+    const cardId = opToCard.get(id)
+    if (cardId) {
+      requestExpand(cardId)
+      navigateTo(id)
       return
     }
     navigateTo(id)
-  }, [navigateTo, channelDomId])
+  }, [navigateTo, opToCard])
 
   // Highlight the sidebar entry for the channel/section currently in view.
   const navSectionIds = useMemo(() => flattenNavItemIds(navItems), [navItems])
@@ -317,7 +338,7 @@ export function AsyncApiSpec({
                 </div>
 
                 <div id="channels">
-                  <h2 className={css({ margin: '0 0 16px', fontSize: 'var(--omnispec-h2-font-size)', fontWeight: 'var(--omnispec-h2-font-weight)', color: 'var(--omnispec-h2-color)' })}>
+                  <h2 className={css({ margin: '0 0 1rem', fontSize: 'var(--omnispec-h2-font-size)', fontWeight: 'var(--omnispec-h2-font-weight)', color: 'var(--omnispec-h2-color)' })}>
                     Channels
                   </h2>
                   {filteredChannels.length === 0 ? (
@@ -328,12 +349,12 @@ export function AsyncApiSpec({
                     </p>
                   ) : grouped ? (
                     tagGroups.map((group) => (
-                      <section key={group.label} id={`taggroup-${group.label}`} className={tagSectionStyle}>
+                      <section key={group.id} id={`taggroup-${group.id}`} className={tagSectionStyle}>
                         <TagGroupHeader group={group} />
                         {group.channels.map((channel) => (
                           <ChannelDetail
-                            key={`${group.label}-${channel.name}`}
-                            id={`${group.label}-channel-${channel.name}`}
+                            key={`${group.id}-${channel.name}`}
+                            id={`${group.id}-channel-${channel.name}`}
                             channel={channel}
                             expandAll={allExpanded}
                             expandGeneration={expandGeneration}
@@ -366,6 +387,41 @@ export function AsyncApiSpec({
   )
 }
 
+/**
+ * Nest tag-group nav items under their `x-tagGroups` parent when the spec
+ * declares them (mirrors OpenApiSpec), falling back to a flat list otherwise.
+ * Tag groups not referenced by any x-tagGroup (and the Untagged bucket) are
+ * appended at the top level so nothing is hidden.
+ */
+function nestByTagGroups(
+  groups: TagGroup[],
+  xTagGroups: ParsedAsyncApiSpec['tagGroups'],
+  toNav: (group: TagGroup) => NavItem,
+): NavItem[] {
+  if (!xTagGroups?.length) return groups.map(toNav)
+
+  const byTagName = new Map<string, TagGroup>()
+  for (const g of groups) if (g.tag?.name) byTagName.set(g.tag.name, g)
+
+  const used = new Set<TagGroup>()
+  const grouped: NavItem[] = xTagGroups
+    .map((xg) => {
+      const children = xg.tags
+        .map((t) => byTagName.get(t))
+        .filter((g): g is TagGroup => !!g)
+      children.forEach((g) => used.add(g))
+      return {
+        id: `xtaggroup-${xg.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'group'}`,
+        label: xg.name,
+        children: children.map(toNav),
+      }
+    })
+    .filter((item) => (item.children?.length ?? 0) > 0)
+
+  const leftover = groups.filter((g) => !used.has(g)).map(toNav)
+  return [...grouped, ...leftover]
+}
+
 const emptyStateStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
@@ -375,8 +431,8 @@ const emptyStateStyle = css({
 const groupToggleStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
-  padding: '8px 12px 4px',
+  gap: '0.5rem',
+  padding: '0.5rem 0.75rem 0.25rem',
   flexWrap: 'wrap',
 })
 
@@ -392,7 +448,7 @@ const groupToggleButtonsStyle = css({
   display: 'inline-flex',
   borderRadius: 'var(--omnispec-border-radius)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '2px',
+  padding: '0.125rem',
 })
 
 const groupToggleButtonStyle = css({
@@ -400,7 +456,7 @@ const groupToggleButtonStyle = css({
   background: 'transparent',
   color: 'var(--omnispec-fg-secondary)',
   fontSize: 'var(--omnispec-font-size-xs)',
-  padding: '2px 10px',
+  padding: '0.125rem 0.625rem',
   borderRadius: 'calc(var(--omnispec-border-radius) - 1px)',
   cursor: 'pointer',
 })
@@ -409,7 +465,7 @@ const groupToggleActiveStyle = css({
   backgroundColor: 'var(--omnispec-bg-primary)',
   color: 'var(--omnispec-fg-primary)',
   fontWeight: 600,
-  boxShadow: 'var(--omnispec-shadow-sm, 0 1px 2px rgba(0,0,0,0.1))',
+  boxShadow: 'var(--omnispec-shadow-sm, 0 1px 0.125rem rgba(0,0,0,0.1))',
 })
 
 const tagSectionStyle = css({

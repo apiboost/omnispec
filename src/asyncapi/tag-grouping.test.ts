@@ -50,4 +50,18 @@ describe('groupChannelsByTag', () => {
     expect(hasAnyTags([channel('a', [])])).toBe(false)
     expect(hasAnyTags([channel('a', ['x'])])).toBe(true)
   })
+
+  it('assigns DOM-safe slug ids from the tag name, de-duplicated (finding 5)', () => {
+    // Two distinct tag names that slugify to the same value must get unique ids,
+    // and ids must not embed the raw display label with spaces.
+    const groups = groupChannelsByTag(
+      [channel('a', ['User Events']), channel('b', ['user/events'])],
+      [{ name: 'User Events' }, { name: 'user/events' }],
+    )
+    const ids = groups.map((g) => g.id)
+    expect(ids[0]).toBe('user-events')
+    expect(ids[1]).toBe('user-events-2')
+    expect(new Set(ids).size).toBe(ids.length)
+    ids.forEach((id) => expect(id).not.toMatch(/\s/))
+  })
 })

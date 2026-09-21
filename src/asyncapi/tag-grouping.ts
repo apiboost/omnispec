@@ -15,12 +15,23 @@ export type TagMeta = NonNullable<ParsedAsyncApiSpec['tags']>[number]
 export interface TagGroup {
   /** Tag metadata, or undefined for the synthetic "Untagged" bucket. */
   tag?: TagMeta
+  /**
+   * Stable, DOM/URL-safe identifier for keys and element ids. Derived from the
+   * tag `name` (not the display label, which may contain spaces/punctuation and
+   * is not unique). De-duplicated across groups.
+   */
+  id: string
   /** Display label for the group. */
   label: string
   channels: AsyncApiChannel[]
 }
 
 export const UNTAGGED_LABEL = 'Untagged'
+
+/** Slugify a tag name into a DOM/URL-safe id fragment. */
+function slugify(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tag'
+}
 
 /** The set of tag names carried by a channel's operations. */
 export function channelTagNames(channel: AsyncApiChannel): string[] {
@@ -73,14 +84,25 @@ export function groupChannelsByTag(
 
   const tagMetaByName = new Map((specTags ?? []).map((t) => [t.name, t]))
 
+  // Assign a unique, DOM-safe id per group derived from the tag name.
+  const usedIds = new Set<string>()
+  const uniqueId = (base: string): string => {
+    let id = base
+    let n = 2
+    while (usedIds.has(id)) id = `${base}-${n++}`
+    usedIds.add(id)
+    return id
+  }
+
   const groups: TagGroup[] = orderedNames.map((name) => ({
     tag: tagMetaByName.get(name) ?? { name },
+    id: uniqueId(slugify(name)),
     label: tagMetaByName.get(name)?.displayName ?? name,
     channels: byName.get(name) ?? [],
   }))
 
   if (untagged.length > 0) {
-    groups.push({ tag: undefined, label: UNTAGGED_LABEL, channels: untagged })
+    groups.push({ tag: undefined, id: uniqueId('untagged'), label: UNTAGGED_LABEL, channels: untagged })
   }
 
   return groups

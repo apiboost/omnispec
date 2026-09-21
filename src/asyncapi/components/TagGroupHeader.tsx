@@ -44,15 +44,15 @@ export function TagGroupHeader({ group }: { group: TagGroup }) {
 }
 
 const headerStyle = css({
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '2px solid var(--omnispec-border-color)',
+  marginBottom: '0.75rem',
+  paddingBottom: '0.5rem',
+  borderBottom: '0.125rem solid var(--omnispec-border-color)',
 })
 
 const titleStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
+  gap: '0.625rem',
   margin: 0,
   fontSize: 'var(--omnispec-h3-font-size)',
   fontWeight: 800,
@@ -64,13 +64,13 @@ const countStyle = css({
   fontWeight: 500,
   color: 'var(--omnispec-fg-muted)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '2px 8px',
-  borderRadius: '10px',
+  padding: '0.125rem 0.5rem',
+  borderRadius: '0.625rem',
   fontFamily: 'var(--omnispec-font-mono)',
 })
 
 const descStyle = css({
-  marginTop: '8px',
+  marginTop: '0.5rem',
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
   lineHeight: 1.6,
@@ -79,8 +79,8 @@ const descStyle = css({
 const docsStyle = css({
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '4px',
-  marginTop: '8px',
+  gap: '0.25rem',
+  marginTop: '0.5rem',
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-link)',
   textDecoration: 'none',
