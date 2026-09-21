@@ -10,11 +10,11 @@ name: Release
 # Automated release via semantic-release. On a push to main it analyzes the
 # conventional commits since the last release tag, computes the next version,
 # publishes to npm with provenance, tags the commit, and creates a GitHub
-# Release with generated notes. Pushing to the `dev` branch publishes a
-# prerelease under the `dev` dist-tag (install with `@apiboost/omnispec@dev`).
+# Release with generated notes. Pushing to the `next` branch publishes a
+# prerelease under the `next` dist-tag (install with `@apiboost/omnispec@next`).
 on:
   push:
-    branches: [main, dev]
+    branches: [main, next]
 
 permissions:
   contents: write # create tags + GitHub Releases

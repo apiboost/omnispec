@@ -9,7 +9,7 @@ name: DCO
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, next]
 
 jobs:
   dco:
