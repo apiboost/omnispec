@@ -36,13 +36,13 @@ const protocolColors: Record<string, string> = {
 
 const badgeBase = css({
   display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: '4px',
-  fontSize: '10px',
+  padding: '0.125rem 0.5rem',
+  borderRadius: '0.25rem',
+  fontSize: '0.625rem',
   fontWeight: 700,
   fontFamily: 'var(--omnispec-font-mono)',
   color: '#ffffff',
-  letterSpacing: '0.5px',
+  letterSpacing: '0.0313rem',
 })
 
 const versionStyle = css({

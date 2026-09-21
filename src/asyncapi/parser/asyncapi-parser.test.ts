@@ -101,4 +101,322 @@ describe('parseAsyncApiSpec', () => {
     const result = await parseAsyncApiSpec(jsonSpec)
     expect(result.title).toBe('Test')
   })
+
+  describe('AsyncAPI 3.x operation → channel resolution', () => {
+    const v3Spec = {
+      asyncapi: '3.0.0',
+      info: { title: 'V3 API', version: '1.0.0' },
+      channels: {
+        userSignedUp: {
+          address: 'user/signedup',
+          messages: {
+            userSignedUp: { $ref: '#/components/messages/UserSignedUp' },
+          },
+        },
+      },
+      operations: {
+        onUserSignedUp: {
+          action: 'receive',
+          channel: { $ref: '#/channels/userSignedUp' },
+          summary: 'Notified when a user signs up',
+          messages: [{ $ref: '#/channels/userSignedUp/messages/userSignedUp' }],
+        },
+      },
+      components: {
+        messages: {
+          UserSignedUp: {
+            name: 'UserSignedUp',
+            payload: { type: 'object', properties: { id: { type: 'string' } } },
+          },
+        },
+      },
+    }
+
+    it('attaches a 3.x operation to the channel it references via $ref', async () => {
+      const result = await parseAsyncApiSpec(JSON.stringify(v3Spec))
+
+      expect(result.channels).toHaveLength(1)
+      const channel = result.channels[0]
+      expect(channel.address).toBe('user/signedup')
+      // The operation references the channel via `channel: { $ref: ... }`.
+      // It must be attached even though resolveRefs() inlines the $ref.
+      expect(channel.operations).toHaveLength(1)
+      expect(channel.operations[0].action).toBe('receive')
+      expect(channel.operations[0].summary).toBe('Notified when a user signs up')
+    })
+  })
+
+  describe('multiple messages', () => {
+    it('keeps every message from a 2.x oneOf list', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'OneOf', version: '1.0.0' },
+        channels: {
+          orders: {
+            subscribe: {
+              operationId: 'onOrders',
+              message: {
+                oneOf: [
+                  { name: 'OrderCreated', payload: { type: 'object' } },
+                  { name: 'OrderCancelled', payload: { type: 'object' } },
+                ],
+              },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.messages).toHaveLength(2)
+      expect(op.messages.map((m) => m.name)).toEqual(['OrderCreated', 'OrderCancelled'])
+      // `message` remains an alias for the first entry.
+      expect(op.message?.name).toBe('OrderCreated')
+    })
+
+    it('keeps every message from a 3.x messages array', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'V3 multi', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          op: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            messages: [
+              { name: 'A', payload: { type: 'object' } },
+              { name: 'B', payload: { type: 'object' } },
+            ],
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.messages.map((m) => m.name)).toEqual(['A', 'B'])
+    })
+  })
+
+  describe('trait merging', () => {
+    it('merges message traits into the message, with the message winning', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Traits', version: '1.0.0' },
+        channels: {
+          c: {
+            subscribe: {
+              operationId: 'onC',
+              message: {
+                summary: 'Own summary',
+                payload: { type: 'object' },
+                traits: [
+                  {
+                    contentType: 'application/json',
+                    summary: 'Trait summary',
+                    headers: { type: 'object', properties: { 'X-Trace': { type: 'string' } } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const msg = result.channels[0].operations[0].message!
+      // Trait contributes contentType and a header...
+      expect(msg.contentType).toBe('application/json')
+      expect((msg.headers as { properties: Record<string, unknown> }).properties['X-Trace']).toBeDefined()
+      // ...but the message's own summary wins over the trait's.
+      expect(msg.summary).toBe('Own summary')
+    })
+
+    it('merges operation traits and unions tags', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'OpTraits', version: '1.0.0' },
+        channels: {
+          c: {
+            subscribe: {
+              operationId: 'onC',
+              tags: [{ name: 'own' }],
+              traits: [
+                { summary: 'Trait-provided summary', tags: [{ name: 'trait-tag' }] },
+              ],
+              message: { payload: { type: 'object' } },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.summary).toBe('Trait-provided summary')
+      expect((op.tags ?? []).map((t) => t.name).sort()).toEqual(['own', 'trait-tag'])
+    })
+  })
+
+  describe('security', () => {
+    it('extracts component security schemes', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Sec', version: '1.0.0' },
+        channels: {},
+        components: {
+          securitySchemes: {
+            apiKey: { type: 'httpApiKey', name: 'X-Api-Key', in: 'header' },
+            oauth: {
+              type: 'oauth2',
+              flows: {
+                clientCredentials: {
+                  tokenUrl: 'https://example.com/token',
+                  availableScopes: { 'orders:read': 'Read orders' },
+                },
+              },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(Object.keys(result.components.securitySchemes)).toEqual(['apiKey', 'oauth'])
+      expect(result.components.securitySchemes.apiKey.type).toBe('httpApiKey')
+      expect(result.components.securitySchemes.oauth.flows?.clientCredentials.availableScopes)
+        .toEqual({ 'orders:read': 'Read orders' })
+    })
+
+    it('derives server security scheme names from a 2.x requirement map', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Sec2', version: '1.0.0' },
+        servers: {
+          prod: { url: 'mqtt://x', protocol: 'mqtt', security: [{ apiKey: [] }] },
+        },
+        channels: {},
+        components: { securitySchemes: { apiKey: { type: 'httpApiKey', name: 'k', in: 'user' } } },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(result.servers[0].securityNames).toEqual(['apiKey'])
+    })
+
+    it('parses a 3.x operation reply (request-reply)', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'Reply', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          ask: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            reply: {
+              messages: [{ name: 'Pong', payload: { type: 'object' } }],
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.reply?.messages).toHaveLength(1)
+      expect(op.reply?.messages[0].name).toBe('Pong')
+    })
+
+    it('derives 3.x operation security scheme names from $ref', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'Sec3', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          op: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            security: [{ $ref: '#/components/securitySchemes/oauth' }],
+          },
+        },
+        components: {
+          securitySchemes: { oauth: { type: 'oauth2', flows: {} } },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(result.channels[0].operations[0].securityNames).toEqual(['oauth'])
+    })
+
+    it('derives 2.x operation-level security scheme names (finding 6)', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'Sec2op', version: '1.0.0' },
+        channels: {
+          foo: {
+            publish: {
+              operationId: 'pubFoo',
+              security: [{ apiKey: [] }],
+              message: { payload: { type: 'object' } },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      expect(result.channels[0].operations[0].securityNames).toEqual(['apiKey'])
+    })
+  })
+
+  describe('review fixes', () => {
+    it('decodes JSON-pointer escapes in a 3.x channel $ref (finding 1)', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'Escapes', version: '1.0.0' },
+        channels: { 'user/signedup': { address: 'user/signedup', messages: {} } },
+        operations: {
+          onSignup: {
+            action: 'receive',
+            // "user~1signedup" decodes to "user/signedup"
+            channel: { $ref: '#/channels/user~1signedup' },
+            summary: 'signed up',
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const channel = result.channels.find((c) => c.name === 'user/signedup')!
+      expect(channel.operations).toHaveLength(1)
+      expect(channel.operations[0].summary).toBe('signed up')
+    })
+
+    it('routes component messages through convertMessage — traits merged, schemaFormat kept (finding 3)', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'CompMsg', version: '1.0.0' },
+        channels: {},
+        components: {
+          messages: {
+            LightMeasured: {
+              schemaFormat: 'application/vnd.apache.avro;version=1.9.0',
+              traits: [{ title: 'Light measured' }],
+              payload: { type: 'record', fields: [{ name: 'lumens', type: 'int' }] },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const msg = result.components.messages.LightMeasured
+      expect(msg.title).toBe('Light measured') // trait merged
+      expect(msg.schemaFormat).toBe('application/vnd.apache.avro;version=1.9.0')
+    })
+
+    it('skips unresolvable/circular $ref messages instead of emitting empty ones (finding 4)', async () => {
+      const spec = {
+        asyncapi: '3.0.0',
+        info: { title: 'BadRefs', version: '1.0.0' },
+        channels: { c: { address: 'c', messages: {} } },
+        operations: {
+          op: {
+            action: 'send',
+            channel: { $ref: '#/channels/c' },
+            messages: [
+              { name: 'Real', payload: { type: 'object' } },
+              // unresolvable ref with a sibling key -> must be skipped, not rendered empty
+              { $ref: '#/components/messages/Missing', summary: 'x' },
+            ],
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const op = result.channels[0].operations[0]
+      expect(op.messages).toHaveLength(1)
+      expect(op.messages[0].name).toBe('Real')
+    })
+  })
 })

@@ -13,3 +13,7 @@ yalc.lock
 website/build/
 website/.docusaurus/
 *.tgz
+
+# Editor config and local-only scratch notes (never commit these)
+.vscode/
+*.local.md

@@ -9,7 +9,7 @@
  */
 
 import { parse as parseYaml } from 'yaml'
-import { resolveRefs } from '../../openapi/parser/ref-resolver'
+import { resolveRefs, decodeJsonPointerSegment } from '../../openapi/parser/ref-resolver'
 import type {
   ParsedAsyncApiSpec,
   AsyncApiServer,
@@ -39,6 +39,7 @@ interface ServerObject {
   description?: string
   variables?: Record<string, { default?: string; description?: string; enum?: string[] }>
   security?: Record<string, string[]>[]
+  bindings?: Record<string, unknown>
 }
 
 interface ChannelObject {
@@ -60,6 +61,8 @@ interface OperationObjectV2 {
   message?: MessageObject | { oneOf: MessageObject[] }
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  security?: Array<Record<string, string[]>>
+  traits?: Array<Partial<OperationObjectV2>>
 }
 
 interface OperationObjectV3 {
@@ -70,6 +73,9 @@ interface OperationObjectV3 {
   messages?: Array<{ $ref?: string } | MessageObject>
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  security?: unknown[]
+  reply?: { channel?: unknown; messages?: Array<{ $ref?: string } | MessageObject> }
+  traits?: Array<Partial<OperationObjectV3>>
 }
 
 interface MessageObject {
@@ -78,12 +84,106 @@ interface MessageObject {
   summary?: string
   description?: string
   contentType?: string
+  schemaFormat?: string
   payload?: Record<string, unknown>
   headers?: Record<string, unknown>
   correlationId?: { description?: string; location: string }
   tags?: Array<{ name: string; description?: string }>
   examples?: Array<{ name?: string; summary?: string; payload?: unknown; headers?: unknown }>
   bindings?: Record<string, unknown>
+  traits?: MessageObject[]
+}
+
+type TagList = Array<{ name: string; description?: string }>
+
+/** Union two tag lists by name; the first occurrence wins. */
+function unionTags(a?: TagList, b?: TagList): TagList | undefined {
+  if (!a && !b) return undefined
+  const byName = new Map<string, { name: string; description?: string }>()
+  for (const tag of [...(a ?? []), ...(b ?? [])]) {
+    if (!byName.has(tag.name)) byName.set(tag.name, tag)
+  }
+  return Array.from(byName.values())
+}
+
+/** Merge two JSON-Schema-shaped objects (used for message headers). Override wins. */
+function mergeSchema(
+  base?: Record<string, unknown>,
+  override?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  if (!base) return override
+  if (!override) return base
+  const result: Record<string, unknown> = { ...base, ...override }
+  const baseProps = base.properties as Record<string, unknown> | undefined
+  const overrideProps = override.properties as Record<string, unknown> | undefined
+  if (baseProps || overrideProps) {
+    result.properties = { ...(baseProps ?? {}), ...(overrideProps ?? {}) }
+  }
+  const required = Array.from(
+    new Set([...((base.required as string[]) ?? []), ...((override.required as string[]) ?? [])]),
+  )
+  if (required.length > 0) result.required = required
+  return result
+}
+
+/** Merge one message layer over a base; `override` wins on scalars. */
+function mergeMessageLayer(base: MessageObject, override: MessageObject): MessageObject {
+  const result: MessageObject = { ...base }
+  for (const [key, value] of Object.entries(override)) {
+    if (key === 'traits' || value === undefined) continue
+    if (key === 'tags') {
+      result.tags = unionTags(base.tags, value as TagList)
+    } else if (key === 'headers') {
+      result.headers = mergeSchema(base.headers, value as Record<string, unknown>)
+    } else if (key === 'examples') {
+      result.examples = [...(base.examples ?? []), ...(value as MessageObject['examples'] ?? [])]
+    } else if (key === 'bindings') {
+      result.bindings = { ...(base.bindings ?? {}), ...(value as Record<string, unknown>) }
+    } else {
+      ;(result as Record<string, unknown>)[key] = value
+    }
+  }
+  return result
+}
+
+/**
+ * Apply AsyncAPI message traits. Traits are folded in declaration order, then
+ * the message's own definition is folded last so it wins (per the AsyncAPI spec).
+ * $refs in `traits` are already inlined by resolveRefs.
+ */
+function applyMessageTraits(msg: MessageObject): MessageObject {
+  if (!msg.traits || msg.traits.length === 0) return msg
+  let acc: MessageObject = {}
+  for (const trait of msg.traits) acc = mergeMessageLayer(acc, trait)
+  return mergeMessageLayer(acc, msg)
+}
+
+/** Merge one operation layer over a base; `override` wins on scalars. */
+function mergeOperationLayer<T extends Record<string, unknown>>(base: T, override: T): T {
+  const result: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(override)) {
+    if (key === 'traits' || value === undefined) continue
+    if (key === 'tags') {
+      result.tags = unionTags(base.tags as TagList, value as TagList)
+    } else if (key === 'bindings') {
+      result.bindings = { ...(base.bindings as Record<string, unknown> ?? {}), ...(value as Record<string, unknown>) }
+    } else {
+      result[key] = value
+    }
+  }
+  return result as T
+}
+
+/**
+ * Apply AsyncAPI operation traits. Same fold-then-own-wins semantics as messages.
+ * Preserves operation-shape keys (action, channel, message) since the operation
+ * itself is folded last.
+ */
+function applyOperationTraits<T extends { traits?: Array<Partial<T>> }>(op: T): T {
+  if (!op.traits || op.traits.length === 0) return op
+  let acc = {} as T
+  for (const trait of op.traits) acc = mergeOperationLayer(acc, trait as T)
+  return mergeOperationLayer(acc, op)
 }
 
 export async function parseAsyncApiSpec(specInput: string | Record<string, unknown>): Promise<ParsedAsyncApiSpec> {
@@ -93,8 +193,14 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   const majorVersion = parseInt(api.asyncapi.split('.')[0], 10)
   const isV3 = majorVersion >= 3
 
-  const servers = extractServers(api)
-  const channels = isV3 ? extractChannelsV3(api) : extractChannelsV2(api)
+  const servers = extractServers(api, raw as unknown as AsyncApiDocument)
+  // `raw` still holds the original `$ref` pointers (resolveRefs returns a fresh
+  // tree and never mutates its input). 3.x wires operations to channels via
+  // `channel: { $ref: '#/channels/...' }`, and once resolveRefs inlines that
+  // ref the pointer is gone — so channel attachment must read the name from the
+  // pre-resolution document.
+  const rawApi = raw as unknown as AsyncApiDocument
+  const channels = isV3 ? extractChannelsV3(api, rawApi) : extractChannelsV2(api)
   const components = extractComponents(api)
 
   const root = api as unknown as Record<string, unknown>
@@ -127,22 +233,10 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   }
 }
 
-function extractServers(api: AsyncApiDocument): AsyncApiServer[] {
+function extractServers(api: AsyncApiDocument, rawApi: AsyncApiDocument): AsyncApiServer[] {
   if (!api.servers) return []
 
-  if (Array.isArray(api.servers)) {
-    return api.servers.map((s, idx) => ({
-      name: s.name ?? `server-${idx}`,
-      url: s.host ? `${s.protocol}://${s.host}${s.pathname ?? ''}` : s.url ?? '',
-      protocol: s.protocol,
-      protocolVersion: s.protocolVersion,
-      description: s.description,
-      variables: s.variables,
-      security: s.security,
-    }))
-  }
-
-  return Object.entries(api.servers).map(([name, s]) => ({
+  const toServer = (s: ServerObject, name: string, rawSecurity?: unknown[]): AsyncApiServer => ({
     name,
     url: s.host ? `${s.protocol}://${s.host}${s.pathname ?? ''}` : s.url ?? '',
     protocol: s.protocol,
@@ -150,7 +244,17 @@ function extractServers(api: AsyncApiDocument): AsyncApiServer[] {
     description: s.description,
     variables: s.variables,
     security: s.security,
-  }))
+    securityNames: deriveSecurityNames(rawSecurity, s.security),
+    bindings: s.bindings,
+  })
+
+  if (Array.isArray(api.servers)) {
+    const rawServers = Array.isArray(rawApi.servers) ? rawApi.servers : []
+    return api.servers.map((s, idx) => toServer(s, s.name ?? `server-${idx}`, rawServers[idx]?.security))
+  }
+
+  const rawServers = (!Array.isArray(rawApi.servers) && rawApi.servers) || {}
+  return Object.entries(api.servers).map(([name, s]) => toServer(s, name, rawServers[name]?.security))
 }
 
 function extractChannelsV2(api: AsyncApiDocument): AsyncApiChannel[] {
@@ -180,14 +284,17 @@ function extractChannelsV2(api: AsyncApiDocument): AsyncApiChannel[] {
   })
 }
 
-function convertOperationV2(action: 'publish' | 'subscribe', op: OperationObjectV2): AsyncApiOperation {
-  let message: AsyncApiMessage | undefined
+function convertOperationV2(action: 'publish' | 'subscribe', rawOp: OperationObjectV2): AsyncApiOperation {
+  const op = applyOperationTraits(rawOp)
+  const messages: AsyncApiMessage[] = []
 
   if (op.message) {
     if ('oneOf' in op.message) {
-      message = convertMessage(op.message.oneOf[0])
+      for (const m of op.message.oneOf) {
+        messages.push(convertMessage(m))
+      }
     } else {
-      message = convertMessage(op.message as MessageObject)
+      messages.push(convertMessage(op.message as MessageObject))
     }
   }
 
@@ -198,25 +305,66 @@ function convertOperationV2(action: 'publish' | 'subscribe', op: OperationObject
     operationId: op.operationId,
     summary: op.summary,
     description: op.description,
-    message,
+    messages,
+    message: messages[0],
     tags: op.tags,
     bindings: op.bindings,
+    securityNames: deriveSecurityNames(undefined, op.security),
     xBadges: raw['x-badges'] as AsyncApiOperation['xBadges'],
     xInternal: raw['x-internal'] as boolean | undefined,
   }
 }
 
-function extractChannelsV3(api: AsyncApiDocument): AsyncApiChannel[] {
+/**
+ * Extract the channel name a `channel:` reference points at.
+ *
+ * In a resolved document the `$ref` is gone, so we prefer the raw (pre-resolution)
+ * value which still holds `{ $ref: '#/channels/<name>' }`. Falls back to a
+ * still-present `$ref`, then to matching the resolved channel's `address`.
+ */
+function resolveChannelName(
+  rawChannel: OperationObjectV3['channel'] | undefined,
+  resolvedChannel: OperationObjectV3['channel'] | undefined,
+  addressToName: Map<string, string>,
+): string | undefined {
+  const refString =
+    rawChannel && typeof rawChannel === 'object' && '$ref' in rawChannel && typeof rawChannel.$ref === 'string'
+      ? rawChannel.$ref
+      : resolvedChannel && typeof resolvedChannel === 'object' && '$ref' in resolvedChannel && typeof resolvedChannel.$ref === 'string'
+        ? resolvedChannel.$ref
+        : undefined
+
+  if (refString) {
+    // e.g. "#/channels/userSignedUp" -> "userSignedUp". Decode JSON-pointer
+    // escapes (`~1`→`/`, `~0`→`~`, percent-encoding) so the name matches the
+    // channel key exactly as lookupRef resolved it.
+    const last = refString.split('/').pop()
+    return last !== undefined ? decodeJsonPointerSegment(last) : undefined
+  }
+
+  // The ref was inlined without a $ref surviving; match on the channel address.
+  const address = (resolvedChannel as ChannelObject | undefined)?.address
+  if (address && addressToName.has(address)) {
+    return addressToName.get(address)
+  }
+
+  return undefined
+}
+
+function extractChannelsV3(api: AsyncApiDocument, rawApi: AsyncApiDocument): AsyncApiChannel[] {
   if (!api.channels) return []
 
   const channelMap = new Map<string, AsyncApiChannel>()
+  const addressToName = new Map<string, string>()
 
   // First, register all channels
   for (const [channelName, ch] of Object.entries(api.channels)) {
     const raw = ch as Record<string, unknown>
+    const address = ch.address ?? channelName
+    addressToName.set(address, channelName)
     channelMap.set(channelName, {
       name: channelName,
-      address: ch.address ?? channelName,
+      address,
       description: ch.description,
       operations: [],
       parameters: ch.parameters,
@@ -227,31 +375,38 @@ function extractChannelsV3(api: AsyncApiDocument): AsyncApiChannel[] {
 
   // Then attach operations to channels
   if (api.operations) {
-    for (const [, op] of Object.entries(api.operations)) {
-      const channelRef = op.channel
-      let channelName: string | undefined
+    for (const [opKey, resolvedOp] of Object.entries(api.operations)) {
+      const op = applyOperationTraits(resolvedOp)
+      const rawOp = rawApi.operations?.[opKey]
+      const channelName = resolveChannelName(rawOp?.channel, op.channel, addressToName)
 
-      if (channelRef && '$ref' in channelRef && typeof channelRef.$ref === 'string') {
-        // e.g. "#/channels/userSignedUp" -> "userSignedUp"
-        channelName = channelRef.$ref.split('/').pop()
-      }
-
-      const messages: AsyncApiMessage[] = []
-      if (op.messages) {
-        for (const msg of op.messages) {
-          if ('$ref' in msg) continue
-          messages.push(convertMessage(msg as MessageObject))
+      const collectMessages = (list?: Array<{ $ref?: string } | MessageObject>): AsyncApiMessage[] => {
+        const out: AsyncApiMessage[] = []
+        for (const msg of list ?? []) {
+          // After resolveRefs a successfully-resolved message has no `$ref` (its
+          // siblings are merged over the target). A surviving `$ref` means the
+          // ref was unresolvable, or circular (`{ $ref, x-circular }`) — skip it
+          // rather than emit an empty message, regardless of sibling keys.
+          if (msg && typeof msg === 'object' && '$ref' in msg) continue
+          out.push(convertMessage(msg as MessageObject))
         }
+        return out
       }
+
+      const messages = collectMessages(op.messages)
+      const replyMessages = collectMessages(op.reply?.messages)
 
       const raw = op as unknown as Record<string, unknown>
       const operation: AsyncApiOperation = {
         action: op.action,
         summary: op.summary,
         description: op.description,
+        messages,
         message: messages[0],
         tags: op.tags,
         bindings: op.bindings,
+        securityNames: deriveSecurityNames(rawOp?.security, op.security),
+        reply: replyMessages.length > 0 ? { messages: replyMessages } : undefined,
         xBadges: raw['x-badges'] as AsyncApiOperation['xBadges'],
         xInternal: raw['x-internal'] as boolean | undefined,
       }
@@ -267,13 +422,15 @@ function extractChannelsV3(api: AsyncApiDocument): AsyncApiChannel[] {
   return Array.from(channelMap.values())
 }
 
-function convertMessage(msg: MessageObject): AsyncApiMessage {
+function convertMessage(rawMsg: MessageObject): AsyncApiMessage {
+  const msg = applyMessageTraits(rawMsg)
   return {
     name: msg.name,
     title: msg.title,
     summary: msg.summary,
     description: msg.description,
     contentType: msg.contentType,
+    schemaFormat: msg.schemaFormat,
     payload: msg.payload,
     headers: msg.headers,
     correlationId: msg.correlationId,
@@ -284,10 +441,51 @@ function convertMessage(msg: MessageObject): AsyncApiMessage {
 }
 
 function extractComponents(api: AsyncApiDocument): AsyncApiComponents {
+  const components = api.components as Record<string, unknown> | undefined
+
+  // Run component messages through convertMessage() — the same path channel
+  // messages take — so trait-merging, schemaFormat, examples, etc. apply in the
+  // browsable Messages section too, not only inside ChannelDetail.
+  const rawMessages = (api.components?.messages ?? {}) as Record<string, MessageObject>
+  const messages: Record<string, AsyncApiMessage> = {}
+  for (const [name, msg] of Object.entries(rawMessages)) {
+    messages[name] = convertMessage(msg)
+  }
+
   return {
     schemas: (api.components?.schemas ?? {}) as Record<string, Record<string, unknown>>,
-    messages: (api.components?.messages ?? {}) as Record<string, AsyncApiMessage>,
+    messages,
+    securitySchemes: (components?.securitySchemes ?? {}) as AsyncApiComponents['securitySchemes'],
   }
+}
+
+/**
+ * Derive the security-scheme names for a `security` requirement list, covering:
+ * - 2.x requirement maps `{ schemeName: scopes }` → the map keys;
+ * - 3.x `$ref` entries (resolveRefs inlines them, so read the ref from `raw`);
+ * - 3.x inline scheme objects → the scheme `type` as a fallback label.
+ */
+function deriveSecurityNames(raw?: unknown[], resolved?: unknown[]): string[] | undefined {
+  const rawArr = raw ?? []
+  const resArr = resolved ?? []
+  const count = Math.max(rawArr.length, resArr.length)
+  if (count === 0) return undefined
+
+  const names: string[] = []
+  for (let i = 0; i < count; i++) {
+    const rawEntry = rawArr[i] as Record<string, unknown> | undefined
+    const resEntry = resArr[i] as Record<string, unknown> | undefined
+    if (rawEntry && typeof rawEntry === 'object' && typeof rawEntry.$ref === 'string') {
+      names.push(decodeJsonPointerSegment(rawEntry.$ref.split('/').pop() as string))
+    } else if (resEntry && typeof resEntry === 'object') {
+      if (typeof resEntry.type === 'string') {
+        names.push(resEntry.type)
+      } else {
+        names.push(...Object.keys(resEntry))
+      }
+    }
+  }
+  return names.length > 0 ? names : undefined
 }
 
 function parseSpecString(input: string): Record<string, unknown> {
