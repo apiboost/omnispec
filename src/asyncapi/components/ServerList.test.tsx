@@ -85,10 +85,24 @@ describe('ServerList', () => {
         name: 'production',
         url: 'mqtt://broker.example.com',
         protocol: 'mqtt',
-        securityNames: ['userPass'],
+        securityRequirements: [[{ name: 'userPass', scopes: [] }]],
       },
     ]
     render(<ServerList servers={servers} />)
     expect(screen.getByText('userPass')).toBeInTheDocument()
+  })
+
+  it('renders server oauth2 security scopes', () => {
+    const servers: AsyncApiServer[] = [
+      {
+        name: 'production',
+        url: 'mqtt://broker.example.com',
+        protocol: 'mqtt',
+        securityRequirements: [[{ name: 'oauth2Auth', scopes: ['read', 'write'] }]],
+      },
+    ]
+    render(<ServerList servers={servers} />)
+    const link = screen.getByRole('link', { name: /oauth2Auth/ })
+    expect(link).toHaveTextContent('read, write')
   })
 })
