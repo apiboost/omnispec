@@ -209,7 +209,7 @@ describe('ChannelDetail message rendering', () => {
         {
           action: 'send',
           operationId: 'sendOrder',
-          securityNames: ['oauth2Scheme'],
+          securityRequirements: [[{ name: 'oauth2Scheme', scopes: [] }]],
           messages: [{ name: 'Order', payload: { type: 'object' } }],
         },
       ],
@@ -236,5 +236,145 @@ describe('ChannelDetail message rendering', () => {
     // Both message names must be reachable — the second is not silently dropped.
     expect(screen.getByText('OrderCreated')).toBeInTheDocument()
     expect(screen.getByText('OrderCancelled')).toBeInTheDocument()
+  })
+
+  // ABOSPEC-46: 3.x operations carry operationId AND title AND summary; all appear.
+  it('shows the 3.x operationId, title, and summary together', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'sendOrder',
+          title: 'Send Order',
+          summary: 'Places a new order',
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('sendOrder')).toBeInTheDocument()
+    expect(screen.getByText('Send Order')).toBeInTheDocument()
+    expect(screen.getByText('Places a new order')).toBeInTheDocument()
+  })
+
+  // ABOSPEC-46: Reply address (location + description) and channelName render.
+  it('renders the reply address location, description, and channel name', () => {
+    const channel: AsyncApiChannel = {
+      name: 'ping',
+      address: 'ping',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'ping',
+          messages: [{ name: 'Ping', payload: { type: 'object' } }],
+          reply: {
+            messages: [{ name: 'Pong', payload: { type: 'object' } }],
+            address: { location: '$message.header#/replyTo', description: 'Where the reply goes' },
+            channelName: 'pong-channel',
+          },
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('$message.header#/replyTo')).toBeInTheDocument()
+    expect(screen.getByText('Where the reply goes')).toBeInTheDocument()
+    expect(screen.getByText(/pong-channel/)).toBeInTheDocument()
+  })
+
+  // ABOSPEC-45: filterable tag chips.
+  it('renders operation tag chips as buttons that call onTagClick when the prop is given', () => {
+    const channel: AsyncApiChannel = {
+      name: 'order-events',
+      address: 'order-events',
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          tags: [{ name: 'orders' }, { name: 'alerts' }],
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    const clicked: string[] = []
+    render(
+      <ConfigProvider config={{ defaultExpandOperations: true }}>
+        <ChannelDetail channel={channel} expandAll onTagClick={(name) => clicked.push(name)} />
+      </ConfigProvider>,
+    )
+    const ordersChip = screen.getByRole('button', { name: 'orders' })
+    fireEvent.click(ordersChip)
+    expect(clicked).toEqual(['orders'])
+  })
+
+  it('renders operation tag chips as static (non-button) when onTagClick is absent', () => {
+    const channel: AsyncApiChannel = {
+      name: 'order-events',
+      address: 'order-events',
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          tags: [{ name: 'orders' }],
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('orders')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'orders' })).toBeNull()
+  })
+
+  // ABOSPEC-53: operation externalDocs.
+  it('renders operation externalDocs', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'sendOrder',
+          externalDocs: { description: 'Operation guide', url: 'https://example.com/op' },
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    const link = screen.getByRole('link', { name: /sendOrder external docs/i })
+    expect(link).toHaveAttribute('href', 'https://example.com/op')
+  })
+
+  // ABOSPEC-53: channel externalDocs (3.x).
+  it('renders channel externalDocs', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      externalDocs: { description: 'Channel guide', url: 'https://example.com/channel' },
+      operations: [],
+    }
+    renderChannel(channel)
+    const link = screen.getByRole('link', { name: /orders external docs/i })
+    expect(link).toHaveAttribute('href', 'https://example.com/channel')
+  })
+
+  // ABOSPEC-52: operation security via the requirements API.
+  it('renders operation-level security requirements with scopes', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'sendOrder',
+          securityRequirements: [[{ name: 'oauth2Scheme', scopes: ['orders:write'] }]],
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    const link = screen.getByRole('link', { name: /oauth2Scheme/ })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveTextContent('orders:write')
   })
 })
