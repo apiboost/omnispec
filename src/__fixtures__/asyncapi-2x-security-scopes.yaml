@@ -1,0 +1,38 @@
+asyncapi: '2.6.0'
+info:
+  title: Security Scopes 2.x
+  version: 1.0.0
+servers:
+  prod:
+    url: mqtt://broker.example.com
+    protocol: mqtt
+    security:
+      - oauth2:
+          - read
+          - write
+channels:
+  admin/actions:
+    publish:
+      operationId: doAdmin
+      security:
+        - oauth2:
+            - admin
+          apiKey: []
+      message:
+        payload:
+          type: object
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/token
+          scopes:
+            read: Read access
+            write: Write access
+            admin: Admin access
+    apiKey:
+      type: httpApiKey
+      name: X-Api-Key
+      in: header

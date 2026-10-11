@@ -33,9 +33,14 @@ function slugify(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tag'
 }
 
-/** The set of tag names carried by a channel's operations. */
+/**
+ * The set of tag names a channel groups under: the channel's own (3.x) tags plus
+ * every tag carried by its operations. A channel tagged only at the channel level
+ * (untagged operations) still groups correctly.
+ */
 export function channelTagNames(channel: AsyncApiChannel): string[] {
   const names = new Set<string>()
+  for (const tag of channel.tags ?? []) names.add(tag.name)
   for (const op of channel.operations) {
     for (const tag of op.tags ?? []) names.add(tag.name)
   }

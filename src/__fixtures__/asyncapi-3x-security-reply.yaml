@@ -1,0 +1,64 @@
+asyncapi: '3.0.0'
+info:
+  title: Security Scopes and Reply 3.x
+  version: 1.0.0
+defaultContentType: application/json
+servers:
+  prod:
+    host: broker.example.com
+    protocol: mqtt
+    security:
+      - $ref: '#/components/securitySchemes/oauth2'
+        scopes:
+          - read
+          - write
+channels:
+  requests:
+    address: requests
+    messages:
+      Ping:
+        $ref: '#/components/messages/Ping'
+  responses:
+    address: responses
+    messages:
+      Pong:
+        $ref: '#/components/messages/Pong'
+operations:
+  askQuestion:
+    action: send
+    channel:
+      $ref: '#/channels/requests'
+    security:
+      - $ref: '#/components/securitySchemes/oauth2'
+        scopes:
+          - admin
+    messages:
+      - $ref: '#/channels/requests/messages/Ping'
+    reply:
+      address:
+        location: '$message.header#/replyTo'
+        description: Where to send the reply
+      channel:
+        $ref: '#/channels/responses'
+      messages:
+        - $ref: '#/channels/responses/messages/Pong'
+components:
+  messages:
+    Ping:
+      name: Ping
+      payload:
+        type: object
+    Pong:
+      name: Pong
+      payload:
+        type: object
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/token
+          scopes:
+            read: Read
+            write: Write
+            admin: Admin
