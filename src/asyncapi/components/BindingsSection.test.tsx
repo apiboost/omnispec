@@ -52,4 +52,64 @@ describe('BindingsSection', () => {
     expect(screen.getByText('WS')).toBeInTheDocument()
     expect(screen.getByText('GET')).toBeInTheDocument()
   })
+
+  it('renders a Kafka topicConfiguration object as nested rows, not raw JSON', () => {
+    render(
+      <BindingsSection
+        bindings={{
+          kafka: {
+            topic: 'orders',
+            topicConfiguration: {
+              cleanupPolicy: 'delete',
+              retentionMs: 604800000,
+            },
+            bindingVersion: '0.4.0',
+          },
+        }}
+      />,
+    )
+    expect(screen.getByText('Topic Configuration')).toBeInTheDocument()
+    expect(screen.getByText('Cleanup Policy')).toBeInTheDocument()
+    expect(screen.getByText('delete')).toBeInTheDocument()
+    expect(screen.queryByText(/\{"cleanupPolicy"/)).toBeNull()
+  })
+
+  it('renders a WebSocket query JSON schema as a schema table', () => {
+    render(
+      <BindingsSection
+        bindings={{
+          ws: {
+            method: 'GET',
+            query: {
+              type: 'object',
+              properties: {
+                token: { type: 'string', description: 'Auth token' },
+              },
+            },
+          },
+        }}
+      />,
+    )
+    expect(screen.getByText('Query')).toBeInTheDocument()
+    expect(screen.getByText('token')).toBeInTheDocument()
+    expect(screen.getByText('Auth token')).toBeInTheDocument()
+  })
+
+  it('renders AMQP cc array as comma-separated values', () => {
+    render(
+      <BindingsSection
+        bindings={{ amqp: { cc: ['orders.audit'], bcc: ['orders.log', 'orders.err'] } }}
+      />,
+    )
+    expect(screen.getByText('orders.audit')).toBeInTheDocument()
+    expect(screen.getByText('orders.log, orders.err')).toBeInTheDocument()
+  })
+
+  it('keeps x- extension field labels literal', () => {
+    render(
+      <BindingsSection bindings={{ ws: { 'x-subprotocol': 'graphql-ws' } }} />,
+    )
+    expect(screen.getByText('x-subprotocol')).toBeInTheDocument()
+    expect(screen.queryByText('X subprotocol')).toBeNull()
+  })
 })
