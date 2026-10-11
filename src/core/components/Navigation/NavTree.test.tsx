@@ -69,7 +69,7 @@ describe('NavTree mobile-drawer dismissal', () => {
   })
 })
 
-describe('NavTree collapsible-group a11y (ABOSPEC-54)', () => {
+describe('NavTree collapsible-group a11y', () => {
   it('exposes aria-expanded on collapsible group toggles and updates it on toggle', () => {
     const { getByRole } = render(<NavTree items={items} onSelect={vi.fn()} />)
     const group = getByRole('button', { name: 'Pets' })

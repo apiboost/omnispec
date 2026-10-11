@@ -154,7 +154,7 @@ export function AsyncApiSpec({
 
     const channelNavItem = (ch: typeof filteredChannels[number], idPrefix: string): NavItem => {
       // Dedupe actions so a channel with two same-action operations shows one
-      // badge (e.g. `RECEIVE`, not `RECEIVE/RECEIVE`) — ABOSPEC-46.
+      // badge (e.g. `RECEIVE`, not `RECEIVE/RECEIVE`).
       const uniqueActions = [...new Set(ch.operations.map((op) => actionLabel(op.action)))]
       return {
         id: `${idPrefix}channel-${ch.name}`,
@@ -199,7 +199,7 @@ export function AsyncApiSpec({
 
     // When a search filters every channel out, don't leave a bare empty
     // "Channels" parent — surface a non-navigating "No results" affordance
-    // instead (ABOSPEC-54). If the spec genuinely has no channels, omit the
+    // instead. If the spec genuinely has no channels, omit the
     // group entirely rather than show a misleading "No results".
     const searchedToEmpty = channelChildren.length === 0 && searchQuery.trim().length > 0
     const channelsChildren: NavItem[] = searchedToEmpty

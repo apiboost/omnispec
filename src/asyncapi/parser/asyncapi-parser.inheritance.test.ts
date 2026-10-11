@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseAsyncApiSpec } from './asyncapi-parser'
 
-// ABOSPEC-46: per the AsyncAPI 3.0 spec, when a 3.x operation omits `messages`
+// per the AsyncAPI 3.0 spec, when a 3.x operation omits `messages`
 // it applies to ALL of its channel's messages — not none.
 describe('AsyncAPI 3.x operation message inheritance', () => {
   const channel = {
@@ -53,7 +53,7 @@ describe('AsyncAPI 3.x operation message inheritance', () => {
   })
 })
 
-// ABOSPEC-46: an operation referencing a channel that isn't defined must not
+// an operation referencing a channel that isn't defined must not
 // silently vanish — it's surfaced under a synthetic "Unassigned" group.
 describe('AsyncAPI 3.x operations referencing a missing channel', () => {
   it('surfaces the operation under an Unassigned group instead of dropping it', async () => {

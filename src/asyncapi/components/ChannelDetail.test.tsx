@@ -238,7 +238,7 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('OrderCancelled')).toBeInTheDocument()
   })
 
-  // ABOSPEC-46: 3.x operations carry operationId AND title AND summary; all appear.
+  // 3.x operations carry operationId AND title AND summary; all appear.
   it('shows the 3.x operationId, title, and summary together', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',
@@ -259,7 +259,7 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText('Places a new order')).toBeInTheDocument()
   })
 
-  // ABOSPEC-46: Reply address (location + description) and channelName render.
+  // Reply address (location + description) and channelName render.
   it('renders the reply address location, description, and channel name', () => {
     const channel: AsyncApiChannel = {
       name: 'ping',
@@ -283,7 +283,7 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText(/pong-channel/)).toBeInTheDocument()
   })
 
-  // ABOSPEC-45: filterable tag chips.
+  // filterable tag chips.
   it('renders operation tag chips as buttons that call onTagClick when the prop is given', () => {
     const channel: AsyncApiChannel = {
       name: 'order-events',
@@ -326,7 +326,7 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.queryByRole('button', { name: 'orders' })).toBeNull()
   })
 
-  // ABOSPEC-53: operation externalDocs.
+  // operation externalDocs.
   it('renders operation externalDocs', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',
@@ -345,7 +345,7 @@ describe('ChannelDetail message rendering', () => {
     expect(link).toHaveAttribute('href', 'https://example.com/op')
   })
 
-  // ABOSPEC-53: channel externalDocs (3.x).
+  // channel externalDocs (3.x).
   it('renders channel externalDocs', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',
@@ -358,7 +358,7 @@ describe('ChannelDetail message rendering', () => {
     expect(link).toHaveAttribute('href', 'https://example.com/channel')
   })
 
-  // ABOSPEC-52: operation security via the requirements API.
+  // operation security via the requirements API.
   it('renders operation-level security requirements with scopes', () => {
     const channel: AsyncApiChannel = {
       name: 'orders',

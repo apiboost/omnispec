@@ -15,7 +15,7 @@ import type { TagGroup } from '../tag-grouping'
 
 /**
  * Header shown above a tag group's channels: the tag label, a channel count, the
- * tag description, and its externalDocs link (ABOSPEC-51).
+ * tag description, and its externalDocs link.
  */
 export function TagGroupHeader({ group }: { group: TagGroup }) {
   return (

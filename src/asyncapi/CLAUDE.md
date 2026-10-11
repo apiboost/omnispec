@@ -90,7 +90,7 @@ Other message rendering:
 - **Traits** — message and operation traits are merged in the parser with **version-aware precedence** (per the AsyncAPI spec; JSON Merge Patch / RFC 7386):
   - **2.x — the trait wins.** Traits are applied as patches on top of the object in declaration order (base = object; later traits override earlier ones and the object).
   - **3.x — the object wins.** "A property on a trait MUST NOT override the same property on the target object." Traits fold first, the object is applied last.
-  - `tags` **replace** (not union) following the per-version rule; `externalDocs` is carried through as a normal mergeable field; `headers`/`examples`/`bindings` stay composite-merged. The version is threaded into the merge via `isV3`. **Do not revert this to a blanket object-wins — it is spec-wrong for 2.x** (ABOSPEC-48/50).
+  - `tags` **replace** (not union) following the per-version rule; `externalDocs` is carried through as a normal mergeable field; `headers`/`examples`/`bindings` stay composite-merged. The version is threaded into the merge via `isV3`. **Do not revert this to a blanket object-wins — it is spec-wrong for 2.x**.
 - **Tags** — a message's tags (own or trait-provided) render as chips on the message.
 - **externalDocs** — root, tag, channel (3.x), operation, and message `externalDocs` all render via the shared `ExternalDocsLink` (↗ icon, `target="_blank"`, accessible "<context> external docs, opens in new tab" label). Extraction is version-agnostic; it renders wherever the data is present.
 - `contentType`, `correlationId`, and headers-schema render on each message. When a message omits `contentType`, the parser fills it from the document-root `defaultContentType` (then `application/json`) and flags `contentTypeInherited` so the UI can mark it `(default)`. In the browsable components Messages view, headers render under an explicit **"Headers"** label. An unresolvable `$ref` payload renders a visible "Unresolved reference" notice rather than an empty schema.
@@ -102,7 +102,7 @@ Other message rendering:
 
 3.x `operation.reply` is parsed onto `AsyncApiOperation.reply` (`{ messages, address?: { location?, description? }, channelName? }`) and rendered in a "Reply" section on the operation — the reply messages, the reply **address** (fixed or dynamic/runtime-expression `location`), and the reply channel. 3.x operations also surface their `operationId` (the operations-map key) and `title`, matching 2.x.
 
-A 3.x operation whose `channel` `$ref` can't be resolved (an invalid document) is **not silently dropped** — it's collected under a synthetic `__unassigned__` channel ("Unassigned operations") so it stays visible (ABOSPEC-46).
+A 3.x operation whose `channel` `$ref` can't be resolved (an invalid document) is **not silently dropped** — it's collected under a synthetic `__unassigned__` channel ("Unassigned operations") so it stays visible.
 
 ---
 
@@ -111,13 +111,13 @@ A 3.x operation whose `channel` `$ref` can't be resolved (an invalid document) i
 AsyncAPI honors the global `displayMode` (via `useConfig()`, same as OpenAPI):
 
 - **`compact`** (default) — single-column channel/operation cards (`ChannelDetail`).
-- **`reference`** — three-panel layout (`ChannelReferenceDetail` composing the shared `@core/components/Reference/ReferenceLayout`): operation detail in the main column, the message **payload schema + example in the right "Samples" column**, and reply messages. This mirrors the OpenAPI reference layout so a portal set to reference mode renders AsyncAPI docs consistently (ABOSPEC-54).
+- **`reference`** — three-panel layout (`ChannelReferenceDetail` composing the shared `@core/components/Reference/ReferenceLayout`): operation detail in the main column, the message **payload schema + example in the right "Samples" column**, and reply messages. This mirrors the OpenAPI reference layout so a portal set to reference mode renders AsyncAPI docs consistently.
 
 Reference mode is the AsyncAPI analogue of OpenAPI's — the samples column shows message payloads/examples (AsyncAPI has no request/response pair, so there is no Try-It column; see below).
 
 ## Accessibility
 
-The mobile nav drawer (core `DocLayout`) moves focus into the drawer on open and restores it on close, and its trigger exposes `aria-expanded`/`aria-haspopup`. Collapsible sidebar group toggles (core `NavTree`) expose `aria-expanded`. These live in `core/` so every renderer benefits (ABOSPEC-54).
+The mobile nav drawer (core `DocLayout`) moves focus into the drawer on open and restores it on close, and its trigger exposes `aria-expanded`/`aria-haspopup`. Collapsible sidebar group toggles (core `NavTree`) expose `aria-expanded`. These live in `core/` so every renderer benefits.
 
 ## Try-It
 
@@ -142,7 +142,7 @@ The mobile nav drawer (core `DocLayout`) moves focus into the drawer on open and
 - **Test the rendered UI, not just the parser.** A field being present on the parsed
   model does not mean it reaches the screen — that gap (parser complete, render layer
   missing, docs describing it as done) is exactly what shipped broken and was caught
-  in QA (ABOSPEC-40 / ABOSPEC-45–53). Every renderable field must have a component
+  in QA. Every renderable field must have a component
   test asserting it appears in the DOM (see `ChannelDetail.test.tsx`,
   `BindingsSection.test.tsx`, `SecuritySchemesSection.test.tsx`).
 - Component tests wrap in `ConfigProvider`; set `defaultExpandOperations: true` so
@@ -151,4 +151,4 @@ The mobile nav drawer (core `DocLayout`) moves focus into the drawer on open and
 - Test fixtures live in `src/__fixtures__/`. When testing an advanced feature
   (bindings, security, traits, Avro, oneOf), add a fixture that actually exercises it —
   QA had to hand-author specs because the fixtures didn't cover these cases.
-- QA test scope: ABOSPEC-40 + sub-tasks (AsyncAPI-specific).
+- QA test scope: the AsyncAPI renderer (2.x and 3.x).

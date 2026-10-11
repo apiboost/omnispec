@@ -114,8 +114,8 @@ export function AuthPanel({ schemes, serverUrl }: AuthPanelProps) {
     )
   }
 
-  // The type label comes from the canonical map so casing is consistent
-  // (ABOSPEC-215). When more than one scheme shares a type, the per-scheme id
+  // The type label comes from the canonical map so casing is consistent.
+  // When more than one scheme shares a type, the per-scheme id
   // disambiguates them; a lone scheme of its type shows just the type label.
   const typeCounts = renderable.reduce<Record<string, number>>((acc, { scheme }) => {
     acc[scheme.type] = (acc[scheme.type] ?? 0) + 1

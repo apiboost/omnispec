@@ -20,7 +20,7 @@ function renderMessage(message: AsyncApiMessage) {
 }
 
 describe('MessagePayload', () => {
-  it('renders the message-level externalDocs link (ABOSPEC-53)', () => {
+  it('renders the message-level externalDocs link', () => {
     renderMessage({
       name: 'UserSignedUp',
       externalDocs: { url: 'https://docs.example.com/user-signed-up', description: 'Message docs' },
@@ -30,7 +30,7 @@ describe('MessagePayload', () => {
     expect(link).toHaveAttribute('href', 'https://docs.example.com/user-signed-up')
   })
 
-  it('renders message tags as chips (ABOSPEC-50)', () => {
+  it('renders message tags as chips', () => {
     renderMessage({
       name: 'UserSignedUp',
       tags: [{ name: 'user' }, { name: 'lifecycle' }],

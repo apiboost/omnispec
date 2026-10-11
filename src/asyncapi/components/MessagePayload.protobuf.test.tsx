@@ -15,7 +15,7 @@ import type { AsyncApiMessage } from '@asyncapi/types/asyncapi.types'
 
 afterEach(cleanup)
 
-// ABOSPEC-48: Protobuf payloads collapsed to the bare word "any". Full .proto
+// Protobuf payloads collapsed to the bare word "any". Full .proto
 // field-tree parsing is a Pro capability; Free must at least surface the raw
 // payload content rather than "any".
 describe('MessagePayload protobuf', () => {
