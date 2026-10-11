@@ -66,6 +66,21 @@ describe('FieldRows value rendering', () => {
     expect(screen.queryByText(/\{"cleanupPolicy"/)).toBeNull()
   })
 
+  it('renders a config object whose `type` is not a JSON-schema type as nested rows (AMQP exchange)', () => {
+    // AMQP exchange/queue config carries a `type` key (e.g. "topic"), which must
+    // NOT be mistaken for a JSON Schema and routed to the schema table.
+    render(
+      <FieldRows fields={[['exchange', { name: 'orders', type: 'topic', durable: true }]]} />,
+    )
+    expect(screen.getByText('Exchange')).toBeInTheDocument()
+    expect(screen.getByText('Name')).toBeInTheDocument()
+    expect(screen.getByText('orders')).toBeInTheDocument()
+    // Rendered as a nested row ("Durable" is a config key, not a schema keyword).
+    expect(screen.getByText('Durable')).toBeInTheDocument()
+    expect(screen.getByText('Type')).toBeInTheDocument()
+    expect(screen.getByText('topic')).toBeInTheDocument()
+  })
+
   it('renders nested x- extension keys literally inside a plain object', () => {
     render(
       <FieldRows
