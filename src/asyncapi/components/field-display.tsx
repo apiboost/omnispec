@@ -38,8 +38,23 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * table; plain config objects (Kafka `topicConfiguration`, AMQP
  * `queue`/`exchange`) read best as nested labelled rows.
  */
+const JSON_SCHEMA_TYPES = new Set([
+  'string', 'number', 'integer', 'boolean', 'object', 'array', 'null',
+])
+
+/** True when `type` names a JSON-schema type (not e.g. an AMQP exchange "topic"). */
+function hasSchemaType(value: Record<string, unknown>): boolean {
+  const t = value.type
+  if (typeof t === 'string') return JSON_SCHEMA_TYPES.has(t)
+  if (Array.isArray(t)) return t.every((x) => typeof x === 'string' && JSON_SCHEMA_TYPES.has(x))
+  return false
+}
+
 function isJsonSchema(value: Record<string, unknown>): boolean {
-  return 'type' in value || 'properties' in value || 'enum' in value
+  // `properties`/`enum`/`items` are unambiguous schema keywords. A bare `type`
+  // only counts when its value is an actual JSON-schema type — config objects
+  // like AMQP `exchange`/`queue` also carry a `type` (e.g. "topic"/"fanout").
+  return 'properties' in value || 'enum' in value || 'items' in value || hasSchemaType(value)
 }
 
 /** Arrays whose every element is a scalar (string/number/boolean/null). */
