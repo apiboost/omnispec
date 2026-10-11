@@ -10,6 +10,7 @@
 
 import { css } from '@core/styles/css'
 import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
+import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 import type { TagGroup } from '../tag-grouping'
 
 /**
@@ -29,15 +30,9 @@ export function TagGroupHeader({ group }: { group: TagGroup }) {
         </div>
       )}
       {group.tag?.externalDocs && (
-        <a
-          href={group.tag.externalDocs.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={docsStyle}
-        >
-          {group.tag.externalDocs.description ?? 'External docs'}
-          <span aria-hidden="true"> &#8599;</span>
-        </a>
+        <div className={docsStyle}>
+          <ExternalDocsLink externalDocs={group.tag.externalDocs} context={group.label} />
+        </div>
       )}
     </div>
   )
@@ -77,14 +72,5 @@ const descStyle = css({
 })
 
 const docsStyle = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.25rem',
   marginTop: '0.5rem',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-link)',
-  textDecoration: 'none',
-  '&:hover': {
-    textDecoration: 'underline',
-  },
 })
