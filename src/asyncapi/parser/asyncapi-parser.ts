@@ -414,6 +414,7 @@ function extractChannelsV3(
   }
 
   // Then attach operations to channels
+  const orphanOperations: AsyncApiOperation[] = []
   if (api.operations) {
     for (const [opKey, resolvedOp] of Object.entries(api.operations)) {
       const op = applyOperationTraits(resolvedOp, true)
@@ -433,7 +434,16 @@ function extractChannelsV3(
         return out
       }
 
-      const messages = collectMessages(op.messages)
+      let messages = collectMessages(op.messages)
+      // Per the AsyncAPI 3.0 spec, an operation that declares no `messages`
+      // applies to ALL of its channel's messages (not none) (ABOSPEC-46).
+      if (messages.length === 0 && channelName && api.channels?.[channelName]?.messages) {
+        messages = collectMessages(
+          Object.values(api.channels[channelName].messages as Record<string, unknown>) as Array<
+            { $ref?: string } | MessageObject
+          >,
+        )
+      }
       const replyMessages = collectMessages(op.reply?.messages)
       // The reply `channel` $ref tail (prefer the pre-resolution raw pointer).
       const rawReplyChannel = (rawOp?.reply as { channel?: unknown } | undefined)?.channel as
@@ -478,11 +488,25 @@ function extractChannelsV3(
 
       if (channelName && channelMap.has(channelName)) {
         channelMap.get(channelName)!.operations.push(operation)
+      } else {
+        // The operation references a channel that isn't defined in this
+        // document (an invalid spec). Surface it under a synthetic group
+        // rather than silently dropping it (ABOSPEC-46).
+        orphanOperations.push(operation)
       }
     }
   }
 
-  return Array.from(channelMap.values())
+  const channels = Array.from(channelMap.values())
+  if (orphanOperations.length > 0) {
+    channels.push({
+      name: '__unassigned__',
+      address: 'Unassigned operations',
+      description: 'These operations reference a channel that is not defined in this document.',
+      operations: orphanOperations,
+    })
+  }
+  return channels
 }
 
 function convertMessage(
