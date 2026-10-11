@@ -31,7 +31,7 @@ const spec = {
   },
 }
 
-describe('AsyncApiSpec sidebar empty-search state (ABOSPEC-54)', () => {
+describe('AsyncApiSpec sidebar empty-search state', () => {
   it('shows a "No results" affordance instead of a bare empty Channels node when a search matches nothing', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} />)
     const nav = await screen.findByRole('navigation')
@@ -52,7 +52,7 @@ describe('AsyncApiSpec sidebar empty-search state (ABOSPEC-54)', () => {
   })
 })
 
-describe('AsyncApiSpec sidebar action-badge dedupe (ABOSPEC-46)', () => {
+describe('AsyncApiSpec sidebar action-badge dedupe', () => {
   it('shows a single action badge when a channel has two same-action operations', async () => {
     const dupeSpec = {
       asyncapi: '3.0.0',
@@ -72,7 +72,7 @@ describe('AsyncApiSpec sidebar action-badge dedupe (ABOSPEC-46)', () => {
   })
 })
 
-describe('AsyncApiSpec tag chip click filters (ABOSPEC-45)', () => {
+describe('AsyncApiSpec tag chip click filters', () => {
   it('filters the list to the clicked tag', async () => {
     const taggedSpec = {
       asyncapi: '2.6.0',

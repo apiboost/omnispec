@@ -67,7 +67,7 @@ function PayloadBody({
   idx: string | number
 }) {
   // An unresolvable $ref survives resolution as a bare `{ $ref }` — surface it
-  // rather than rendering an empty/misleading schema (ABOSPEC-50).
+  // rather than rendering an empty/misleading schema.
   if (typeof rawPayload.$ref === 'string') {
     return (
       <div className={unresolvedRefStyle} role="alert">
@@ -81,7 +81,7 @@ function PayloadBody({
 
   // Protobuf: full `.proto` field-tree parsing is a Pro capability; the free core
   // surfaces the raw payload content as a code block rather than collapsing it to
-  // the bare type word "any" (ABOSPEC-48).
+  // the bare type word "any".
   if (format === 'protobuf') {
     return (
       <div>

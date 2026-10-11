@@ -18,7 +18,7 @@ interface ExternalDocsLinkProps {
    * A short name for the thing these docs belong to (tag, operation, message, or
    * "API"). Used only to disambiguate the accessible label — several
    * "External docs" links on one page are indistinguishable to a screen reader
-   * otherwise (ABOSPEC-53).
+   * otherwise.
    */
   context?: string
   className?: string

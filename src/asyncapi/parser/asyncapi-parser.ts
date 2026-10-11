@@ -436,7 +436,7 @@ function extractChannelsV3(
 
       let messages = collectMessages(op.messages)
       // Per the AsyncAPI 3.0 spec, an operation that declares no `messages`
-      // applies to ALL of its channel's messages (not none) (ABOSPEC-46).
+      // applies to ALL of its channel's messages (not none).
       if (messages.length === 0 && channelName && api.channels?.[channelName]?.messages) {
         messages = collectMessages(
           Object.values(api.channels[channelName].messages as Record<string, unknown>) as Array<
@@ -491,7 +491,7 @@ function extractChannelsV3(
       } else {
         // The operation references a channel that isn't defined in this
         // document (an invalid spec). Surface it under a synthetic group
-        // rather than silently dropping it (ABOSPEC-46).
+        // rather than silently dropping it.
         orphanOperations.push(operation)
       }
     }

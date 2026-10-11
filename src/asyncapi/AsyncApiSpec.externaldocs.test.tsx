@@ -18,7 +18,7 @@ beforeAll(() => {
 
 afterEach(cleanup)
 
-// End-to-end regression for ABOSPEC-53: root externalDocs must render for a 3.x
+// End-to-end regression for root externalDocs must render for a 3.x
 // document, through the full parser -> AsyncOverview -> ExternalDocsLink path
 // (QA reported 3.x root externalDocs did not appear). Operations-as-first-class
 // 3.x shape is used deliberately.

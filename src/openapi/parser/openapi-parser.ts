@@ -95,7 +95,7 @@ interface SecuritySchemeObject {
     tokenUrl?: string
     refreshUrl?: string
     scopes?: Record<string, string>
-    /** OmniSpec `x-flowVariables` — URL templating variables for this flow (ABOSPEC-221). */
+    /** OmniSpec `x-flowVariables` — URL templating variables for this flow. */
     'x-flowVariables'?: Record<string, { default: string; enum?: string[]; description?: string }>
   }>
   /** Preselects the token-endpoint client-authentication method for confidential clients. */

@@ -55,7 +55,7 @@ describe('ComponentsSection', () => {
     expect(screen.getByText('UserSignedUp')).toBeInTheDocument()
   })
 
-  it('shows a "Headers" label before the headers schema (ABOSPEC-50)', () => {
+  it('shows a "Headers" label before the headers schema', () => {
     const components: AsyncApiComponents = {
       schemas: {},
       securitySchemes: {},
@@ -71,7 +71,7 @@ describe('ComponentsSection', () => {
     expect(screen.getByText('Headers')).toBeInTheDocument()
   })
 
-  it('displays an inherited contentType (ABOSPEC-48)', () => {
+  it('displays an inherited contentType', () => {
     const components: AsyncApiComponents = {
       schemas: {},
       securitySchemes: {},
