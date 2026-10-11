@@ -133,6 +133,9 @@ function NavTreeItem({ item, activeId, onSelect, depth, parentToggleOnly }: NavT
       <button
         type="button"
         onClick={handleClick}
+        // Collapsible group toggles expose their expanded state to assistive
+        // tech; leaf items (no children) are plain actions with no state.
+        aria-expanded={hasChildren ? expanded : undefined}
         className={cx(
           css({
             ...itemBaseStyles,

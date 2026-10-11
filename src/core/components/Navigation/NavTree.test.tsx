@@ -68,3 +68,19 @@ describe('NavTree mobile-drawer dismissal', () => {
     expect(onSelect).toHaveBeenCalledWith('about')
   })
 })
+
+describe('NavTree collapsible-group a11y (ABOSPEC-54)', () => {
+  it('exposes aria-expanded on collapsible group toggles and updates it on toggle', () => {
+    const { getByRole } = render(<NavTree items={items} onSelect={vi.fn()} />)
+    const group = getByRole('button', { name: 'Pets' })
+    // Groups are expanded by default.
+    expect(group).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(group)
+    expect(group).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('does not put aria-expanded on leaf items (they do not expand)', () => {
+    const { getByRole } = render(<NavTree items={items} onSelect={vi.fn()} />)
+    expect(getByRole('button', { name: 'About' })).not.toHaveAttribute('aria-expanded')
+  })
+})
