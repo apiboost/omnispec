@@ -20,6 +20,7 @@ import { ExpandableCard } from '@core/components/common/ExpandableCard'
 import { MethodBar } from '@core/components/common/MethodBar'
 import { BindingsSection } from './BindingsSection'
 import { SecurityRequirementBadges } from './SecurityRequirementBadges'
+import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 import { MessagePayload } from './MessagePayload'
 
 interface ChannelDetailProps {
@@ -27,6 +28,11 @@ interface ChannelDetailProps {
   id?: string
   expandAll?: boolean
   expandGeneration?: number
+  /**
+   * When provided, operation tag chips become buttons that invoke this with the
+   * tag name (e.g. to filter the spec by tag). When absent, chips render static.
+   */
+  onTagClick?: (tagName: string) => void
 }
 
 const actionLabels: Record<string, string> = {
@@ -43,7 +49,7 @@ const actionColors: Record<string, string> = {
   receive: 'var(--omnispec-color-subscribe)',
 }
 
-export function ChannelDetail({ channel, id, expandAll, expandGeneration }: ChannelDetailProps) {
+export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick }: ChannelDetailProps) {
   const primaryAction = channel.operations[0]?.action
   const primaryLabel = actionLabels[primaryAction] ?? primaryAction?.toUpperCase() ?? ''
   const primaryColor = actionColors[primaryAction] ?? 'var(--omnispec-fg-muted)'
@@ -64,6 +70,13 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
         {channel.description && (
           <div className={sectionStyle}>
             <MarkdownRenderer content={channel.description} />
+          </div>
+        )}
+
+        {/* Channel-level external documentation (3.x) */}
+        {channel.externalDocs && (
+          <div className={sectionStyle}>
+            <ExternalDocsLink externalDocs={channel.externalDocs} context={channel.address} />
           </div>
         )}
 
@@ -122,14 +135,27 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
                 {actionLabels[op.action] ?? op.action.toUpperCase()}
               </span>
               {op.operationId && <span className={opIdStyle}>{op.operationId}</span>}
+              {op.title && <span className={opTitleStyle}>{op.title}</span>}
               {op.summary && <span className={opSummaryStyle}>{op.summary}</span>}
             </div>
 
             {op.tags && op.tags.length > 0 && (
               <div className={tagChipsStyle}>
-                {op.tags.map((tag) => (
-                  <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
-                ))}
+                {op.tags.map((tag) =>
+                  onTagClick ? (
+                    <button
+                      key={tag.name}
+                      type="button"
+                      className={tagChipButtonStyle}
+                      title={tag.description}
+                      onClick={() => onTagClick(tag.name)}
+                    >
+                      {tag.name}
+                    </button>
+                  ) : (
+                    <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
+                  ),
+                )}
               </div>
             )}
 
@@ -139,13 +165,39 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration }: Chan
               </div>
             )}
 
-            <SecurityRequirementBadges names={op.securityNames} />
+            {op.externalDocs && (
+              <div className={opExternalDocsStyle}>
+                <ExternalDocsLink
+                  externalDocs={op.externalDocs}
+                  context={op.operationId ?? op.summary ?? 'operation'}
+                />
+              </div>
+            )}
+
+            <SecurityRequirementBadges requirements={op.securityRequirements ?? []} />
 
             <OperationMessages operation={op} idx={idx} />
 
-            {op.reply && op.reply.messages.length > 0 && (
+            {op.reply && (op.reply.messages.length > 0 || op.reply.address || op.reply.channelName) && (
               <div className={replyStyle}>
                 <h4 className={replyTitleStyle}>Reply</h4>
+                {op.reply.channelName && (
+                  <div className={replyMetaRowStyle}>
+                    <span className={replyMetaLabelStyle}>channel</span>
+                    <code className={replyMetaValueStyle}>{op.reply.channelName}</code>
+                  </div>
+                )}
+                {op.reply.address && (op.reply.address.location || op.reply.address.description) && (
+                  <div className={replyMetaRowStyle}>
+                    <span className={replyMetaLabelStyle}>address</span>
+                    {op.reply.address.location && (
+                      <code className={replyMetaValueStyle}>{op.reply.address.location}</code>
+                    )}
+                    {op.reply.address.description && (
+                      <span className={replyMetaDescStyle}>{op.reply.address.description}</span>
+                    )}
+                  </div>
+                )}
                 {op.reply.messages.map((replyMsg, i) => (
                   <MessageView key={i} message={replyMsg} idx={`${idx}-reply-${i}`} />
                 ))}
@@ -329,9 +381,19 @@ const opIdStyle = css({
   padding: 0,
 })
 
+const opTitleStyle = css({
+  fontSize: 'var(--omnispec-font-size-sm)',
+  fontWeight: 600,
+  color: 'var(--omnispec-fg-primary)',
+})
+
 const opSummaryStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
+})
+
+const opExternalDocsStyle = css({
+  marginBottom: '0.75rem',
 })
 
 const messageTitleStyle = css({
@@ -434,6 +496,35 @@ const replyTitleStyle = css({
   letterSpacing: '0.02em',
 })
 
+const replyMetaRowStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  flexWrap: 'wrap',
+  marginBottom: '0.5rem',
+})
+
+const replyMetaLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-primary)',
+  fontFamily: 'var(--omnispec-font-mono)',
+})
+
+const replyMetaValueStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-code)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 0.375rem',
+  borderRadius: '0.1875rem',
+})
+
+const replyMetaDescStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-secondary)',
+})
+
 const tagChipsStyle = css({
   display: 'flex',
   flexWrap: 'wrap',
@@ -448,4 +539,18 @@ const tagChipStyle = css({
   backgroundColor: 'var(--omnispec-bg-tertiary)',
   padding: '1px 0.5rem',
   borderRadius: '0.625rem',
+})
+
+const tagChipButtonStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 0.5rem',
+  borderRadius: '0.625rem',
+  border: 'none',
+  cursor: 'pointer',
+  '&:hover': {
+    color: 'var(--omnispec-fg-primary)',
+  },
 })
