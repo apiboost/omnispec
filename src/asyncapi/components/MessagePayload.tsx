@@ -18,6 +18,7 @@ import { Icon } from '@core/components/common/Icon'
 import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
 import type { AsyncApiMessage } from '@asyncapi/types/asyncapi.types'
 import { avroToJsonSchema, detectSchemaFormat } from '@asyncapi/schema-formats'
+import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 
 /**
  * Renders a message payload as Schema + Example tabs. Avro payloads are
@@ -31,6 +32,21 @@ export function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx
 
   return (
     <>
+      {message.tags && message.tags.length > 0 && (
+        <div className={tagChipsStyle}>
+          {message.tags.map((tag) => (
+            <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
+          ))}
+        </div>
+      )}
+      {message.externalDocs && (
+        <div className={externalDocsStyle}>
+          <ExternalDocsLink
+            externalDocs={message.externalDocs}
+            context={message.name ?? message.title ?? 'message'}
+          />
+        </div>
+      )}
       {message.schemaFormat && (
         <span className={schemaFormatBadgeStyle}>{message.schemaFormat}</span>
       )}
@@ -111,6 +127,26 @@ function MessageExample({ message, schema }: { message: AsyncApiMessage; schema?
     </>
   )
 }
+
+const tagChipsStyle = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.25rem',
+  marginBottom: '0.5rem',
+})
+
+const tagChipStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 0.5rem',
+  borderRadius: '0.625rem',
+})
+
+const externalDocsStyle = css({
+  marginBottom: '0.5rem',
+})
 
 const schemaFormatBadgeStyle = css({
   display: 'inline-block',
