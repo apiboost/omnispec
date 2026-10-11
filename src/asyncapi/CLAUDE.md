@@ -85,7 +85,7 @@ Multiple payload schema formats are valid in AsyncAPI:
 
 Other message rendering:
 
-- **Multiple messages** — an operation's `oneOf` (2.x) / `messages` array (3.x) are all kept (`AsyncApiOperation.messages[]`); a selector switches between them.
+- **Multiple messages** — an operation's `oneOf` (2.x) / `messages` array (3.x) are all kept (`AsyncApiOperation.messages[]`); a selector switches between them. Per the 3.0 spec, a 3.x operation that declares **no** `messages` inherits **all** of its channel's messages (not none) — `extractChannelsV3` falls back to the referenced channel's `messages`.
 - **Examples** — the message's declared `examples` render (with a selector for named examples), falling back to a synthesized example only when none are declared.
 - **Traits** — message and operation traits are merged in the parser with **version-aware precedence** (per the AsyncAPI spec; JSON Merge Patch / RFC 7386):
   - **2.x — the trait wins.** Traits are applied as patches on top of the object in declaration order (base = object; later traits override earlier ones and the object).
@@ -94,13 +94,15 @@ Other message rendering:
 - **Tags** — a message's tags (own or trait-provided) render as chips on the message.
 - **externalDocs** — root, tag, channel (3.x), operation, and message `externalDocs` all render via the shared `ExternalDocsLink` (↗ icon, `target="_blank"`, accessible "<context> external docs, opens in new tab" label). Extraction is version-agnostic; it renders wherever the data is present.
 - `contentType`, `correlationId`, and headers-schema render on each message. When a message omits `contentType`, the parser fills it from the document-root `defaultContentType` (then `application/json`) and flags `contentTypeInherited` so the UI can mark it `(default)`. In the browsable components Messages view, headers render under an explicit **"Headers"** label. An unresolvable `$ref` payload renders a visible "Unresolved reference" notice rather than an empty schema.
-- **Protobuf** full `.proto` field-tree parsing is a **Pro** capability (gRPC/Protobuf + `protobufjs` live in `@apiboost/omnispec-pro`); Free renders the payload's structured content and does not pull in a protobuf parser.
+- **Protobuf** full `.proto` field-tree parsing is a **Pro** capability (gRPC/Protobuf + `protobufjs` live in `@apiboost/omnispec-pro`). The free core renders the raw payload in a code block (with a "full Protobuf rendering in Pro" note) rather than collapsing it to the bare type word `any` — it does not pull in a protobuf parser.
 
 ---
 
 ## Request-Reply (3.x)
 
 3.x `operation.reply` is parsed onto `AsyncApiOperation.reply` (`{ messages, address?: { location?, description? }, channelName? }`) and rendered in a "Reply" section on the operation — the reply messages, the reply **address** (fixed or dynamic/runtime-expression `location`), and the reply channel. 3.x operations also surface their `operationId` (the operations-map key) and `title`, matching 2.x.
+
+A 3.x operation whose `channel` `$ref` can't be resolved (an invalid document) is **not silently dropped** — it's collected under a synthetic `__unassigned__` channel ("Unassigned operations") so it stays visible (ABOSPEC-46).
 
 ---
 
