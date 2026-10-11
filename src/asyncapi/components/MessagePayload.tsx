@@ -77,7 +77,21 @@ function PayloadBody({
     )
   }
 
-  const schema = detectSchemaFormat(schemaFormat) === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
+  const format = detectSchemaFormat(schemaFormat)
+
+  // Protobuf: full `.proto` field-tree parsing is a Pro capability; the free core
+  // surfaces the raw payload content as a code block rather than collapsing it to
+  // the bare type word "any" (ABOSPEC-48).
+  if (format === 'protobuf') {
+    return (
+      <div>
+        <CodeBlock code={JSON.stringify(rawPayload, null, 2)} language="json" />
+        <p className={proNoteStyle}>Full Protobuf schema rendering is available in Pro.</p>
+      </div>
+    )
+  }
+
+  const schema = format === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
 
   return (
     <Tabs
@@ -157,6 +171,13 @@ const schemaFormatBadgeStyle = css({
   padding: '0.0625rem 0.375rem',
   borderRadius: 'var(--omnispec-border-radius)',
   marginBottom: '0.5rem',
+})
+
+const proNoteStyle = css({
+  margin: '0.375rem 0 0',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  color: 'var(--omnispec-fg-muted)',
+  fontStyle: 'italic',
 })
 
 const unresolvedRefStyle = css({
