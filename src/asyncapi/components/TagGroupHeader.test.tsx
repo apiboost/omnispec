@@ -15,7 +15,7 @@ import { TagGroupHeader } from './TagGroupHeader'
 afterEach(cleanup)
 
 describe('TagGroupHeader', () => {
-  it('renders the tag label, description, and externalDocs link', () => {
+  it('renders the tag label, description, and externalDocs via ExternalDocsLink', () => {
     render(
       <TagGroupHeader
         group={{
@@ -32,8 +32,35 @@ describe('TagGroupHeader', () => {
     )
     expect(screen.getByText('orders')).toBeInTheDocument()
     expect(screen.getByText('Everything about orders')).toBeInTheDocument()
-    const link = screen.getByRole('link', { name: /order docs/i })
+    // ExternalDocsLink derives the accessible name from the group label + "opens in new tab".
+    const link = screen.getByRole('link', { name: /orders external docs, opens in new tab/i })
     expect(link).toHaveAttribute('href', 'https://example.com/orders')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(screen.getByText('Order docs')).toBeInTheDocument()
+    // The ↗ external-link icon comes from ExternalDocsLink's <Icon>.
+    expect(link.querySelector('svg')).toBeTruthy()
+  })
+
+  it('renders both description and externalDocs for a 3.x-style tag (no version suppression)', () => {
+    render(
+      <TagGroupHeader
+        group={{
+          id: 'accounts',
+          label: 'accounts',
+          tag: {
+            name: 'accounts',
+            description: 'Account lifecycle events',
+            externalDocs: { url: 'https://example.com/accounts' },
+          },
+          channels: [],
+        }}
+      />,
+    )
+    expect(screen.getByText('Account lifecycle events')).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /accounts external docs, opens in new tab/i })
+    expect(link).toHaveAttribute('href', 'https://example.com/accounts')
+    // No description on externalDocs → falls back to "External docs".
+    expect(screen.getByText('External docs')).toBeInTheDocument()
   })
 
   it('renders without a description or docs for the untagged group', () => {
