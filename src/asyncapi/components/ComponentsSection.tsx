@@ -39,10 +39,20 @@ export function ComponentsSection({ components }: ComponentsSectionProps) {
                 >
                   {message.title && <p className={messageSummaryStyle}>{message.title}</p>}
                   {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
-                  {message.contentType && <code className={contentTypeStyle}>{message.contentType}</code>}
+                  {message.contentType && (
+                    <code className={contentTypeStyle}>
+                      {message.contentType}
+                      {message.contentTypeInherited && (
+                        <span className={contentTypeHintStyle}> (default)</span>
+                      )}
+                    </code>
+                  )}
                   <MessagePayload message={message} idx={`message-${name}`} />
                   {message.headers && (
-                    <SchemaTree nodes={schemaToNodes(message.headers as Record<string, unknown>)} />
+                    <div className={headersWrapStyle}>
+                      <h4 className={headersTitleStyle}>Headers</h4>
+                      <SchemaTree nodes={schemaToNodes(message.headers as Record<string, unknown>)} />
+                    </div>
                   )}
                 </Collapsible>
               </div>
@@ -124,4 +134,21 @@ const contentTypeStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-muted)',
   marginBottom: '0.5rem',
+})
+
+const contentTypeHintStyle = css({
+  fontStyle: 'italic',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const headersWrapStyle = css({
+  marginTop: '1rem',
+})
+
+const headersTitleStyle = css({
+  margin: '0 0 0.75rem',
+  fontSize: 'var(--omnispec-font-size-md)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-primary)',
+  letterSpacing: '0.02em',
 })
