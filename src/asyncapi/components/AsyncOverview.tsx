@@ -8,9 +8,10 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { css, cx } from '../../core/styles/css'
+import { css, cx } from '@core/styles/css'
 import type { ParsedAsyncApiSpec } from '../types/asyncapi.types'
-import { MarkdownRenderer } from '../../core/components/MarkdownRenderer'
+import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
+import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 
 interface AsyncOverviewProps {
   spec: ParsedAsyncApiSpec
@@ -95,9 +96,7 @@ export function AsyncOverview({ spec }: AsyncOverviewProps) {
 
       {spec.externalDocs && (
         <div className={metaStyle}>
-          <a href={spec.externalDocs.url} target="_blank" rel="noopener noreferrer" className={linkStyle}>
-            {spec.externalDocs.description ?? 'External Documentation'}
-          </a>
+          <ExternalDocsLink externalDocs={spec.externalDocs} context={spec.title ?? 'API'} />
         </div>
       )}
     </div>

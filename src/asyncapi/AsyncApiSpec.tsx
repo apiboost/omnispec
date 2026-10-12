@@ -33,6 +33,7 @@ import { useAsyncApiSpec } from './hooks/useAsyncApiSpec'
 import { AsyncOverview } from './components/AsyncOverview'
 import { ServerList } from './components/ServerList'
 import { ChannelDetail } from './components/ChannelDetail'
+import { ChannelReferenceDetail } from './components/ChannelReferenceDetail'
 import { ComponentsSection } from './components/ComponentsSection'
 import { SecuritySchemesSection } from './components/SecuritySchemesSection'
 import { groupChannelsByTag, hasAnyTags, type TagGroup } from './tag-grouping'
@@ -45,6 +46,7 @@ export function AsyncApiSpec({
   layout = 'sidebar',
   sidebarPosition = 'left',
   defaultExpandOperations = false,
+  displayMode,
   downloadLink,
   sidebarNav,
   slots = {},
@@ -54,6 +56,9 @@ export function AsyncApiSpec({
   className,
 }: BaseSpecProps) {
   const resolvedSchemaStyle = resolveSchemaStyle(schemaStyle, pro?.advancedSchemaStyles ?? false)
+  // Match OpenApiSpec: `reference` switches to the three-panel layout; anything
+  // else (including unset) stays compact single-column.
+  const resolvedDisplayMode = displayMode ?? 'compact'
   const { data: parsedSpec, state } = useAsyncApiSpec(spec)
   const [searchQuery, setSearchQuery] = useState('')
   const [allExpanded, setAllExpanded] = useState(defaultExpandOperations)
@@ -147,12 +152,17 @@ export function AsyncApiSpec({
         ? 'var(--omnispec-color-subscribe)'
         : 'var(--omnispec-color-publish)'
 
-    const channelNavItem = (ch: typeof filteredChannels[number], idPrefix: string): NavItem => ({
-      id: `${idPrefix}channel-${ch.name}`,
-      label: ch.address,
-      badge: ch.operations.map((op) => actionLabel(op.action)).join('/') || undefined,
-      badgeColor: actionColor(ch.operations[0]?.action ?? ''),
-    })
+    const channelNavItem = (ch: typeof filteredChannels[number], idPrefix: string): NavItem => {
+      // Dedupe actions so a channel with two same-action operations shows one
+      // badge (e.g. `RECEIVE`, not `RECEIVE/RECEIVE`).
+      const uniqueActions = [...new Set(ch.operations.map((op) => actionLabel(op.action)))]
+      return {
+        id: `${idPrefix}channel-${ch.name}`,
+        label: ch.address,
+        badge: uniqueActions.join('/') || undefined,
+        badgeColor: actionColor(ch.operations[0]?.action ?? ''),
+      }
+    }
 
     // Operation-first index: one entry per operation. The id is the operation's
     // real DOM anchor so scroll-spy can highlight it (finding 2).
@@ -187,11 +197,22 @@ export function AsyncApiSpec({
       items.push({ id: 'servers', label: 'Servers' })
     }
 
-    items.push({
-      id: 'channels',
-      label: navGrouping === 'operation' ? 'Operations' : 'Channels',
-      children: channelChildren,
-    })
+    // When a search filters every channel out, don't leave a bare empty
+    // "Channels" parent — surface a non-navigating "No results" affordance
+    // instead. If the spec genuinely has no channels, omit the
+    // group entirely rather than show a misleading "No results".
+    const searchedToEmpty = channelChildren.length === 0 && searchQuery.trim().length > 0
+    const channelsChildren: NavItem[] = searchedToEmpty
+      ? [{ id: 'channels-no-results', label: 'No results', className: noResultsNavStyle }]
+      : channelChildren
+
+    if (channelsChildren.length > 0) {
+      items.push({
+        id: 'channels',
+        label: navGrouping === 'operation' ? 'Operations' : 'Channels',
+        children: channelsChildren,
+      })
+    }
 
     if (Object.keys(parsedSpec.components.messages ?? {}).length > 0) {
       items.push({
@@ -220,7 +241,7 @@ export function AsyncApiSpec({
     }
 
     return items
-  }, [parsedSpec, grouped, tagGroups, filteredChannels, navGrouping, operationDomId])
+  }, [parsedSpec, grouped, tagGroups, filteredChannels, navGrouping, operationDomId, searchQuery])
 
   const { navigateTo } = useHashScroll(filteredChannels.length)
 
@@ -311,7 +332,7 @@ export function AsyncApiSpec({
   const resolvedDownloadLink = resolveDownloadLink(downloadLink, spec)
 
   return (
-    <ConfigProvider config={{ allowTryIt: false, layout, sidebarPosition, defaultExpandOperations, schemaStyle: resolvedSchemaStyle, slots, proRenderers: pro?.renderers ?? new Map(), premiumThemingEnabled: pro?.premiumThemingEnabled ?? false }}>
+    <ConfigProvider config={{ allowTryIt: false, layout, sidebarPosition, defaultExpandOperations, displayMode: resolvedDisplayMode, schemaStyle: resolvedSchemaStyle, slots, proRenderers: pro?.renderers ?? new Map(), premiumThemingEnabled: pro?.premiumThemingEnabled ?? false }}>
       <ExpandProvider expandAll={allExpanded} expandGeneration={expandGeneration}>
         <ThemeProvider theme={theme}>
           <div className={`omnispec-asyncapi ${className ?? ''}`}>
@@ -352,24 +373,28 @@ export function AsyncApiSpec({
                       <section key={group.id} id={`taggroup-${group.id}`} className={tagSectionStyle}>
                         <TagGroupHeader group={group} />
                         {group.channels.map((channel) => (
-                          <ChannelDetail
+                          <ChannelCard
                             key={`${group.id}-${channel.name}`}
                             id={`${group.id}-channel-${channel.name}`}
                             channel={channel}
+                            displayMode={resolvedDisplayMode}
                             expandAll={allExpanded}
                             expandGeneration={expandGeneration}
+                            onTagClick={setSearchQuery}
                           />
                         ))}
                       </section>
                     ))
                   ) : (
                     filteredChannels.map((channel) => (
-                      <ChannelDetail
+                      <ChannelCard
                         key={channel.name}
                         id={`channel-${channel.name}`}
                         channel={channel}
+                        displayMode={resolvedDisplayMode}
                         expandAll={allExpanded}
                         expandGeneration={expandGeneration}
+                        onTagClick={setSearchQuery}
                       />
                     ))
                   )}
@@ -384,6 +409,40 @@ export function AsyncApiSpec({
         </ThemeProvider>
       </ExpandProvider>
     </ConfigProvider>
+  )
+}
+
+/**
+ * Picks the channel renderer by display mode: the three-panel
+ * `ChannelReferenceDetail` for `reference`, the compact single-column
+ * `ChannelDetail` otherwise. Both accept the same props, so switching modes is a
+ * pure presentation change — anchors, expand state, and tag-click wiring carry
+ * over unchanged.
+ */
+function ChannelCard({
+  channel,
+  id,
+  displayMode,
+  expandAll,
+  expandGeneration,
+  onTagClick,
+}: {
+  channel: ParsedAsyncApiSpec['channels'][number]
+  id: string
+  displayMode: 'compact' | 'reference'
+  expandAll: boolean
+  expandGeneration: number
+  onTagClick: (tagName: string) => void
+}) {
+  const Renderer = displayMode === 'reference' ? ChannelReferenceDetail : ChannelDetail
+  return (
+    <Renderer
+      id={id}
+      channel={channel}
+      expandAll={expandAll}
+      expandGeneration={expandGeneration}
+      onTagClick={onTagClick}
+    />
   )
 }
 
@@ -426,6 +485,12 @@ const emptyStateStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
   fontStyle: 'italic',
+})
+
+const noResultsNavStyle = css({
+  fontStyle: 'italic',
+  color: 'var(--omnispec-fg-muted)',
+  cursor: 'default',
 })
 
 const groupToggleStyle = css({

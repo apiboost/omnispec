@@ -65,13 +65,13 @@ Server-level bindings are parsed in `extractServers` (they were previously dropp
 ## Security
 
 - `components.securitySchemes` is parsed into the model and rendered by `SecuritySchemesSection` — every scheme type is supported (apiKey, httpApiKey, http, oauth2 with flows + scopes, openIdConnect, userPassword, X509, symmetric/asymmetric encryption, scramSha256/512, gssapi, plain) via a generic type-badge + field-row renderer.
-- Server and 3.x operation `security` requirements render as lock badges that link to the schemes section. Scheme names are derived from 2.x requirement maps, 3.x `$ref`s (read from the pre-resolution raw doc), or an inline scheme's `type`.
+- Server and 2.x/3.x operation `security` requirements render as lock badges (`SecurityRequirementBadges`) that link to the schemes section. The parser captures the full requirement structure as `securityRequirements: AsyncApiSecurityRequirement[][]` (outer array = OR alternatives, inner = AND within an alternative), **including the required scopes per scheme** — 2.x from requirement-map values, 3.x from the entry's `scopes`. The badge shows each scheme name with its required scopes (`name · read, write`) and separates alternative requirements with an `OR` divider. (`securityNames: string[]` is retained for back-compat.) Scheme names are derived from 2.x requirement maps, 3.x `$ref`s (read from the pre-resolution raw doc), or an inline scheme's `type`.
 
 ---
 
 ## Tags & Grouping
 
-`tag-grouping.ts` groups channels by the tags their operations carry (declared-tag order first, then operation-only tags, then an **Untagged** bucket; a channel appears under each of its tags). When any channel is tagged, both the sidebar and the main content group by tag, with `TagGroupHeader` rendering the tag description and externalDocs. Operation tags render as chips. The sidebar is derived from the *filtered* channel set, so the filter input updates the sidebar, not just the content.
+`tag-grouping.ts` groups channels by the tags their operations carry **and the channel's own `tags` (3.x)** — `channelTagNames()` unions both, so a channel that is itself tagged groups correctly even when its operations are untagged. Grouping is declared-tag order first, then operation-only tags, then an **Untagged** bucket; a channel appears under each of its tags. When any channel is tagged, both the sidebar and the main content group by tag, with `TagGroupHeader` rendering the tag description and externalDocs (both render on data presence, 2.x and 3.x alike — never branch on version). Operation tags render as chips; the chips are **filterable** — clicking one filters the list to that tag (`ChannelDetail`'s `onTagClick` → `AsyncApiSpec`'s search filter). The sidebar is derived from the *filtered* channel set, so the filter input updates the sidebar, not just the content; a search matching nothing shows a "No results" affordance rather than an empty group heading.
 
 ---
 
@@ -85,22 +85,43 @@ Multiple payload schema formats are valid in AsyncAPI:
 
 Other message rendering:
 
-- **Multiple messages** — an operation's `oneOf` (2.x) / `messages` array (3.x) are all kept (`AsyncApiOperation.messages[]`); a selector switches between them.
+- **Multiple messages** — an operation's `oneOf` (2.x) / `messages` array (3.x) are all kept (`AsyncApiOperation.messages[]`); a selector switches between them. Per the 3.0 spec, a 3.x operation that declares **no** `messages` inherits **all** of its channel's messages (not none) — `extractChannelsV3` falls back to the referenced channel's `messages`.
 - **Examples** — the message's declared `examples` render (with a selector for named examples), falling back to a synthesized example only when none are declared.
-- **Traits** — message and operation traits are merged in the parser (declaration order, own definition wins; tags unioned, headers/bindings merged).
-- `contentType`, `correlationId`, and headers-schema render on each message. An unresolvable `$ref` payload renders a visible "Unresolved reference" notice rather than an empty schema.
+- **Traits** — message and operation traits are merged in the parser with **version-aware precedence** (per the AsyncAPI spec; JSON Merge Patch / RFC 7386):
+  - **2.x — the trait wins.** Traits are applied as patches on top of the object in declaration order (base = object; later traits override earlier ones and the object).
+  - **3.x — the object wins.** "A property on a trait MUST NOT override the same property on the target object." Traits fold first, the object is applied last.
+  - `tags` **replace** (not union) following the per-version rule; `externalDocs` is carried through as a normal mergeable field; `headers`/`examples`/`bindings` stay composite-merged. The version is threaded into the merge via `isV3`. **Do not revert this to a blanket object-wins — it is spec-wrong for 2.x**.
+- **Tags** — a message's tags (own or trait-provided) render as chips on the message.
+- **externalDocs** — root, tag, channel (3.x), operation, and message `externalDocs` all render via the shared `ExternalDocsLink` (↗ icon, `target="_blank"`, accessible "<context> external docs, opens in new tab" label). Extraction is version-agnostic; it renders wherever the data is present.
+- `contentType`, `correlationId`, and headers-schema render on each message. When a message omits `contentType`, the parser fills it from the document-root `defaultContentType` (then `application/json`) and flags `contentTypeInherited` so the UI can mark it `(default)`. In the browsable components Messages view, headers render under an explicit **"Headers"** label. An unresolvable `$ref` payload renders a visible "Unresolved reference" notice rather than an empty schema.
+- **Protobuf** full `.proto` field-tree parsing is a **Pro** capability (gRPC/Protobuf + `protobufjs` live in `@apiboost/omnispec-pro`). The free core renders the raw payload in a code block (with a "full Protobuf rendering in Pro" note) rather than collapsing it to the bare type word `any` — it does not pull in a protobuf parser.
 
 ---
 
 ## Request-Reply (3.x)
 
-3.x `operation.reply.messages` are parsed onto `AsyncApiOperation.reply` and rendered in a "Reply" section on the operation.
+3.x `operation.reply` is parsed onto `AsyncApiOperation.reply` (`{ messages, address?: { location?, description? }, channelName? }`) and rendered in a "Reply" section on the operation — the reply messages, the reply **address** (fixed or dynamic/runtime-expression `location`), and the reply channel. 3.x operations also surface their `operationId` (the operations-map key) and `title`, matching 2.x.
+
+A 3.x operation whose `channel` `$ref` can't be resolved (an invalid document) is **not silently dropped** — it's collected under a synthetic `__unassigned__` channel ("Unassigned operations") so it stays visible.
 
 ---
 
+## Display Modes
+
+AsyncAPI honors the global `displayMode` (via `useConfig()`, same as OpenAPI):
+
+- **`compact`** (default) — single-column channel/operation cards (`ChannelDetail`).
+- **`reference`** — three-panel layout (`ChannelReferenceDetail` composing the shared `@core/components/Reference/ReferenceLayout`): operation detail in the main column, the message **payload schema + example in the right "Samples" column**, and reply messages. This mirrors the OpenAPI reference layout so a portal set to reference mode renders AsyncAPI docs consistently.
+
+Reference mode is the AsyncAPI analogue of OpenAPI's — the samples column shows message payloads/examples (AsyncAPI has no request/response pair, so there is no Try-It column; see below).
+
+## Accessibility
+
+The mobile nav drawer (core `DocLayout`) moves focus into the drawer on open and restores it on close, and its trigger exposes `aria-expanded`/`aria-haspopup`. Collapsible sidebar group toggles (core `NavTree`) expose `aria-expanded`. These live in `core/` so every renderer benefits.
+
 ## Try-It
 
-**AsyncAPI Try-It is N/A** — protocols like MQTT and Kafka cannot be exercised from a browser. The renderer should not show a Try-It panel for AsyncAPI operations. Verify this is the case before shipping changes that touch the operation detail view.
+**AsyncAPI Try-It is N/A** — protocols like MQTT and Kafka cannot be exercised from a browser. The renderer should not show a Try-It panel for AsyncAPI operations (in reference mode the Try-It slot shows an "N/A for AsyncAPI protocols" note instead). Verify this is the case before shipping changes that touch the operation detail view.
 
 ---
 
@@ -121,7 +142,7 @@ Other message rendering:
 - **Test the rendered UI, not just the parser.** A field being present on the parsed
   model does not mean it reaches the screen — that gap (parser complete, render layer
   missing, docs describing it as done) is exactly what shipped broken and was caught
-  in QA (ABOSPEC-40 / ABOSPEC-45–53). Every renderable field must have a component
+  in QA. Every renderable field must have a component
   test asserting it appears in the DOM (see `ChannelDetail.test.tsx`,
   `BindingsSection.test.tsx`, `SecuritySchemesSection.test.tsx`).
 - Component tests wrap in `ConfigProvider`; set `defaultExpandOperations: true` so
@@ -130,4 +151,4 @@ Other message rendering:
 - Test fixtures live in `src/__fixtures__/`. When testing an advanced feature
   (bindings, security, traits, Avro, oneOf), add a fixture that actually exercises it —
   QA had to hand-author specs because the fixtures didn't cover these cases.
-- QA test scope: ABOSPEC-40 + sub-tasks (AsyncAPI-specific).
+- QA test scope: the AsyncAPI renderer (2.x and 3.x).

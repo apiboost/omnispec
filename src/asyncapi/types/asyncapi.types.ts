@@ -8,6 +8,16 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
+export interface AsyncApiExternalDocs {
+  description?: string
+  url: string
+}
+
+export interface AsyncApiSecurityRequirement {
+  name: string
+  scopes: string[]
+}
+
 export interface ParsedAsyncApiSpec {
   title: string
   description?: string
@@ -16,13 +26,15 @@ export interface ParsedAsyncApiSpec {
   servers: AsyncApiServer[]
   channels: AsyncApiChannel[]
   components: AsyncApiComponents
-  tags?: Array<{ name: string; description?: string; displayName?: string; externalDocs?: { description?: string; url: string } }>
+  tags?: Array<{ name: string; description?: string; displayName?: string; externalDocs?: AsyncApiExternalDocs }>
   tagGroups?: Array<{ name: string; tags: string[] }>
-  externalDocs?: { description?: string; url: string }
+  externalDocs?: AsyncApiExternalDocs
   contact?: { name?: string; url?: string; email?: string }
   license?: { name: string; url?: string }
   termsOfService?: string
   logo?: { url: string; backgroundColor?: string; altText?: string; href?: string }
+  /** Document-root `defaultContentType`, inherited by messages without their own. */
+  defaultContentType?: string
 }
 
 export interface AsyncApiServer {
@@ -35,6 +47,11 @@ export interface AsyncApiServer {
   security?: Record<string, string[]>[]
   /** Names of security schemes referenced by this server. */
   securityNames?: string[]
+  /**
+   * Full security requirements with per-requirement scopes. Outer array = OR
+   * alternatives; inner array = AND within an alternative.
+   */
+  securityRequirements?: AsyncApiSecurityRequirement[][]
   bindings?: Record<string, unknown>
 }
 
@@ -45,6 +62,8 @@ export interface AsyncApiChannel {
   operations: AsyncApiOperation[]
   parameters?: Record<string, AsyncApiChannelParameter>
   bindings?: Record<string, unknown>
+  externalDocs?: AsyncApiExternalDocs
+  tags?: Array<{ name: string; description?: string }>
   xInternal?: boolean
 }
 
@@ -57,6 +76,7 @@ export interface AsyncApiChannelParameter {
 export interface AsyncApiOperation {
   action: 'send' | 'receive' | 'publish' | 'subscribe'
   operationId?: string
+  title?: string
   summary?: string
   description?: string
   /**
@@ -68,10 +88,20 @@ export interface AsyncApiOperation {
   message?: AsyncApiMessage
   tags?: Array<{ name: string; description?: string }>
   bindings?: Record<string, unknown>
+  externalDocs?: AsyncApiExternalDocs
   /** Names of security schemes required by this operation (OR semantics). */
   securityNames?: string[]
+  /**
+   * Full security requirements with per-requirement scopes. Outer array = OR
+   * alternatives; inner array = AND within an alternative.
+   */
+  securityRequirements?: AsyncApiSecurityRequirement[][]
   /** AsyncAPI 3.x request-reply: the message(s) sent back in response. */
-  reply?: { messages: AsyncApiMessage[] }
+  reply?: {
+    messages: AsyncApiMessage[]
+    address?: { location?: string; description?: string }
+    channelName?: string
+  }
   xBadges?: Array<{ name: string; color?: string; position?: 'before' | 'after' }>
   xInternal?: boolean
 }
@@ -89,6 +119,9 @@ export interface AsyncApiMessage {
   tags?: Array<{ name: string; description?: string }>
   examples?: Array<{ name?: string; summary?: string; payload?: unknown; headers?: unknown }>
   bindings?: Record<string, unknown>
+  externalDocs?: AsyncApiExternalDocs
+  /** True when `contentType` was inherited from the document default, not declared. */
+  contentTypeInherited?: boolean
 }
 
 export interface AsyncApiOAuthFlow {

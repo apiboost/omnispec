@@ -1,0 +1,93 @@
+asyncapi: '3.0.0'
+info:
+  title: Trait Precedence 3.x
+  version: 1.0.0
+defaultContentType: application/cloudevents+json
+externalDocs:
+  description: Root docs 3x
+  url: https://example.com/root-3x
+tags:
+  - name: accounts
+    description: Account events
+    externalDocs:
+      description: Accounts docs
+      url: https://example.com/accounts
+channels:
+  userSignedUp:
+    address: user/signedup
+    description: User signed up channel
+    externalDocs:
+      description: Channel docs
+      url: https://example.com/channel
+    tags:
+      - name: channel-only-tag
+        description: A tag on the channel itself
+    messages:
+      userSignedUp:
+        $ref: '#/components/messages/UserSignedUp'
+  userDeleted:
+    address: user/deleted
+    messages:
+      userDeleted:
+        $ref: '#/components/messages/UserDeleted'
+operations:
+  onUserSignedUp:
+    action: receive
+    channel:
+      $ref: '#/channels/userSignedUp'
+    title: User Signed Up Operation
+    summary: A longer description.
+    tags:
+      - name: accounts
+    externalDocs:
+      description: Operation object docs 3x
+      url: https://example.com/op-object-3x
+    traits:
+      - summary: Description from trait.
+        tags:
+          - name: trait-tag-3x
+    messages:
+      - $ref: '#/channels/userSignedUp/messages/userSignedUp'
+  onUserDeleted:
+    action: receive
+    channel:
+      $ref: '#/channels/userDeleted'
+    traits:
+      - summary: Trait summary surfaces
+        tags:
+          - name: trait-surfaced-tag
+        externalDocs:
+          description: Trait externalDocs surfaces
+          url: https://example.com/op-trait-surfaced
+    messages:
+      - $ref: '#/channels/userDeleted/messages/userDeleted'
+components:
+  messages:
+    UserSignedUp:
+      name: UserSignedUp
+      summary: A longer description.
+      tags:
+        - name: msg-object-tag
+      externalDocs:
+        description: Message object docs
+        url: https://example.com/msg-object
+      payload:
+        type: object
+        properties:
+          id:
+            type: string
+      traits:
+        - summary: Description from trait.
+          tags:
+            - name: msg-trait-tag
+    UserDeleted:
+      name: UserDeleted
+      payload:
+        type: object
+      traits:
+        - summary: Trait message summary surfaces
+          tags:
+            - name: msg-trait-surfaced
+          externalDocs:
+            description: Message trait docs surfaces
+            url: https://example.com/msg-trait-surfaced

@@ -18,6 +18,26 @@ const streetlightsYaml = readFileSync(
   'utf-8',
 )
 
+const traits2xYaml = readFileSync(
+  resolve(__dirname, '../../__fixtures__/asyncapi-2x-traits.yaml'),
+  'utf-8',
+)
+
+const traits3xYaml = readFileSync(
+  resolve(__dirname, '../../__fixtures__/asyncapi-3x-traits.yaml'),
+  'utf-8',
+)
+
+const securityScopes2xYaml = readFileSync(
+  resolve(__dirname, '../../__fixtures__/asyncapi-2x-security-scopes.yaml'),
+  'utf-8',
+)
+
+const securityReply3xYaml = readFileSync(
+  resolve(__dirname, '../../__fixtures__/asyncapi-3x-security-reply.yaml'),
+  'utf-8',
+)
+
 describe('parseAsyncApiSpec', () => {
   it('parses a valid AsyncAPI 2.6 spec', async () => {
     const result = await parseAsyncApiSpec(streetlightsYaml)
@@ -196,7 +216,7 @@ describe('parseAsyncApiSpec', () => {
   })
 
   describe('trait merging', () => {
-    it('merges message traits into the message, with the message winning', async () => {
+    it('merges 2.x message traits with the trait winning on scalars', async () => {
       const spec = {
         asyncapi: '2.6.0',
         info: { title: 'Traits', version: '1.0.0' },
@@ -224,11 +244,11 @@ describe('parseAsyncApiSpec', () => {
       // Trait contributes contentType and a header...
       expect(msg.contentType).toBe('application/json')
       expect((msg.headers as { properties: Record<string, unknown> }).properties['X-Trace']).toBeDefined()
-      // ...but the message's own summary wins over the trait's.
-      expect(msg.summary).toBe('Own summary')
+      // ...and in 2.x the trait's summary OVERRIDES the object's.
+      expect(msg.summary).toBe('Trait summary')
     })
 
-    it('merges operation traits and unions tags', async () => {
+    it('merges 2.x operation traits where the trait wins and tags are replaced', async () => {
       const spec = {
         asyncapi: '2.6.0',
         info: { title: 'OpTraits', version: '1.0.0' },
@@ -236,6 +256,7 @@ describe('parseAsyncApiSpec', () => {
           c: {
             subscribe: {
               operationId: 'onC',
+              summary: 'Object summary',
               tags: [{ name: 'own' }],
               traits: [
                 { summary: 'Trait-provided summary', tags: [{ name: 'trait-tag' }] },
@@ -247,8 +268,10 @@ describe('parseAsyncApiSpec', () => {
       }
       const result = await parseAsyncApiSpec(JSON.stringify(spec))
       const op = result.channels[0].operations[0]
+      // 2.x: the trait wins over the object's scalars.
       expect(op.summary).toBe('Trait-provided summary')
-      expect((op.tags ?? []).map((t) => t.name).sort()).toEqual(['own', 'trait-tag'])
+      // tags REPLACE (RFC 7386 array semantics): the trait's tags win, not a union.
+      expect((op.tags ?? []).map((t) => t.name)).toEqual(['trait-tag'])
     })
   })
 
@@ -417,6 +440,189 @@ describe('parseAsyncApiSpec', () => {
       const op = result.channels[0].operations[0]
       expect(op.messages).toHaveLength(1)
       expect(op.messages[0].name).toBe('Real')
+    })
+  })
+
+  describe('version-aware trait precedence (behavior 1)', () => {
+    it('2.x: trait scalars/contentType override the object; tags replace', async () => {
+      const result = await parseAsyncApiSpec(traits2xYaml)
+      const op = result.channels.find((c) => c.name === 'invoices/created')!.operations[0]
+      // Operation: trait summary wins, trait tags replace object tags.
+      expect(op.summary).toBe('Trait operation summary')
+      expect((op.tags ?? []).map((t) => t.name)).toEqual(['trait-tag'])
+      // Operation externalDocs: trait wins on conflict.
+      expect(op.externalDocs?.url).toBe('https://example.com/op-trait')
+
+      const msg = op.message!
+      expect(msg.summary).toBe('Trait message summary')
+      expect(msg.contentType).toBe('application/trait+json')
+      expect((msg.tags ?? []).map((t) => t.name)).toEqual(['msg-trait-tag'])
+      expect(msg.externalDocs?.url).toBe('https://example.com/msg-trait')
+      // Composite fields still merge: the trait's header is carried.
+      expect((msg.headers as { properties: Record<string, unknown> }).properties['X-Trace']).toBeDefined()
+    })
+
+    it('2.x: trait externalDocs/tags surface when the object omits them', async () => {
+      const result = await parseAsyncApiSpec(traits2xYaml)
+      const msg = result.channels.find((c) => c.name === 'receipts/sent')!.operations[0].message!
+      expect(msg.externalDocs?.url).toBe('https://example.com/only-trait')
+      expect((msg.tags ?? []).map((t) => t.name)).toEqual(['only-trait-tag'])
+    })
+
+    it('3.x: the object wins over the trait (spec worked example)', async () => {
+      const result = await parseAsyncApiSpec(traits3xYaml)
+      const op = result.channels.find((c) => c.name === 'userSignedUp')!.operations[0]
+      // AsyncAPI 3.0 worked example: object "A longer description." wins.
+      expect(op.summary).toBe('A longer description.')
+      // Object tags win; trait tags do not surface when object declares its own.
+      expect((op.tags ?? []).map((t) => t.name)).toEqual(['accounts'])
+      expect(op.externalDocs?.url).toBe('https://example.com/op-object-3x')
+
+      const msg = op.message!
+      expect(msg.summary).toBe('A longer description.')
+      expect((msg.tags ?? []).map((t) => t.name)).toEqual(['msg-object-tag'])
+      expect(msg.externalDocs?.url).toBe('https://example.com/msg-object')
+    })
+
+    it('3.x: trait externalDocs/tags surface only when the object omits them', async () => {
+      const result = await parseAsyncApiSpec(traits3xYaml)
+      const op = result.channels.find((c) => c.name === 'userDeleted')!.operations[0]
+      expect(op.summary).toBe('Trait summary surfaces')
+      expect((op.tags ?? []).map((t) => t.name)).toEqual(['trait-surfaced-tag'])
+      expect(op.externalDocs?.url).toBe('https://example.com/op-trait-surfaced')
+
+      const msg = op.message!
+      expect((msg.tags ?? []).map((t) => t.name)).toEqual(['msg-trait-surfaced'])
+      expect(msg.externalDocs?.url).toBe('https://example.com/msg-trait-surfaced')
+    })
+  })
+
+  describe('externalDocs extraction at all levels (behavior 2)', () => {
+    it('2.x: root + tag externalDocs populate', async () => {
+      const result = await parseAsyncApiSpec(traits2xYaml)
+      expect(result.externalDocs?.url).toBe('https://example.com/root-2x')
+      const tag = result.tags?.find((t) => t.name === 'billing')
+      expect(tag?.description).toBe('Billing events')
+      expect(tag?.externalDocs?.url).toBe('https://example.com/billing')
+    })
+
+    it('3.x: root externalDocs and tag description/externalDocs populate', async () => {
+      const result = await parseAsyncApiSpec(traits3xYaml)
+      expect(result.externalDocs?.url).toBe('https://example.com/root-3x')
+      const tag = result.tags?.find((t) => t.name === 'accounts')
+      expect(tag?.description).toBe('Account events')
+      expect(tag?.externalDocs?.url).toBe('https://example.com/accounts')
+    })
+
+    it('3.x: channel externalDocs populate', async () => {
+      const result = await parseAsyncApiSpec(traits3xYaml)
+      const channel = result.channels.find((c) => c.name === 'userSignedUp')!
+      expect(channel.externalDocs?.url).toBe('https://example.com/channel')
+    })
+  })
+
+  describe('3.x channel tags (behavior 3)', () => {
+    it('extracts channel-level tags', async () => {
+      const result = await parseAsyncApiSpec(traits3xYaml)
+      const channel = result.channels.find((c) => c.name === 'userSignedUp')!
+      expect((channel.tags ?? []).map((t) => t.name)).toContain('channel-only-tag')
+    })
+  })
+
+  describe('security requirement scopes + OR structure (behavior 4)', () => {
+    it('2.x: captures per-map-entry scopes with AND within a map', async () => {
+      const result = await parseAsyncApiSpec(securityScopes2xYaml)
+      // Server oauth2 read,write
+      const server = result.servers[0]
+      expect(server.securityRequirements).toEqual([
+        [{ name: 'oauth2', scopes: ['read', 'write'] }],
+      ])
+      expect(server.securityNames).toEqual(['oauth2'])
+
+      // Operation: one map with two keys (AND) -> one inner array of two reqs.
+      const op = result.channels[0].operations[0]
+      expect(op.securityRequirements).toEqual([
+        [
+          { name: 'oauth2', scopes: ['admin'] },
+          { name: 'apiKey', scopes: [] },
+        ],
+      ])
+    })
+
+    it('3.x: captures scopes from a $ref security entry', async () => {
+      const result = await parseAsyncApiSpec(securityReply3xYaml)
+      const server = result.servers[0]
+      expect(server.securityRequirements).toEqual([
+        [{ name: 'oauth2', scopes: ['read', 'write'] }],
+      ])
+      const op = result.channels.find((c) => c.name === 'requests')!.operations[0]
+      expect(op.securityRequirements).toEqual([
+        [{ name: 'oauth2', scopes: ['admin'] }],
+      ])
+      expect(op.securityNames).toEqual(['oauth2'])
+    })
+  })
+
+  describe('defaultContentType fallback (behavior 5)', () => {
+    it('parses the document-root defaultContentType', async () => {
+      const result = await parseAsyncApiSpec(traits2xYaml)
+      expect(result.defaultContentType).toBe('application/cloudevents+json')
+    })
+
+    it('a message without contentType inherits the document default', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'DCT', version: '1.0.0' },
+        defaultContentType: 'application/cloudevents+json',
+        channels: {
+          a: { subscribe: { operationId: 'onA', message: { payload: { type: 'object' } } } },
+          b: {
+            subscribe: {
+              operationId: 'onB',
+              message: { contentType: 'application/xml', payload: { type: 'object' } },
+            },
+          },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const a = result.channels.find((c) => c.name === 'a')!.operations[0].message!
+      const b = result.channels.find((c) => c.name === 'b')!.operations[0].message!
+      expect(a.contentType).toBe('application/cloudevents+json')
+      expect(a.contentTypeInherited).toBe(true)
+      expect(b.contentType).toBe('application/xml')
+      expect(b.contentTypeInherited).toBeFalsy()
+    })
+
+    it('falls back to application/json when no document default is set', async () => {
+      const spec = {
+        asyncapi: '2.6.0',
+        info: { title: 'NoDCT', version: '1.0.0' },
+        channels: {
+          a: { subscribe: { operationId: 'onA', message: { payload: { type: 'object' } } } },
+        },
+      }
+      const result = await parseAsyncApiSpec(JSON.stringify(spec))
+      const a = result.channels[0].operations[0].message!
+      expect(a.contentType).toBe('application/json')
+      expect(a.contentTypeInherited).toBe(true)
+    })
+  })
+
+  describe('3.x operationId + title + reply address (behavior 6)', () => {
+    it('sets operationId from the operations-map key and extracts title', async () => {
+      const result = await parseAsyncApiSpec(traits3xYaml)
+      const op = result.channels.find((c) => c.name === 'userSignedUp')!.operations[0]
+      expect(op.operationId).toBe('onUserSignedUp')
+      expect(op.title).toBe('User Signed Up Operation')
+    })
+
+    it('extracts 3.x reply address and channelName', async () => {
+      const result = await parseAsyncApiSpec(securityReply3xYaml)
+      const op = result.channels.find((c) => c.name === 'requests')!.operations[0]
+      expect(op.reply?.address?.location).toBe('$message.header#/replyTo')
+      expect(op.reply?.address?.description).toBe('Where to send the reply')
+      expect(op.reply?.channelName).toBe('responses')
+      expect(op.reply?.messages.map((m) => m.name)).toEqual(['Pong'])
     })
   })
 })

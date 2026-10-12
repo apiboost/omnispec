@@ -18,6 +18,7 @@ import { Icon } from '@core/components/common/Icon'
 import { ExampleSelector, type NamedExample } from '@core/components/common/ExampleSelector'
 import type { AsyncApiMessage } from '@asyncapi/types/asyncapi.types'
 import { avroToJsonSchema, detectSchemaFormat } from '@asyncapi/schema-formats'
+import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 
 /**
  * Renders a message payload as Schema + Example tabs. Avro payloads are
@@ -31,6 +32,21 @@ export function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx
 
   return (
     <>
+      {message.tags && message.tags.length > 0 && (
+        <div className={tagChipsStyle}>
+          {message.tags.map((tag) => (
+            <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
+          ))}
+        </div>
+      )}
+      {message.externalDocs && (
+        <div className={externalDocsStyle}>
+          <ExternalDocsLink
+            externalDocs={message.externalDocs}
+            context={message.name ?? message.title ?? 'message'}
+          />
+        </div>
+      )}
       {message.schemaFormat && (
         <span className={schemaFormatBadgeStyle}>{message.schemaFormat}</span>
       )}
@@ -51,7 +67,7 @@ function PayloadBody({
   idx: string | number
 }) {
   // An unresolvable $ref survives resolution as a bare `{ $ref }` — surface it
-  // rather than rendering an empty/misleading schema (ABOSPEC-50).
+  // rather than rendering an empty/misleading schema.
   if (typeof rawPayload.$ref === 'string') {
     return (
       <div className={unresolvedRefStyle} role="alert">
@@ -61,7 +77,21 @@ function PayloadBody({
     )
   }
 
-  const schema = detectSchemaFormat(schemaFormat) === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
+  const format = detectSchemaFormat(schemaFormat)
+
+  // Protobuf: full `.proto` field-tree parsing is a Pro capability; the free core
+  // surfaces the raw payload content as a code block rather than collapsing it to
+  // the bare type word "any".
+  if (format === 'protobuf') {
+    return (
+      <div>
+        <CodeBlock code={JSON.stringify(rawPayload, null, 2)} language="json" />
+        <p className={proNoteStyle}>Full Protobuf schema rendering is available in Pro.</p>
+      </div>
+    )
+  }
+
+  const schema = format === 'avro' ? avroToJsonSchema(rawPayload) : rawPayload
 
   return (
     <Tabs
@@ -112,6 +142,26 @@ function MessageExample({ message, schema }: { message: AsyncApiMessage; schema?
   )
 }
 
+const tagChipsStyle = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.25rem',
+  marginBottom: '0.5rem',
+})
+
+const tagChipStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontFamily: 'var(--omnispec-font-mono)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 0.5rem',
+  borderRadius: '0.625rem',
+})
+
+const externalDocsStyle = css({
+  marginBottom: '0.5rem',
+})
+
 const schemaFormatBadgeStyle = css({
   display: 'inline-block',
   fontFamily: 'var(--omnispec-font-mono)',
@@ -121,6 +171,13 @@ const schemaFormatBadgeStyle = css({
   padding: '0.0625rem 0.375rem',
   borderRadius: 'var(--omnispec-border-radius)',
   marginBottom: '0.5rem',
+})
+
+const proNoteStyle = css({
+  margin: '0.375rem 0 0',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  color: 'var(--omnispec-fg-muted)',
+  fontStyle: 'italic',
 })
 
 const unresolvedRefStyle = css({

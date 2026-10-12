@@ -171,7 +171,7 @@ function ServerCard({ server }: { server: AsyncApiServer }) {
           ))}
         </div>
       )}
-      <SecurityRequirementBadges names={server.securityNames} />
+      <SecurityRequirementBadges requirements={server.securityRequirements ?? []} />
       <BindingsSection bindings={server.bindings} title="Server Bindings" />
     </div>
   )

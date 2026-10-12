@@ -41,7 +41,7 @@ describe('AuthPanel scheme tabs', () => {
 
     const tabs = screen.getAllByRole('tab')
     expect(tabs).toHaveLength(2)
-    // Tab labels come from the canonical type map, not the raw scheme id (ABOSPEC-215).
+    // Tab labels come from the canonical type map, not the raw scheme id.
     expect(tabs[0]).toHaveTextContent('API Key')
     expect(tabs[1]).toHaveTextContent('OAuth2')
 

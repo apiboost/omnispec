@@ -22,6 +22,16 @@ function channel(name: string, tagNames: string[]): AsyncApiChannel {
   }
 }
 
+/** A channel tagged at the channel level with untagged operations. */
+function channelTagged(name: string, tagNames: string[]): AsyncApiChannel {
+  return {
+    name,
+    address: name,
+    tags: tagNames.map((n) => ({ name: n })),
+    operations: [{ action: 'subscribe', messages: [] }],
+  }
+}
+
 describe('groupChannelsByTag', () => {
   it('places a channel under each of its tags and untagged channels last', () => {
     const channels = [
@@ -49,6 +59,33 @@ describe('groupChannelsByTag', () => {
   it('detects whether any channel carries a tag', () => {
     expect(hasAnyTags([channel('a', [])])).toBe(false)
     expect(hasAnyTags([channel('a', ['x'])])).toBe(true)
+  })
+
+  it('groups by channel-level tags even when operations are untagged (behavior 3)', () => {
+    // A channel tagged at the channel level with untagged operations should
+    // group under its own tag, not land in "Untagged".
+    const groups = groupChannelsByTag(
+      [channelTagged('events', ['notifications'])],
+      [{ name: 'notifications' }],
+    )
+    expect(groups.map((g) => g.label)).toEqual(['notifications'])
+    expect(groups[0].channels.map((c) => c.name)).toEqual(['events'])
+  })
+
+  it('combines operation tags and channel tags', () => {
+    const ch: AsyncApiChannel = {
+      name: 'mixed',
+      address: 'mixed',
+      tags: [{ name: 'channel-tag' }],
+      operations: [{ action: 'subscribe', messages: [], tags: [{ name: 'op-tag' }] }],
+    }
+    const groups = groupChannelsByTag([ch], [{ name: 'op-tag' }, { name: 'channel-tag' }])
+    expect(groups.map((g) => g.label).sort()).toEqual(['channel-tag', 'op-tag'])
+    groups.forEach((g) => expect(g.channels.map((c) => c.name)).toEqual(['mixed']))
+  })
+
+  it('detects channel-level tags in hasAnyTags', () => {
+    expect(hasAnyTags([channelTagged('a', ['x'])])).toBe(true)
   })
 
   it('assigns DOM-safe slug ids from the tag name, de-duplicated (finding 5)', () => {

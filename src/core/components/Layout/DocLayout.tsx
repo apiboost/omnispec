@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { css, cx } from '../../styles/css'
 import { mq } from '@core/styles/breakpoints'
@@ -42,6 +42,12 @@ export function DocLayout({
 }: DocLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  // Drawer focus management: capture the element focused before opening so we can
+  // restore it on close, and a ref to the drawer so we can move focus into it.
+  const drawerRef = useRef<HTMLElement | null>(null)
+  const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
+  const drawerTriggerRef = useRef<HTMLElement | null>(null)
+  const mobileToggleRef = useRef<HTMLButtonElement | null>(null)
   const isRight = sidebarPosition === 'right'
   // Show the sidebar column when there's anything to put in it — spec-derived
   // nav OR host-provided slots (sidebarHeader/Footer). This keeps the host's
@@ -79,6 +85,32 @@ export function DocLayout({
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
     }
+  }, [mobileSidebarOpen])
+
+  // Move focus into the drawer when it opens (so keyboard/screen-reader users
+  // land inside the dialog, not on the page behind it), and restore focus to the
+  // trigger when it closes.
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      // Remember what had focus so we can restore it on close.
+      drawerTriggerRef.current = document.activeElement as HTMLElement | null
+      // Prefer the close button; fall back to the drawer container itself.
+      const target = drawerCloseRef.current ?? drawerRef.current
+      target?.focus()
+      return undefined
+    }
+    // Closed: return focus to whatever opened the drawer. The mobile toggle
+    // unmounts while the drawer is open, so prefer the live re-mounted toggle;
+    // fall back to the originally-focused element when it still exists (e.g. the
+    // drawer was opened from somewhere other than the toggle).
+    const live = mobileToggleRef.current
+    const original = drawerTriggerRef.current
+    if (live && document.contains(live)) {
+      live.focus()
+    } else if (original && typeof original.focus === 'function' && document.contains(original)) {
+      original.focus()
+    }
+    return undefined
   }, [mobileSidebarOpen])
 
   const sidebarContent = useMemo(() => (
@@ -182,10 +214,13 @@ export function DocLayout({
           {!mobileSidebarOpen && (
             <motion.button
               key="mobile-toggle"
+              ref={mobileToggleRef}
               type="button"
               onClick={() => setMobileSidebarOpen(true)}
               className={mobileToggleStyle}
               aria-label="Open navigation"
+              aria-expanded={mobileSidebarOpen}
+              aria-haspopup="dialog"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
@@ -209,10 +244,12 @@ export function DocLayout({
           {mobileSidebarOpen && (
             <motion.aside
               key="mobile-drawer"
+              ref={drawerRef}
               className={mobileDrawerStyle}
               role="dialog"
               aria-modal="true"
               aria-label="Navigation"
+              tabIndex={-1}
               onClick={handleDrawerClick}
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
@@ -220,6 +257,7 @@ export function DocLayout({
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             >
               <button
+                ref={drawerCloseRef}
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
                 className={mobileCloseStyle}
