@@ -14,6 +14,11 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Comparisons',
+      items: ['comparisons/swagger-ui-alternative'],
+    },
+    {
+      type: 'category',
       label: 'Integrations',
       items: [
         'integrations-overview',
