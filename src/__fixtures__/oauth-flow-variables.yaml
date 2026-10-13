@@ -2,7 +2,7 @@ openapi: "3.0.3"
 info:
   title: OAuth Flow Variables Demo
   description: >-
-    Demonstrates the OmniSpec `x-flowVariables` extension (ABOSPEC-221), which
+    Demonstrates the OmniSpec `x-flowVariables` extension, which
     templates OAuth flow URLs so a single spec can Try-It OAuth against multiple
     environments, tenants, or a third-party IdP.
   version: "1.0.0"
@@ -40,7 +40,7 @@ components:
           scopes:
             read:pets: Read pets
     # Relative templated token URL: {tenant} composes with the selected server,
-    # so substitution then server-resolution combine (see ABOSPEC-220).
+    # so substitution then server-resolution combine.
     tenantAuth:
       type: oauth2
       description: Per-tenant token endpoint resolved against the selected server.

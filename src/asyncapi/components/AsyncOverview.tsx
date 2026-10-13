@@ -8,22 +8,23 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { css, cx } from '../../core/styles/css'
+import { css, cx } from '@core/styles/css'
 import type { ParsedAsyncApiSpec } from '../types/asyncapi.types'
-import { MarkdownRenderer } from '../../core/components/MarkdownRenderer'
+import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
+import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 
 interface AsyncOverviewProps {
   spec: ParsedAsyncApiSpec
 }
 
 const containerStyle = css({
-  marginBottom: '32px',
-  paddingBottom: '24px',
+  marginBottom: '2rem',
+  paddingBottom: '1.5rem',
   borderBottom: '1px solid var(--omnispec-border-color)',
 })
 
 const titleStyle = css({
-  margin: '0 0 4px',
+  margin: '0 0 0.25rem',
   fontSize: 'var(--omnispec-h2-font-size)',
   color: 'var(--omnispec-h2-color)',
   fontWeight: 700,
@@ -33,7 +34,7 @@ const titleStyle = css({
 const versionStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
-  marginLeft: '12px',
+  marginLeft: '0.75rem',
   fontFamily: 'var(--omnispec-font-mono)',
 })
 
@@ -41,16 +42,16 @@ const specBadgeStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-color-primary)',
   border: '1px solid var(--omnispec-color-primary)',
-  borderRadius: '4px',
-  padding: '1px 6px',
-  marginLeft: '8px',
+  borderRadius: '0.25rem',
+  padding: '1px 0.375rem',
+  marginLeft: '0.5rem',
   fontFamily: 'var(--omnispec-font-mono)',
 })
 
 const metaStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
-  marginTop: '4px',
+  marginTop: '0.25rem',
 })
 
 const linkStyle = css({
@@ -95,9 +96,7 @@ export function AsyncOverview({ spec }: AsyncOverviewProps) {
 
       {spec.externalDocs && (
         <div className={metaStyle}>
-          <a href={spec.externalDocs.url} target="_blank" rel="noopener noreferrer" className={linkStyle}>
-            {spec.externalDocs.description ?? 'External Documentation'}
-          </a>
+          <ExternalDocsLink externalDocs={spec.externalDocs} context={spec.title ?? 'API'} />
         </div>
       )}
     </div>

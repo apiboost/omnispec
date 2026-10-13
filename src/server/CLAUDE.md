@@ -38,7 +38,7 @@ The frontend Try-It panel posts requests to the mounted route. The proxy validat
 
 1. **SSRF guard** — blocks loopback (`127.0.0.1`, `::1`) and RFC1918 private network ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) and link-local (`169.254.0.0/16`). Resolves DNS before forwarding to prevent rebinding attacks
 2. **Rate limiting** — configurable per-IP. Default sensible for public deployment
-3. **Allowed-hosts allowlist** — optional (`allowedDomains`). If set, only requests targeting these hosts are forwarded. When a spec uses an `openIdConnect` scheme, the OpenID discovery host and any endpoint hosts it advertises (`authorization_endpoint` / `token_endpoint`) must be covered by this list too — the discovery fetch and the token exchange both route through this proxy as a CORS fallback (ABOSPEC-215)
+3. **Allowed-hosts allowlist** — optional (`allowedDomains`). If set, only requests targeting these hosts are forwarded. When a spec uses an `openIdConnect` scheme, the OpenID discovery host and any endpoint hosts it advertises (`authorization_endpoint` / `token_endpoint`) must be covered by this list too — the discovery fetch and the token exchange both route through this proxy as a CORS fallback
 4. **Body size limit** — `maxBodySize` option caps the forwarded request body
 5. **Header filtering** — strips host-related and credentialed headers from the inbound request before forwarding
 
