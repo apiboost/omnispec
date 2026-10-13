@@ -1,0 +1,69 @@
+asyncapi: '2.6.0'
+info:
+  title: Trait Precedence 2.x
+  version: 1.0.0
+defaultContentType: application/cloudevents+json
+externalDocs:
+  description: Root docs 2x
+  url: https://example.com/root-2x
+tags:
+  - name: billing
+    description: Billing events
+    externalDocs:
+      description: Billing docs
+      url: https://example.com/billing
+channels:
+  invoices/created:
+    description: Invoice created channel
+    publish:
+      operationId: onInvoiceCreated
+      summary: Object operation summary
+      tags:
+        - name: object-tag
+      externalDocs:
+        description: Operation object docs
+        url: https://example.com/op-object
+      traits:
+        - summary: Trait operation summary
+          tags:
+            - name: trait-tag
+          externalDocs:
+            description: Operation trait docs
+            url: https://example.com/op-trait
+      message:
+        summary: Object message summary
+        contentType: application/object+json
+        tags:
+          - name: msg-object-tag
+        payload:
+          type: object
+          properties:
+            id:
+              type: string
+        traits:
+          - summary: Trait message summary
+            contentType: application/trait+json
+            tags:
+              - name: msg-trait-tag
+            externalDocs:
+              description: Message trait docs
+              url: https://example.com/msg-trait
+            headers:
+              type: object
+              properties:
+                X-Trace:
+                  type: string
+  receipts/sent:
+    description: Receipt channel where object omits externalDocs
+    publish:
+      operationId: onReceiptSent
+      message:
+        summary: Receipt message
+        payload:
+          type: object
+        traits:
+          - externalDocs:
+              description: Only trait externalDocs
+              url: https://example.com/only-trait
+            tags:
+              - name: only-trait-tag

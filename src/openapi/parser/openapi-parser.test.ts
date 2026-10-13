@@ -134,7 +134,7 @@ describe('parseOpenApiSpec', () => {
     })
   })
 
-  it('carries fixture x-flowVariables raw in flow.extensions (ABOSPEC-221)', async () => {
+  it('carries fixture x-flowVariables raw in flow.extensions', async () => {
     const result = await parseOpenApiSpec(oauthFlowVariablesSpec)
 
     const envAuth = result.securitySchemes.find((s) => s.id === 'envAuth')!
@@ -152,7 +152,7 @@ describe('parseOpenApiSpec', () => {
     expect(Object.keys(ac.extensions?.['x-flowVariables'] as object)).toEqual(['env', 'tenant'])
   })
 
-  it('leaves flow.extensions undefined when no x-* is present (ABOSPEC-221)', async () => {
+  it('leaves flow.extensions undefined when no x-* is present', async () => {
     const spec = {
       openapi: '3.0.0',
       info: { title: 'X', version: '1.0.0' },
@@ -171,7 +171,7 @@ describe('parseOpenApiSpec', () => {
     expect(flow.extensions).toBeUndefined()
   })
 
-  it('converts an openIdConnect security scheme (ABOSPEC-215)', async () => {
+  it('converts an openIdConnect security scheme', async () => {
     const spec = {
       openapi: '3.0.0',
       info: { title: 'X', version: '1.0.0' },

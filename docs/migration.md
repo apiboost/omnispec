@@ -198,6 +198,8 @@ The default `displayMode="compact"` uses collapsible operation cards, which work
 
 ## From Swagger UI
 
+Evaluating the switch? See [Swagger UI alternative](./comparisons/swagger-ui-alternative.md) for a side-by-side comparison of the free core against Swagger UI.
+
 ### Installation
 
 ```bash

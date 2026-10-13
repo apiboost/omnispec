@@ -13,7 +13,7 @@ export type AuthSchemeType = 'apiKey' | 'http-basic' | 'http-bearer' | 'oauth2' 
 /**
  * Canonical, human-facing labels for each auth-scheme type. The Authorize tab
  * uses these instead of the raw spec value so casing stays consistent
- * (`oauth2`/`oAuth2` in a spec both render as "OAuth2"). See ABOSPEC-215.
+ * (`oauth2`/`oAuth2` in a spec both render as "OAuth2").
  */
 const AUTH_SCHEME_LABELS: Record<AuthSchemeType, string> = {
   apiKey: 'API Key',
@@ -46,7 +46,7 @@ export interface AuthScheme {
    * `openIdConnect` security scheme). At Try-It time the OpenID configuration is
    * fetched from here and its `authorization_endpoint` / `token_endpoint` /
    * `scopes_supported` are mapped into {@link flows} so the Authorize panel
-   * renders identically to a declared `oauth2` scheme. See ABOSPEC-215.
+   * renders identically to a declared `oauth2` scheme.
    */
   openIdConnectUrl?: string
   /**

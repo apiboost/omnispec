@@ -88,6 +88,49 @@ describe('DocLayout mobile drawer', () => {
       expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
     )
   })
+
+  it('exposes aria-expanded on the Open navigation button reflecting drawer state', async () => {
+    const { getByRole, queryByRole } = render(
+      <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>}>
+        <div>content</div>
+      </DocLayout>,
+    )
+    const openBtn = getByRole('button', { name: 'Open navigation' })
+    expect(openBtn).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(openBtn)
+    // Drawer is open; its dialog exists.
+    expect(getByRole('dialog', { name: 'Navigation' })).toBeTruthy()
+    // Close it and the toggle reappears reporting collapsed.
+    fireEvent.click(getByRole('button', { name: 'Close navigation' }))
+    await waitFor(() =>
+      expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
+    )
+    expect(getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('moves focus into the drawer when it opens and restores it to the toggle on close', async () => {
+    const { getByRole, queryByRole } = render(
+      <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>}>
+        <div>content</div>
+      </DocLayout>,
+    )
+    const openBtn = getByRole('button', { name: 'Open navigation' })
+    openBtn.focus()
+    fireEvent.click(openBtn)
+
+    const drawer = getByRole('dialog', { name: 'Navigation' })
+    // Focus moved off the page behind and into the drawer.
+    await waitFor(() => expect(drawer.contains(document.activeElement)).toBe(true))
+
+    fireEvent.click(getByRole('button', { name: 'Close navigation' }))
+    await waitFor(() =>
+      expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
+    )
+    // Focus returns to the toggle that opened the drawer.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(getByRole('button', { name: 'Open navigation' })),
+    )
+  })
 })
 
 describe('DocLayout sidebar collapse', () => {

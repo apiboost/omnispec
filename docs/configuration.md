@@ -110,6 +110,8 @@ The left column shows parameters and response schemas using a chained-list displ
 
 Display mode and navigation mode are independent — reference mode works with both grouped and segmented navigation.
 
+**AsyncAPI in reference mode:** `<AsyncApiSpec>` (and `<OmniSpecRenderer>` on an AsyncAPI document) honors `displayMode="reference"` too. The main column shows the channel/operation detail; the right **Samples** column shows the message payload schema and examples. AsyncAPI protocols (MQTT, Kafka, …) can't be exercised from a browser, so there is no Try-It tab for AsyncAPI operations.
+
 Both display modes render OAS 3.0 callbacks as expandable sections within each operation. Named examples (when multiple are defined) display a dropdown selector.
 
 ## Schema Rendering
