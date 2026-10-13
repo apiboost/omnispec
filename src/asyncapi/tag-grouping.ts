@@ -30,7 +30,7 @@ export const UNTAGGED_LABEL = 'Untagged'
 
 /** Slugify a tag name into a DOM/URL-safe id fragment. */
 function slugify(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tag'
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tag'
 }
 
 /**

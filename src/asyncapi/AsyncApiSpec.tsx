@@ -470,7 +470,7 @@ function nestByTagGroups(
         .filter((g): g is TagGroup => !!g)
       children.forEach((g) => used.add(g))
       return {
-        id: `xtaggroup-${xg.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'group'}`,
+        id: `xtaggroup-${xg.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'group'}`,
         label: xg.name,
         children: children.map(toNav),
       }

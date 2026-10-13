@@ -138,9 +138,9 @@ const varTokenStyle = css({
 
 /** Render a server URL with `{variable}` placeholders visually highlighted. */
 function highlightVariables(url: string) {
-  const parts = url.split(/(\{[^}]+\})/g)
+  const parts = url.split(/(\{[^{}]+\})/g)
   return parts.map((part, i) =>
-    /^\{[^}]+\}$/.test(part)
+    /^\{[^{}]+\}$/.test(part)
       ? <span key={i} className={varTokenStyle}>{part.slice(1, -1)}</span>
       : <span key={i}>{part}</span>,
   )
