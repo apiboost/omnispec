@@ -8,11 +8,29 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
+/* The demo shell. Mobile-first: the spec picker stacks above the renderer in a
+ * single column. On desktop it becomes a persistent left column beside the
+ * renderer stage. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--ifm-navbar-height));
+  overflow: hidden;
+}
+
+@media (min-width: 997px) {
+  .shell {
+    flex-direction: row;
+  }
+}
+
 /* Positioning context for the renderer stage plus the floating toggle and
- * slide-up config sheet, so both overlay the renderer without stealing width. */
+ * slide-up config sheet, so both overlay the renderer without stealing width.
+ * Flexes to fill the space left of/below the spec picker. */
 .stageWrap {
   position: relative;
-  height: calc(100vh - var(--ifm-navbar-height));
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
 }
 

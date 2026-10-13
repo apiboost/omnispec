@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import {useEffect, useMemo, useState, type ReactNode} from 'react';
+import {type ReactNode} from 'react';
 import styles from './DemoConfigPanel.module.css';
 
 /**
@@ -30,24 +30,73 @@ export interface DemoConfig {
   defaultExpandOperations: boolean;
 }
 
+/** Difficulty hint shown beside each spec, ordered basic → advanced. */
+export type SpecLevel = 'Basic' | 'Intermediate' | 'Advanced';
+
+/** A single curated spec: a friendly name, its `static/specs/*` path, and a
+ * difficulty hint used to order the basic→advanced gradient. */
+export interface SpecOption {
+  label: string;
+  value: string;
+  level: SpecLevel;
+}
+
+/** A labeled section of the spec picker (one spec family). */
+export interface SpecGroup {
+  label: string;
+  options: ReadonlyArray<SpecOption>;
+}
+
 /**
  * Curated demo specs served from `static/specs/` — bundled for reliable,
- * CORS-free switching. A range from a real production API through a
- * feature-rich synthetic spec down to a minimal baseline, plus an AsyncAPI
- * example to show multi-spec rendering. (Any other spec URL can be pasted into
- * the field.) The default leads with the real-world Cat API rather than the
- * bare Petstore.
+ * CORS-free switching. Grouped by spec family (OpenAPI, AsyncAPI) and ordered
+ * basic → advanced within each group so the sidebar can showcase the full range
+ * of what the renderer handles. The sidebar picker renders directly from this
+ * structure; `demo.tsx` resolves each `value` with useBaseUrl before it reaches
+ * the renderer. (A custom spec URL can still be pasted into the sidebar field.)
  */
-export const SPEC_OPTIONS: ReadonlyArray<{label: string; value: string}> = [
-  {label: 'The Cat API — production REST API', value: 'specs/catapi.yaml'},
-  {label: 'E-Commerce Platform — complex OAS', value: 'specs/ecommerce.json'},
-  {label: 'Task Management — OAuth2 + nested schemas', value: 'specs/openapi-moderate.json'},
-  {label: 'Petstore — minimal OpenAPI 3.0', value: 'specs/petstore.json'},
-  {label: 'Streetlights — AsyncAPI (events)', value: 'specs/streetlights-asyncapi.yaml'},
+export const SPEC_GROUPS: ReadonlyArray<SpecGroup> = [
+  {
+    label: 'OpenAPI',
+    options: [
+      {label: 'Petstore — minimal REST', value: 'specs/petstore.json', level: 'Basic'},
+      {
+        label: 'Task Management — OAuth2 + nested schemas',
+        value: 'specs/openapi-moderate.json',
+        level: 'Intermediate',
+      },
+      {label: 'E-Commerce — complex OAS', value: 'specs/ecommerce.json', level: 'Advanced'},
+    ],
+  },
+  {
+    label: 'AsyncAPI',
+    options: [
+      {label: 'Minimal — basic pub/sub', value: 'specs/asyncapi-simple.yaml', level: 'Basic'},
+      {
+        label: 'Streetlights — event-driven',
+        value: 'specs/streetlights-asyncapi.yaml',
+        level: 'Intermediate',
+      },
+      {
+        label: 'IoT Sensor Network — 3.x bindings, oneOf, security',
+        value: 'specs/asyncapi-complex.yaml',
+        level: 'Advanced',
+      },
+    ],
+  },
 ];
 
+/** Flat list of all preset specs, kept for callers that resolve/scan every
+ * preset (e.g. the base-URL resolver and the paste-field preset detection). */
+export const SPEC_OPTIONS: ReadonlyArray<SpecOption> = SPEC_GROUPS.flatMap(
+  (group) => group.options,
+);
+
 export const DEFAULT_DEMO_CONFIG: DemoConfig = {
-  spec: SPEC_OPTIONS[0].value,
+  // Lead with the real-world Cat API — a production REST spec that shows the
+  // renderer at its best on first load. It is not in the picker's basic→advanced
+  // gradient, so it stays here as the default rather than in SPEC_GROUPS.
+  spec: 'specs/catapi.yaml',
   layout: 'sidebar',
   sidebarPosition: 'left',
   displayMode: 'compact',
@@ -117,73 +166,20 @@ function CheckboxField({id, label, checked, onChange}: CheckboxFieldProps): Reac
 export interface DemoConfigPanelProps {
   config: DemoConfig;
   onChange: (config: DemoConfig) => void;
-  /** Preset specs with their base-URL-resolved values, for the paste-or-pick field. */
-  specOptions: ReadonlyArray<{label: string; value: string}>;
 }
 
 export default function DemoConfigPanel({
   config,
   onChange,
-  specOptions,
 }: DemoConfigPanelProps): ReactNode {
   const set = <K extends keyof DemoConfig>(key: K, value: DemoConfig[K]) =>
     onChange({...config, [key]: value});
 
-  // The spec input is a draft: typing/pasting must NOT fetch on every keystroke
-  // (an incomplete or empty URL would flash "Unable to detect specification
-  // type"). We only commit on submit. Picking a preset is unambiguous, so it
-  // applies immediately. Keep the draft in sync when the spec changes elsewhere
-  // (e.g. the header "Reset to defaults").
-  const [specDraft, setSpecDraft] = useState(config.spec);
-  useEffect(() => setSpecDraft(config.spec), [config.spec]);
-  const presetValues = useMemo(() => new Set(specOptions.map((s) => s.value)), [specOptions]);
-
-  const submitSpec = () => {
-    const next = specDraft.trim();
-    if (next && next !== config.spec) set('spec', next);
-  };
-
+  // The spec picker now lives in the sidebar (see SpecSidebar); this panel holds
+  // only the remaining renderer knobs so there is a single spec picker.
   return (
     <div className={styles.panel}>
       <div className={styles.grid}>
-        <div className={`${styles.field} ${styles.specField}`}>
-          <label className={styles.label} htmlFor="demo-spec">
-            Spec
-          </label>
-          <form
-            className={styles.specRow}
-            onSubmit={(e) => {
-              e.preventDefault();
-              submitSpec();
-            }}
-          >
-            <input
-              id="demo-spec"
-              className={styles.select}
-              type="text"
-              list="demo-spec-presets"
-              value={specDraft}
-              spellCheck={false}
-              placeholder="Paste a spec URL or pick a preset, then Render"
-              onChange={(e) => {
-                const value = e.target.value;
-                setSpecDraft(value);
-                // A preset chosen from the dropdown is complete — apply at once.
-                if (presetValues.has(value)) set('spec', value);
-              }}
-            />
-            <button type="submit" className={styles.specSubmit}>
-              Render
-            </button>
-          </form>
-          <datalist id="demo-spec-presets">
-            {specOptions.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </datalist>
-        </div>
         <SelectField
           id="layout"
           label="Layout"

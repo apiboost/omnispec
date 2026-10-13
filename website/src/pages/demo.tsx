@@ -5,9 +5,10 @@ import {useBaseUrlUtils} from '@docusaurus/useBaseUrl'
 import {useColorMode} from '@docusaurus/theme-common'
 import DemoConfigPanel, {
   DEFAULT_DEMO_CONFIG,
-  SPEC_OPTIONS,
+  SPEC_GROUPS,
   type DemoConfig,
 } from '@site/src/components/DemoConfigPanel'
+import SpecSidebar from '@site/src/components/SpecSidebar'
 import styles from './demo.module.css'
 
 // Renders the live library, driven by the config panel and Docusaurus's color
@@ -71,8 +72,16 @@ export default function Demo(): React.ReactNode {
   const {withBaseUrl} = useBaseUrlUtils()
   // Resolve the bundled preset paths to real URLs once; an absolute URL a user
   // pastes passes through withBaseUrl unchanged.
-  const specOptions = useMemo(
-    () => SPEC_OPTIONS.map((s) => ({label: s.label, value: withBaseUrl(s.value)})),
+  const specGroups = useMemo(
+    () =>
+      SPEC_GROUPS.map((group) => ({
+        label: group.label,
+        options: group.options.map((o) => ({
+          label: o.label,
+          value: withBaseUrl(o.value),
+          level: o.level,
+        })),
+      })),
     [withBaseUrl],
   )
   const defaults = useMemo(
@@ -87,58 +96,61 @@ export default function Demo(): React.ReactNode {
       title="Live Demo"
       description="A live, interactive OmniSpec renderer — adjust the settings and watch it update in real time."
     >
-      <div className={styles.stageWrap}>
-        <div className={styles.stage}>
-          <BrowserOnly fallback={<div className={styles.loading}>Loading the live renderer…</div>}>
-            {() => <LiveRenderer config={config} />}
-          </BrowserOnly>
-        </div>
-
-        <button
-          type="button"
-          className={`${styles.fab} ${open ? styles.fabHidden : ''}`}
-          onClick={() => setOpen(true)}
-          aria-expanded={open}
-          aria-controls="demo-config-sheet"
-        >
-          <GearIcon />
-          Configure
-        </button>
-
-        <div
-          id="demo-config-sheet"
-          className={`${styles.sheet} ${open ? styles.sheetOpen : ''}`}
-          role="dialog"
-          aria-label="Live demo configuration"
-          aria-hidden={!open}
-        >
-          <div className={styles.sheetHeader}>
-            <h2 className={styles.sheetTitle}>Live configuration</h2>
-            <div className={styles.headerActions}>
-              <button
-                type="button"
-                className={styles.reset}
-                onClick={() => setConfig(defaults)}
-              >
-                Reset to defaults
-              </button>
-              <button
-                type="button"
-                className={styles.close}
-                onClick={() => setOpen(false)}
-                aria-label="Close configuration"
-              >
-                ×
-              </button>
-            </div>
+      <div className={styles.shell}>
+        <SpecSidebar
+          groups={specGroups}
+          selected={config.spec}
+          onSelect={(spec) => setConfig((c) => ({...c, spec}))}
+        />
+        <div className={styles.stageWrap}>
+          <div className={styles.stage}>
+            <BrowserOnly fallback={<div className={styles.loading}>Loading the live renderer…</div>}>
+              {() => <LiveRenderer config={config} />}
+            </BrowserOnly>
           </div>
-          <div className={styles.sheetBody}>
-            <div className={styles.sheetInner}>
-              <DemoConfigPanel
-                config={config}
-                onChange={setConfig}
-                specOptions={specOptions}
-              />
+
+          <button
+            type="button"
+            className={`${styles.fab} ${open ? styles.fabHidden : ''}`}
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            aria-controls="demo-config-sheet"
+          >
+            <GearIcon />
+            Configure
+          </button>
+
+          <div
+            id="demo-config-sheet"
+            className={`${styles.sheet} ${open ? styles.sheetOpen : ''}`}
+            role="dialog"
+            aria-label="Live demo configuration"
+            aria-hidden={!open}
+          >
+            <div className={styles.sheetHeader}>
+              <h2 className={styles.sheetTitle}>Live configuration</h2>
+              <div className={styles.headerActions}>
+                <button
+                  type="button"
+                  className={styles.reset}
+                  onClick={() => setConfig(defaults)}
+                >
+                  Reset to defaults
+                </button>
+                <button
+                  type="button"
+                  className={styles.close}
+                  onClick={() => setOpen(false)}
+                  aria-label="Close configuration"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className={styles.sheetBody}>
+              <div className={styles.sheetInner}>
+                <DemoConfigPanel config={config} onChange={setConfig} />
+              </div>
             </div>
           </div>
         </div>
