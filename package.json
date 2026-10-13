@@ -141,10 +141,20 @@
   },
   "keywords": [
     "openapi",
+    "openapi-3",
+    "swagger",
+    "swagger-ui",
     "asyncapi",
     "api-documentation",
+    "api-reference",
+    "api-docs",
+    "openapi-renderer",
+    "rest-api",
     "react",
-    "swagger"
+    "react-component",
+    "web-component",
+    "try-it",
+    "documentation"
   ],
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
