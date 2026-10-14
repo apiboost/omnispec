@@ -1,0 +1,139 @@
+/**
+ * This source file is part of the Apiboost(R) OmniSpec Core.
+ *
+ * Copyright (c) Apiboost, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * See LICENSE.md and LICENSING.md in the project root for license information.
+ */
+
+/* The spec picker lives inside the renderer's own sidebar (slots.sidebarHeader),
+ * so it is styled entirely with the renderer's --omnispec-* tokens to read as
+ * part of the renderer's nav rather than a separate column. The slot renders
+ * inside the renderer's ThemeProvider, so those tokens are in scope here. */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0 0.75rem;
+  /* Separate the picker from the generated nav below it, matching the
+   * renderer's own slot divider. */
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--omnispec-border-color);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Reads like the renderer's nav group headers (NavTree separatorStyle). */
+.groupLabel {
+  padding: 1rem 0.75rem 0.25rem;
+  font-size: var(--omnispec-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--omnispec-nav-heading-color);
+}
+
+/* Reads like a renderer nav item (NavTree itemBaseStyles + active styling). */
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  width: 100%;
+  padding: var(--omnispec-nav-item-padding-v) var(--omnispec-nav-item-padding-h);
+  text-align: left;
+  font-family: inherit;
+  color: var(--omnispec-nav-text);
+  background: transparent;
+  border: none;
+  border-left: var(--omnispec-nav-active-border-width) solid transparent;
+  border-radius: var(--omnispec-nav-item-radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.item:hover {
+  background-color: var(--omnispec-nav-hover-bg);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--omnispec-nav-accent);
+  outline-offset: -2px;
+}
+
+.itemActive {
+  background-color: var(--omnispec-nav-active-bg);
+  border-left: var(--omnispec-nav-active-border-width) solid var(--omnispec-nav-accent);
+}
+
+.itemName {
+  font-size: var(--omnispec-font-size-base);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.itemLevel {
+  font-size: var(--omnispec-font-size-xxs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--omnispec-fg-muted);
+}
+
+.itemActive .itemLevel {
+  color: var(--omnispec-nav-accent);
+}
+
+/* Paste-your-own-spec field, at the bottom of the slot. */
+.customField {
+  display: flex;
+  flex-direction: column;
+}
+
+.customRow {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0;
+}
+
+.customInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.4375rem 0.625rem;
+  font-size: var(--omnispec-font-size-sm);
+  font-family: inherit;
+  color: var(--omnispec-fg-primary);
+  background: var(--omnispec-input-bg);
+  border: 1px solid var(--omnispec-input-border);
+  border-radius: var(--omnispec-border-radius);
+}
+
+.customInput::placeholder {
+  color: var(--omnispec-fg-muted);
+}
+
+.customInput:focus-visible {
+  outline: 2px solid var(--omnispec-nav-accent);
+  outline-offset: -1px;
+}
+
+.customSubmit {
+  flex: 0 0 auto;
+  padding: 0.4375rem 0.875rem;
+  font-size: var(--omnispec-font-size-sm);
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--omnispec-color-primary-text);
+  background: var(--omnispec-color-primary);
+  border: none;
+  border-radius: var(--omnispec-border-radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.customSubmit:hover {
+  background: var(--omnispec-color-primary-hover);
+}
