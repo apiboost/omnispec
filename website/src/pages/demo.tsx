@@ -17,7 +17,13 @@ import styles from './demo.module.css'
 // the header switcher stays the single source of truth. This component only
 // mounts client-side (see BrowserOnly below), so useColorMode, useBaseUrl, and
 // the browser-only renderer are all safe here.
-function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
+function LiveRenderer({
+  config,
+  sidebarHeader,
+}: {
+  config: DemoConfig
+  sidebarHeader: React.ReactNode
+}): React.ReactNode {
   const {colorMode} = useColorMode() // 'light' | 'dark' — tracks the header switcher
   const {OmniSpecRenderer} = require('@apiboost/omnispec') as typeof import('@apiboost/omnispec')
 
@@ -41,6 +47,10 @@ function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
       allowTryIt={config.allowTryIt}
       downloadLink={config.downloadLink}
       defaultExpandOperations={config.defaultExpandOperations}
+      // The spec picker rides in the renderer's own sidebar (top, above the
+      // generated nav) so it reads as part of the renderer, and the renderer's
+      // mobile drawer surfaces it on small screens.
+      slots={{sidebarHeader}}
     />
   )
 }
@@ -91,66 +101,70 @@ export default function Demo(): React.ReactNode {
   const [config, setConfig] = useState<DemoConfig>(defaults)
   const [open, setOpen] = useState(false)
 
+  // The spec picker is injected into the renderer's own sidebar via its
+  // sidebarHeader slot, so it reads as part of the renderer rather than a
+  // separate column.
+  const specPicker = (
+    <SpecSidebar
+      groups={specGroups}
+      selected={config.spec}
+      onSelect={(spec) => setConfig((c) => ({...c, spec}))}
+    />
+  )
+
   return (
     <Layout
       title="Live Demo"
       description="A live, interactive OmniSpec renderer — adjust the settings and watch it update in real time."
     >
-      <div className={styles.shell}>
-        <SpecSidebar
-          groups={specGroups}
-          selected={config.spec}
-          onSelect={(spec) => setConfig((c) => ({...c, spec}))}
-        />
-        <div className={styles.stageWrap}>
-          <div className={styles.stage}>
-            <BrowserOnly fallback={<div className={styles.loading}>Loading the live renderer…</div>}>
-              {() => <LiveRenderer config={config} />}
-            </BrowserOnly>
-          </div>
+      <div className={styles.stageWrap}>
+        <div className={styles.stage}>
+          <BrowserOnly fallback={<div className={styles.loading}>Loading the live renderer…</div>}>
+            {() => <LiveRenderer config={config} sidebarHeader={specPicker} />}
+          </BrowserOnly>
+        </div>
 
-          <button
-            type="button"
-            className={`${styles.fab} ${open ? styles.fabHidden : ''}`}
-            onClick={() => setOpen(true)}
-            aria-expanded={open}
-            aria-controls="demo-config-sheet"
-          >
-            <GearIcon />
-            Configure
-          </button>
+        <button
+          type="button"
+          className={`${styles.fab} ${open ? styles.fabHidden : ''}`}
+          onClick={() => setOpen(true)}
+          aria-expanded={open}
+          aria-controls="demo-config-sheet"
+        >
+          <GearIcon />
+          Configure
+        </button>
 
-          <div
-            id="demo-config-sheet"
-            className={`${styles.sheet} ${open ? styles.sheetOpen : ''}`}
-            role="dialog"
-            aria-label="Live demo configuration"
-            aria-hidden={!open}
-          >
-            <div className={styles.sheetHeader}>
-              <h2 className={styles.sheetTitle}>Live configuration</h2>
-              <div className={styles.headerActions}>
-                <button
-                  type="button"
-                  className={styles.reset}
-                  onClick={() => setConfig(defaults)}
-                >
-                  Reset to defaults
-                </button>
-                <button
-                  type="button"
-                  className={styles.close}
-                  onClick={() => setOpen(false)}
-                  aria-label="Close configuration"
-                >
-                  ×
-                </button>
-              </div>
+        <div
+          id="demo-config-sheet"
+          className={`${styles.sheet} ${open ? styles.sheetOpen : ''}`}
+          role="dialog"
+          aria-label="Live demo configuration"
+          aria-hidden={!open}
+        >
+          <div className={styles.sheetHeader}>
+            <h2 className={styles.sheetTitle}>Live configuration</h2>
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.reset}
+                onClick={() => setConfig(defaults)}
+              >
+                Reset to defaults
+              </button>
+              <button
+                type="button"
+                className={styles.close}
+                onClick={() => setOpen(false)}
+                aria-label="Close configuration"
+              >
+                ×
+              </button>
             </div>
-            <div className={styles.sheetBody}>
-              <div className={styles.sheetInner}>
-                <DemoConfigPanel config={config} onChange={setConfig} />
-              </div>
+          </div>
+          <div className={styles.sheetBody}>
+            <div className={styles.sheetInner}>
+              <DemoConfigPanel config={config} onChange={setConfig} />
             </div>
           </div>
         </div>

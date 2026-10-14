@@ -8,225 +8,132 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-/* The spec picker. Mobile-first: a horizontally scrolling strip that sits above
- * the renderer, collapsible behind a disclosure button so it never steals the
- * limited vertical room on phones. On desktop it becomes a persistent column to
- * the left of the stage. */
+/* The spec picker lives inside the renderer's own sidebar (slots.sidebarHeader),
+ * so it is styled entirely with the renderer's --omnispec-* tokens to read as
+ * part of the renderer's nav rather than a separate column. The slot renders
+ * inside the renderer's ThemeProvider, so those tokens are in scope here. */
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  flex: 0 0 auto;
-  padding: 0.75rem 1rem;
-  background: var(--ifm-background-surface-color);
-  border-bottom: 1px solid var(--ifm-toc-border-color);
-}
-
-.sidebarHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.sidebarTitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: var(--ifm-font-color-base);
-}
-
-/* Mobile disclosure toggle — hidden on desktop where the picker is always open. */
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.3125rem 0.625rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--ifm-color-primary);
-  background: transparent;
-  border: 1px solid var(--ifm-color-primary);
-  border-radius: var(--ifm-global-radius);
-  cursor: pointer;
-}
-
-.toggleIcon {
-  width: 0.75rem;
-  height: 0.75rem;
-  transition: transform 0.2s ease;
-}
-
-.toggleIconOpen {
-  transform: rotate(180deg);
-}
-
-/* Collapsible body — hidden on mobile when closed. */
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.bodyCollapsed {
-  display: none;
+  padding: 0.25rem 0 0.75rem;
+  /* Separate the picker from the generated nav below it, matching the
+   * renderer's own slot divider. */
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--omnispec-border-color);
 }
 
 .group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
+/* Reads like the renderer's nav group headers (NavTree separatorStyle). */
 .groupLabel {
-  margin: 0;
-  font-size: 0.6875rem;
+  padding: 1rem 0.75rem 0.25rem;
+  font-size: var(--omnispec-font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ifm-color-emphasis-600);
+  color: var(--omnispec-nav-heading-color);
 }
 
-/* The items. Mobile: a horizontal scroll strip of pills. */
-.items {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.25rem;
-  -webkit-overflow-scrolling: touch;
-}
-
+/* Reads like a renderer nav item (NavTree itemBaseStyles + active styling). */
 .item {
   display: flex;
   flex-direction: column;
-  gap: 0.1875rem;
-  flex: 0 0 auto;
-  min-width: 11rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.125rem;
+  width: 100%;
+  padding: var(--omnispec-nav-item-padding-v) var(--omnispec-nav-item-padding-h);
   text-align: left;
   font-family: inherit;
-  color: var(--ifm-font-color-base);
-  background: var(--ifm-background-color);
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: var(--ifm-global-radius);
+  color: var(--omnispec-nav-text);
+  background: transparent;
+  border: none;
+  border-left: var(--omnispec-nav-active-border-width) solid transparent;
+  border-radius: var(--omnispec-nav-item-radius);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .item:hover {
-  border-color: var(--ifm-color-primary);
+  background-color: var(--omnispec-nav-hover-bg);
 }
 
 .item:focus-visible {
-  outline: 2px solid var(--ifm-color-primary);
-  outline-offset: 1px;
+  outline: 2px solid var(--omnispec-nav-accent);
+  outline-offset: -2px;
 }
 
 .itemActive {
-  border-color: var(--ifm-color-primary);
-  background: var(--ifm-color-primary-contrast-background);
+  background-color: var(--omnispec-nav-active-bg);
+  border-left: var(--omnispec-nav-active-border-width) solid var(--omnispec-nav-accent);
 }
 
 .itemName {
-  font-size: 0.8125rem;
+  font-size: var(--omnispec-font-size-base);
   font-weight: 600;
   line-height: 1.3;
 }
 
 .itemLevel {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ifm-color-emphasis-600);
+  font-size: var(--omnispec-font-size-xxs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--omnispec-fg-muted);
 }
 
 .itemActive .itemLevel {
-  color: var(--ifm-color-primary);
+  color: var(--omnispec-nav-accent);
 }
 
-/* Paste-your-own-spec field, pinned to the bottom of the picker. */
+/* Paste-your-own-spec field, at the bottom of the slot. */
 .customField {
   display: flex;
   flex-direction: column;
-  gap: 0.3125rem;
-}
-
-.customLabel {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ifm-color-emphasis-600);
 }
 
 .customRow {
   display: flex;
   gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0;
 }
 
 .customInput {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0.4375rem 0.625rem;
-  font-size: 0.8125rem;
+  font-size: var(--omnispec-font-size-sm);
   font-family: inherit;
-  color: var(--ifm-font-color-base);
-  background: var(--ifm-background-color);
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: var(--ifm-global-radius);
+  color: var(--omnispec-fg-primary);
+  background: var(--omnispec-input-bg);
+  border: 1px solid var(--omnispec-input-border);
+  border-radius: var(--omnispec-border-radius);
+}
+
+.customInput::placeholder {
+  color: var(--omnispec-fg-muted);
 }
 
 .customInput:focus-visible {
-  outline: 2px solid var(--ifm-color-primary);
-  outline-offset: 1px;
+  outline: 2px solid var(--omnispec-nav-accent);
+  outline-offset: -1px;
 }
 
 .customSubmit {
   flex: 0 0 auto;
   padding: 0.4375rem 0.875rem;
-  font-size: 0.8125rem;
+  font-size: var(--omnispec-font-size-sm);
   font-weight: 600;
   font-family: inherit;
-  color: #fff;
-  background: var(--ifm-color-primary);
-  border: 1px solid var(--ifm-color-primary);
-  border-radius: var(--ifm-global-radius);
+  color: var(--omnispec-color-primary-text);
+  background: var(--omnispec-color-primary);
+  border: none;
+  border-radius: var(--omnispec-border-radius);
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .customSubmit:hover {
-  background: var(--ifm-color-primary-dark);
-  border-color: var(--ifm-color-primary-dark);
-}
-
-/* Desktop: persistent left column, vertical item lists, always expanded. */
-@media (min-width: 997px) {
-  .sidebar {
-    width: 17rem;
-    flex: 0 0 17rem;
-    overflow-y: auto;
-    border-bottom: none;
-    border-right: 1px solid var(--ifm-toc-border-color);
-  }
-
-  .toggle {
-    display: none;
-  }
-
-  .body,
-  .bodyCollapsed {
-    display: flex;
-  }
-
-  .items {
-    flex-direction: column;
-    overflow-x: visible;
-    padding-bottom: 0;
-  }
-
-  .item {
-    min-width: 0;
-  }
+  background: var(--omnispec-color-primary-hover);
 }

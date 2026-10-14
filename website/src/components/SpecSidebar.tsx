@@ -27,32 +27,17 @@ export interface SpecSidebarProps {
   onSelect: (value: string) => void;
 }
 
-function ChevronIcon({open}: {open: boolean}): ReactNode {
-  return (
-    <svg
-      className={`${styles.toggleIcon} ${open ? styles.toggleIconOpen : ''}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-
 /**
- * The primary spec picker: a grouped list (one section per spec family) ordered
- * basic → advanced, that drives the renderer. Mobile-first — collapses behind a
- * disclosure button and scrolls horizontally; on desktop it becomes a persistent
- * left column. A paste-your-own-URL field is pinned to the bottom.
+ * The primary spec picker, injected into the renderer's own sidebar via the
+ * `slots.sidebarHeader` slot so it reads as part of the renderer rather than a
+ * separate column. A grouped list (one section per spec family) ordered basic →
+ * advanced drives the renderer; a paste-your-own-URL field is pinned to the
+ * bottom. Styling blends with the renderer's nav chrome via `--omnispec-*`
+ * tokens (available because the slot renders inside the renderer's
+ * ThemeProvider). Mobile is handled by the renderer's own nav drawer — this
+ * component has no breakpoint logic of its own.
  */
 export default function SpecSidebar({groups, selected, onSelect}: SpecSidebarProps): ReactNode {
-  const [open, setOpen] = useState(false);
-
   // Known preset URLs — so a pasted value that matches a preset still lights up
   // the matching item, and the custom draft resets when a preset is active.
   const presetValues = useMemo(
@@ -73,75 +58,51 @@ export default function SpecSidebar({groups, selected, onSelect}: SpecSidebarPro
   };
 
   return (
-    <aside className={styles.sidebar} aria-label="Spec picker">
-      <div className={styles.sidebarHeader}>
-        <h2 className={styles.sidebarTitle}>Choose a spec</h2>
-        <button
-          type="button"
-          className={styles.toggle}
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls="spec-sidebar-body"
-        >
-          {open ? 'Hide' : 'Browse'}
-          <ChevronIcon open={open} />
-        </button>
-      </div>
+    <div className={styles.sidebar}>
+      {groups.map((group) => (
+        <div key={group.label} className={styles.group}>
+          <div className={styles.groupLabel}>{group.label}</div>
+          {group.options.map((option) => {
+            const active = option.value === selected;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`${styles.item} ${active ? styles.itemActive : ''}`}
+                aria-pressed={active}
+                onClick={() => onSelect(option.value)}
+              >
+                <span className={styles.itemName}>{option.label}</span>
+                <span className={styles.itemLevel}>{option.level}</span>
+              </button>
+            );
+          })}
+        </div>
+      ))}
 
-      <div
-        id="spec-sidebar-body"
-        className={`${styles.body} ${open ? '' : styles.bodyCollapsed}`}
+      <form
+        className={styles.customField}
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitCustom();
+        }}
       >
-        {groups.map((group) => (
-          <div key={group.label} className={styles.group}>
-            <h3 className={styles.groupLabel}>{group.label}</h3>
-            <div className={styles.items}>
-              {group.options.map((option) => {
-                const active = option.value === selected;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`${styles.item} ${active ? styles.itemActive : ''}`}
-                    aria-pressed={active}
-                    onClick={() => onSelect(option.value)}
-                  >
-                    <span className={styles.itemName}>{option.label}</span>
-                    <span className={styles.itemLevel}>{option.level}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-
-        <form
-          className={styles.customField}
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitCustom();
-          }}
-        >
-          <label className={styles.customLabel} htmlFor="spec-sidebar-custom">
-            Your own spec URL
-          </label>
-          <div className={styles.customRow}>
-            <input
-              id="spec-sidebar-custom"
-              className={styles.customInput}
-              type="text"
-              value={customDraft}
-              spellCheck={false}
-              placeholder="https://…/openapi.yaml"
-              onChange={(e) => setCustomDraft(e.target.value)}
-            />
-            <button type="submit" className={styles.customSubmit}>
-              Render
-            </button>
-          </div>
-        </form>
-      </div>
-    </aside>
+        <div className={styles.groupLabel}>Your own spec URL</div>
+        <div className={styles.customRow}>
+          <input
+            className={styles.customInput}
+            type="text"
+            value={customDraft}
+            spellCheck={false}
+            placeholder="https://…/openapi.yaml"
+            onChange={(e) => setCustomDraft(e.target.value)}
+          />
+          <button type="submit" className={styles.customSubmit}>
+            Render
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 
