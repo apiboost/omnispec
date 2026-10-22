@@ -177,9 +177,14 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
                     <code className={replyMetaValueStyle}>{op.reply.channelName}</code>
                   </div>
                 )}
-                {op.reply.address && (op.reply.address.location || op.reply.address.description) && (
+                {op.reply.address && (op.reply.address.value || op.reply.address.location || op.reply.address.description) && (
                   <div className={replyMetaRowStyle}>
                     <span className={replyMetaLabelStyle}>address</span>
+                    {/* A fixed literal address (`reply.address` as a string) and a
+                        dynamic/runtime-expression `location` are both surfaced. */}
+                    {op.reply.address.value && (
+                      <code className={replyMetaValueStyle}>{op.reply.address.value}</code>
+                    )}
                     {op.reply.address.location && (
                       <code className={replyMetaValueStyle}>{op.reply.address.location}</code>
                     )}

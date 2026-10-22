@@ -38,6 +38,11 @@ const securityReply3xYaml = readFileSync(
   'utf-8',
 )
 
+const messageTraits3xYaml = readFileSync(
+  resolve(__dirname, '../../__fixtures__/asyncapi-3x-message-traits.yaml'),
+  'utf-8',
+)
+
 describe('parseAsyncApiSpec', () => {
   it('parses a valid AsyncAPI 2.6 spec', async () => {
     const result = await parseAsyncApiSpec(streetlightsYaml)
@@ -678,6 +683,30 @@ components:
       expect(op.reply?.address?.description).toBe('Where to send the reply')
       expect(op.reply?.channelName).toBe('responses')
       expect(op.reply?.messages.map((m) => m.name)).toEqual(['Pong'])
+    })
+
+    it('extracts a fixed literal 3.x reply address (string form)', async () => {
+      const result = await parseAsyncApiSpec(messageTraits3xYaml)
+      const op = result.channels.find((c) => c.name === 'requests')!.operations[0]
+      expect(op.reply?.address?.value).toBe('fixed/reply/queue')
+      expect(op.reply?.address?.location).toBeUndefined()
+    })
+  })
+
+  // $ref-based message traits: the component message merges its traits (keeping
+  // correlationId) and records the applied trait $ref target names in order.
+  describe('3.x message traits via $ref', () => {
+    it('keeps a trait-provided correlationId on the component message', async () => {
+      const result = await parseAsyncApiSpec(messageTraits3xYaml)
+      const msg = result.components.messages.AddOnlyMessage
+      expect(msg.correlationId?.location).toBe('$message.header#/correlationId')
+      expect(msg.correlationId?.description).toBe('Correlates replies to requests')
+    })
+
+    it('records the applied trait $ref target names in applied order', async () => {
+      const result = await parseAsyncApiSpec(messageTraits3xYaml)
+      const msg = result.components.messages.AddOnlyMessage
+      expect(msg.appliedTraits).toEqual(['CommonHeaders', 'Correlated'])
     })
   })
 })

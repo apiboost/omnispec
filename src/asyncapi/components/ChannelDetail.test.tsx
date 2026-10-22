@@ -283,6 +283,54 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText(/pong-channel/)).toBeInTheDocument()
   })
 
+  // A fixed literal reply address (reply.address given as a plain string) must
+  // render, not only the dynamic/location form.
+  it('renders a fixed literal reply address', () => {
+    const channel: AsyncApiChannel = {
+      name: 'ping',
+      address: 'ping',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'ping',
+          messages: [{ name: 'Ping', payload: { type: 'object' } }],
+          reply: {
+            messages: [],
+            address: { value: 'fixed/reply/address' },
+            channelName: 'pong-channel',
+          },
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('fixed/reply/address')).toBeInTheDocument()
+  })
+
+  // Applied message traits are surfaced so a reader can see which traits a
+  // message uses.
+  it('renders the applied message trait identifiers', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'placeOrder',
+          messages: [
+            {
+              name: 'Order',
+              payload: { type: 'object' },
+              appliedTraits: ['CommonHeaders', 'TracingTrait'],
+            },
+          ],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('CommonHeaders')).toBeInTheDocument()
+    expect(screen.getByText('TracingTrait')).toBeInTheDocument()
+  })
+
   // filterable tag chips.
   it('renders operation tag chips as buttons that call onTagClick when the prop is given', () => {
     const channel: AsyncApiChannel = {

@@ -143,6 +143,18 @@ export function AsyncApiSpec({
     [filteredChannels],
   )
 
+  // Operations referencing a channel that isn't defined (including documents
+  // with zero channels) are collected by the parser under a synthetic
+  // "__unassigned__" group. Surface an always-visible notice so they never
+  // disappear silently behind a collapsed card.
+  const unassignedOpCount = useMemo(
+    () =>
+      parsedSpec?.channels
+        .filter((ch) => ch.name === '__unassigned__')
+        .reduce((sum, ch) => sum + ch.operations.length, 0) ?? 0,
+    [parsedSpec],
+  )
+
   const navItems: NavItem[] = useMemo(() => {
     if (!parsedSpec) return []
 
@@ -362,6 +374,11 @@ export function AsyncApiSpec({
                   <h2 className={css({ margin: '0 0 1rem', fontSize: 'var(--omnispec-h2-font-size)', fontWeight: 'var(--omnispec-h2-font-weight)', color: 'var(--omnispec-h2-color)' })}>
                     Channels
                   </h2>
+                  {unassignedOpCount > 0 && (
+                    <p className={unassignedNoticeStyle} role="alert">
+                      {`Unresolved reference: ${unassignedOpCount} ${unassignedOpCount === 1 ? 'operation references' : 'operations reference'} an undefined channel. ${unassignedOpCount === 1 ? 'It is' : 'They are'} listed under "Unassigned operations" below rather than dropped.`}
+                    </p>
+                  )}
                   {filteredChannels.length === 0 ? (
                     <p className={emptyStateStyle}>
                       {parsedSpec.channels.length === 0
@@ -485,6 +502,18 @@ const emptyStateStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
   fontStyle: 'italic',
+})
+
+const unassignedNoticeStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  padding: '0.625rem 0.875rem',
+  marginBottom: '1rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+  backgroundColor: 'color-mix(in srgb, var(--omnispec-color-warning) 12%, transparent)',
+  color: 'var(--omnispec-color-warning)',
+  fontSize: 'var(--omnispec-font-size-sm)',
 })
 
 const noResultsNavStyle = css({

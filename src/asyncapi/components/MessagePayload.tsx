@@ -34,6 +34,15 @@ export function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx
   return (
     <>
       {message.tags && message.tags.length > 0 && <TagChips tags={message.tags} />}
+      {/* Which message traits were applied, in applied order (compact chips). */}
+      {message.appliedTraits && message.appliedTraits.length > 0 && (
+        <div className={traitsRowStyle}>
+          <span className={traitsLabelStyle}>Traits:</span>
+          {message.appliedTraits.map((trait, i) => (
+            <code key={`${trait}-${i}`} className={traitChipStyle}>{trait}</code>
+          ))}
+        </div>
+      )}
       {message.externalDocs && (
         <div className={externalDocsStyle}>
           <ExternalDocsLink
@@ -139,6 +148,29 @@ function MessageExample({ message, schema }: { message: AsyncApiMessage; schema?
 
 const externalDocsStyle = css({
   marginBottom: '0.5rem',
+})
+
+const traitsRowStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '0.375rem',
+  marginBottom: '0.5rem',
+})
+
+const traitsLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const traitChipStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '0.0625rem 0.375rem',
+  borderRadius: 'var(--omnispec-border-radius)',
 })
 
 const schemaFormatBadgeStyle = css({

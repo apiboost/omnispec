@@ -110,7 +110,12 @@ export interface AsyncApiOperation {
   /** AsyncAPI 3.x request-reply: the message(s) sent back in response. */
   reply?: {
     messages: AsyncApiMessage[]
-    address?: { location?: string; description?: string }
+    /**
+     * The reply address. `location` is a runtime expression (dynamic address);
+     * `value` is a fixed literal address (`reply.address` given as a plain
+     * string). Either may be present.
+     */
+    address?: { location?: string; value?: string; description?: string }
     channelName?: string
   }
   xBadges?: Array<{ name: string; color?: string; position?: 'before' | 'after' }>
@@ -133,6 +138,12 @@ export interface AsyncApiMessage {
   externalDocs?: AsyncApiExternalDocs
   /** True when `contentType` was inherited from the document default, not declared. */
   contentTypeInherited?: boolean
+  /**
+   * Identifiers of the message traits applied to this message, in applied order
+   * (a trait's `name`/`title`, or the `$ref` target name). Empty/absent when the
+   * message uses no traits.
+   */
+  appliedTraits?: string[]
 }
 
 export interface AsyncApiOAuthFlow {
