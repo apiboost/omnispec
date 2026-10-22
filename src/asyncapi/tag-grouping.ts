@@ -55,14 +55,19 @@ export function hasAnyTags(channels: AsyncApiChannel[]): boolean {
 /**
  * Group channels by the tags their operations carry. A channel with multiple
  * tags appears under each of its tag groups; channels with no tags fall into a
- * trailing "Untagged" group. Group order follows the document's declared `tags`
- * first (so tag descriptions/externalDocs order is preserved), then any tags
- * only found on operations, then "Untagged" last. Groups with no channels are
- * omitted.
+ * trailing "Untagged" group. Group order follows, in priority:
+ *   1. the `x-tagGroups` order (when provided) — so the main content matches the
+ *      sidebar, which nests groups under their `x-tagGroups` parent;
+ *   2. then the document's declared `tags` order (tag descriptions/externalDocs
+ *      order is preserved);
+ *   3. then any tags only found on operations (alphabetical);
+ *   4. then "Untagged" last.
+ * Groups with no channels are omitted.
  */
 export function groupChannelsByTag(
   channels: AsyncApiChannel[],
   specTags: ParsedAsyncApiSpec['tags'],
+  xTagGroups?: ParsedAsyncApiSpec['tagGroups'],
 ): TagGroup[] {
   const byName = new Map<string, AsyncApiChannel[]>()
   const untagged: AsyncApiChannel[] = []
@@ -80,12 +85,20 @@ export function groupChannelsByTag(
     }
   }
 
-  // Preserve declared tag order first, then operation-only tags (alphabetical).
+  // Order priority: x-tagGroups order, then declared tag order, then
+  // operation-only tags (alphabetical). The sidebar nests groups under their
+  // x-tagGroup parent, so honoring x-tagGroups here keeps the main content in
+  // the same order as the nav (and matches 2.x).
+  const xGrouped = (xTagGroups ?? []).flatMap((xg) => xg.tags).filter((name) => byName.has(name))
   const declared = (specTags ?? []).map((t) => t.name)
+  const seen = new Set<string>(xGrouped)
+  const declaredRemaining = declared.filter((name) => byName.has(name) && !seen.has(name))
+  declaredRemaining.forEach((name) => seen.add(name))
   const operationOnly = Array.from(byName.keys())
-    .filter((name) => !declared.includes(name))
+    .filter((name) => !seen.has(name))
     .sort()
-  const orderedNames = [...declared.filter((name) => byName.has(name)), ...operationOnly]
+  // De-dup xGrouped (an x-tagGroup may list a tag more than once).
+  const orderedNames = [...new Set([...xGrouped, ...declaredRemaining, ...operationOnly])]
 
   const tagMetaByName = new Map((specTags ?? []).map((t) => [t.name, t]))
 

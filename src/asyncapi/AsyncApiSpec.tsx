@@ -101,7 +101,7 @@ export function AsyncApiSpec({
   // Group channels by tag when any channel is tagged; otherwise keep a flat list.
   const grouped = useMemo(() => hasAnyTags(filteredChannels), [filteredChannels])
   const tagGroups = useMemo(
-    () => (grouped ? groupChannelsByTag(filteredChannels, parsedSpec?.tags) : []),
+    () => (grouped ? groupChannelsByTag(filteredChannels, parsedSpec?.tags, parsedSpec?.tagGroups) : []),
     [grouped, filteredChannels, parsedSpec],
   )
 

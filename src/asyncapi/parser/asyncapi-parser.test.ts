@@ -529,6 +529,61 @@ describe('parseAsyncApiSpec', () => {
     })
   })
 
+  describe('tag-level externalDocs on channel/operation/message tags', () => {
+    const spec = `
+asyncapi: '3.0.0'
+info: { title: T, version: '1.0.0' }
+tags:
+  - $ref: '#/components/tags/orders'
+channels:
+  c:
+    address: c
+    tags:
+      - name: chtag
+        description: Channel tag
+        externalDocs: { description: ChTag docs, url: https://example.com/chtag }
+operations:
+  op:
+    action: receive
+    channel: { $ref: '#/channels/c' }
+    tags:
+      - name: optag
+        externalDocs: { url: https://example.com/optag }
+    messages:
+      - $ref: '#/components/messages/M'
+components:
+  tags:
+    orders:
+      name: orders
+      description: Order events
+      externalDocs: { description: Order docs, url: https://example.com/orders }
+  messages:
+    M:
+      name: M
+      tags:
+        - name: msgtag
+          externalDocs: { description: MsgTag docs, url: https://example.com/msgtag }
+      payload: { type: object }
+`
+
+    it('resolves a $ref root tag with its description and externalDocs', async () => {
+      const result = await parseAsyncApiSpec(spec)
+      const tag = result.tags?.find((t) => t.name === 'orders')
+      expect(tag?.description).toBe('Order events')
+      expect(tag?.externalDocs?.url).toBe('https://example.com/orders')
+    })
+
+    it('carries externalDocs on channel, operation, and message tags', async () => {
+      const result = await parseAsyncApiSpec(spec)
+      const channel = result.channels.find((c) => c.name === 'c')!
+      expect(channel.tags?.[0]?.externalDocs?.url).toBe('https://example.com/chtag')
+      const op = channel.operations[0]
+      expect(op.tags?.[0]?.externalDocs?.url).toBe('https://example.com/optag')
+      const msg = op.messages[0]
+      expect(msg.tags?.[0]?.externalDocs?.url).toBe('https://example.com/msgtag')
+    })
+  })
+
   describe('security requirement scopes + OR structure (behavior 4)', () => {
     it('2.x: captures per-map-entry scopes with AND within a map', async () => {
       const result = await parseAsyncApiSpec(securityScopes2xYaml)

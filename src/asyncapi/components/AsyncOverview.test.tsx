@@ -71,4 +71,33 @@ describe('AsyncOverview', () => {
     render(<AsyncOverview spec={makeSpec()} />)
     expect(screen.queryByRole('link', { name: /external docs/i })).toBeNull()
   })
+
+  it('routes the contact URL through the external-link treatment (icon + opens in new tab)', () => {
+    render(
+      <AsyncOverview
+        spec={makeSpec({
+          contact: { name: 'Support', url: 'https://support.example.com' },
+        })}
+      />,
+    )
+    const link = screen.getByRole('link', { name: /opens in new tab/i })
+    expect(link).toHaveAttribute('href', 'https://support.example.com')
+    expect(link).toHaveAttribute('target', '_blank')
+    // The shared ↗ external-link icon is present.
+    expect(link.querySelector('svg')).toBeTruthy()
+  })
+
+  it('routes the license URL through the external-link treatment (icon + opens in new tab)', () => {
+    render(
+      <AsyncOverview
+        spec={makeSpec({
+          license: { name: 'Apache 2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0' },
+        })}
+      />,
+    )
+    const link = screen.getByRole('link', { name: /opens in new tab/i })
+    expect(link).toHaveAttribute('href', 'https://www.apache.org/licenses/LICENSE-2.0')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link.querySelector('svg')).toBeTruthy()
+  })
 })

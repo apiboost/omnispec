@@ -13,6 +13,17 @@ export interface AsyncApiExternalDocs {
   url: string
 }
 
+/**
+ * A tag as carried on a channel, operation, or message. Unlike the richer
+ * document-root tag (which also has `displayName`), these carry the tag's own
+ * `description` and `externalDocs` so a tag chip can surface its docs link.
+ */
+export interface AsyncApiTag {
+  name: string
+  description?: string
+  externalDocs?: AsyncApiExternalDocs
+}
+
 export interface AsyncApiSecurityRequirement {
   name: string
   scopes: string[]
@@ -63,7 +74,7 @@ export interface AsyncApiChannel {
   parameters?: Record<string, AsyncApiChannelParameter>
   bindings?: Record<string, unknown>
   externalDocs?: AsyncApiExternalDocs
-  tags?: Array<{ name: string; description?: string }>
+  tags?: AsyncApiTag[]
   xInternal?: boolean
 }
 
@@ -86,7 +97,7 @@ export interface AsyncApiOperation {
    */
   messages: AsyncApiMessage[]
   message?: AsyncApiMessage
-  tags?: Array<{ name: string; description?: string }>
+  tags?: AsyncApiTag[]
   bindings?: Record<string, unknown>
   externalDocs?: AsyncApiExternalDocs
   /** Names of security schemes required by this operation (OR semantics). */
@@ -116,7 +127,7 @@ export interface AsyncApiMessage {
   payload?: Record<string, unknown>
   headers?: Record<string, unknown>
   correlationId?: { description?: string; location: string }
-  tags?: Array<{ name: string; description?: string }>
+  tags?: AsyncApiTag[]
   examples?: Array<{ name?: string; summary?: string; payload?: unknown; headers?: unknown }>
   bindings?: Record<string, unknown>
   externalDocs?: AsyncApiExternalDocs

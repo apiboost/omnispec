@@ -39,4 +39,16 @@ describe('MessagePayload', () => {
     expect(screen.getByText('user')).toBeInTheDocument()
     expect(screen.getByText('lifecycle')).toBeInTheDocument()
   })
+
+  it('renders the externalDocs link of a message tag', () => {
+    renderMessage({
+      name: 'UserSignedUp',
+      tags: [
+        { name: 'user', externalDocs: { description: 'User tag docs', url: 'https://docs.example.com/user-tag' } },
+      ],
+      payload: { type: 'object', properties: { id: { type: 'string' } } },
+    })
+    const link = screen.getByRole('link', { name: /user external docs, opens in new tab/i })
+    expect(link).toHaveAttribute('href', 'https://docs.example.com/user-tag')
+  })
 })

@@ -21,6 +21,7 @@ import { MethodBar } from '@core/components/common/MethodBar'
 import { BindingsSection } from './BindingsSection'
 import { SecurityRequirementBadges } from './SecurityRequirementBadges'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
+import { TagChips } from '@asyncapi/components/TagChips'
 import { MessagePayload } from './MessagePayload'
 
 interface ChannelDetailProps {
@@ -71,6 +72,11 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
           <div className={sectionStyle}>
             <MarkdownRenderer content={channel.description} />
           </div>
+        )}
+
+        {/* Channel's own tags (2.x and 3.x) — chips, each with its docs link */}
+        {channel.tags && channel.tags.length > 0 && (
+          <TagChips tags={channel.tags} onTagClick={onTagClick} />
         )}
 
         {/* Channel-level external documentation (3.x) */}
@@ -140,23 +146,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
             </div>
 
             {op.tags && op.tags.length > 0 && (
-              <div className={tagChipsStyle}>
-                {op.tags.map((tag) =>
-                  onTagClick ? (
-                    <button
-                      key={tag.name}
-                      type="button"
-                      className={tagChipButtonStyle}
-                      title={tag.description}
-                      onClick={() => onTagClick(tag.name)}
-                    >
-                      {tag.name}
-                    </button>
-                  ) : (
-                    <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
-                  ),
-                )}
-              </div>
+              <TagChips tags={op.tags} onTagClick={onTagClick} />
             )}
 
             {op.description && (
@@ -523,34 +513,4 @@ const replyMetaValueStyle = css({
 const replyMetaDescStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-secondary)',
-})
-
-const tagChipsStyle = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '0.25rem',
-  marginBottom: '0.5rem',
-})
-
-const tagChipStyle = css({
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  color: 'var(--omnispec-fg-secondary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.5rem',
-  borderRadius: '0.625rem',
-})
-
-const tagChipButtonStyle = css({
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  color: 'var(--omnispec-fg-secondary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.5rem',
-  borderRadius: '0.625rem',
-  border: 'none',
-  cursor: 'pointer',
-  '&:hover': {
-    color: 'var(--omnispec-fg-primary)',
-  },
 })
