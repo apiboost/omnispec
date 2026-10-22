@@ -28,6 +28,7 @@ import { ErrorMessage } from '@core/components/common/ErrorMessage'
 import { ErrorBoundary } from '@core/components/common/ErrorBoundary'
 import { SpecStatusScreen } from '@core/components/Layout/SpecStatusScreen'
 import { SpecToolbar } from '@core/components/common/SpecToolbar'
+import { Icon } from '@core/components/common/Icon'
 import { resolveDownloadLink } from '@core/utils/resolve-download-link'
 import { useAsyncApiSpec } from './hooks/useAsyncApiSpec'
 import { AsyncOverview } from './components/AsyncOverview'
@@ -67,9 +68,37 @@ export function AsyncApiSpec({
   // operations as first-class, so an operation-first index is offered as a toggle.
   const [navGrouping, setNavGrouping] = useState<'channel' | 'operation'>('channel')
 
+  // When a tag chip is clicked it drives the same search filter, but we also
+  // track which tag is active so the filter can be shown as a dismissible
+  // indicator and toggled off by re-clicking the active chip.
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
+
   const handleToggleExpand = useCallback(() => {
     setAllExpanded((prev) => !prev)
     setExpandGeneration((prev) => prev + 1)
+  }, [])
+
+  // Clicking a tag chip filters to that tag; clicking the already-active tag
+  // toggles the filter back off (so there's always a way to clear it).
+  const handleTagFilter = useCallback((tagName: string) => {
+    setActiveTagFilter((prev) => {
+      const next = prev === tagName ? null : tagName
+      setSearchQuery(next ?? '')
+      return next
+    })
+  }, [])
+
+  // Typing in the filter box is an independent search — it supersedes (and
+  // clears) any active tag filter so the indicator never lies about why the
+  // list is filtered.
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query)
+    setActiveTagFilter(null)
+  }, [])
+
+  const clearTagFilter = useCallback(() => {
+    setActiveTagFilter(null)
+    setSearchQuery('')
   }, [])
 
   useMemo(() => {
@@ -305,8 +334,24 @@ export function AsyncApiSpec({
     <>
       <SearchBar
         placeholder="Filter channels..."
-        onSearch={setSearchQuery}
+        onSearch={handleSearch}
+        value={searchQuery}
       />
+      {activeTagFilter && (
+        <div className={activeFilterStyle}>
+          <span className={activeFilterLabelStyle}>Filtered by tag:</span>
+          <span className={activeFilterTagStyle}>{activeTagFilter}</span>
+          <button
+            type="button"
+            className={activeFilterClearStyle}
+            onClick={clearTagFilter}
+            aria-label={`Clear tag filter: ${activeTagFilter}`}
+          >
+            Clear
+            <Icon name="xmark" size="0.75rem" strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
       {hasOperations && (
         <div className={groupToggleStyle} role="group" aria-label="Sidebar grouping">
           <span className={groupToggleLabelStyle}>Group by</span>
@@ -397,7 +442,7 @@ export function AsyncApiSpec({
                             displayMode={resolvedDisplayMode}
                             expandAll={allExpanded}
                             expandGeneration={expandGeneration}
-                            onTagClick={setSearchQuery}
+                            onTagClick={handleTagFilter}
                           />
                         ))}
                       </section>
@@ -411,7 +456,7 @@ export function AsyncApiSpec({
                         displayMode={resolvedDisplayMode}
                         expandAll={allExpanded}
                         expandGeneration={expandGeneration}
-                        onTagClick={setSearchQuery}
+                        onTagClick={handleTagFilter}
                       />
                     ))
                   )}
@@ -564,4 +609,52 @@ const groupToggleActiveStyle = css({
 
 const tagSectionStyle = css({
   marginBottom: '2rem',
+})
+
+// Active tag-filter indicator, shown under the filter box so there's always a
+// visible sign that (and why) the list is filtered, plus a way to clear it.
+const activeFilterStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '0.375rem',
+  padding: '0 0.75rem 0.5rem',
+})
+
+const activeFilterLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const activeFilterTagStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 500,
+  color: 'var(--omnispec-fg-primary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '0.125rem 0.5rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+})
+
+const activeFilterClearStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.1875rem',
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  marginLeft: 'auto',
+  padding: '0.125rem 0.25rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--omnispec-color-primary)',
+  '&:hover': {
+    backgroundColor: 'var(--omnispec-bg-tertiary)',
+  },
 })

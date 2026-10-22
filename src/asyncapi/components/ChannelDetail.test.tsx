@@ -498,4 +498,30 @@ describe('ChannelDetail message rendering', () => {
     expect(link).toBeInTheDocument()
     expect(link).toHaveTextContent('orders:write')
   })
+
+  // finding 5: the operation summary must stack under the operation name rather
+  // than share its row and get crushed on narrow (~390-426px) viewports.
+  it('stacks the operation summary under the operation name line', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'sendOrder',
+          title: 'Send Order',
+          summary: 'Places a new order and does quite a lot of narrative explaining',
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    const summary = screen.getByText(/Places a new order/)
+    const operationId = screen.getByText('sendOrder')
+    // The summary is not a direct sibling of the operationId inside one flex
+    // row; it lives in its own block that spans the full width (flexBasis 100%),
+    // so it wraps onto its own line.
+    expect(summary.parentElement).not.toBe(operationId.parentElement)
+    expect(getComputedStyle(summary).flexBasis).toBe('100%')
+  })
 })

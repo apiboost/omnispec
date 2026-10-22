@@ -133,15 +133,19 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
         {channel.operations.map((op, idx) => (
           <div key={idx} id={id ? `${id}-op-${idx}` : undefined} className={operationStyle}>
             <div className={opHeaderStyle}>
-              <span
-                className={cx(actionBadgeBase, css({
-                  backgroundColor: actionColors[op.action] ?? 'var(--omnispec-fg-muted)',
-                }))}
-              >
-                {actionLabels[op.action] ?? op.action.toUpperCase()}
+              <span className={opNameLineStyle}>
+                <span
+                  className={cx(actionBadgeBase, css({
+                    backgroundColor: actionColors[op.action] ?? 'var(--omnispec-fg-muted)',
+                  }))}
+                >
+                  {actionLabels[op.action] ?? op.action.toUpperCase()}
+                </span>
+                {op.operationId && <span className={opIdStyle}>{op.operationId}</span>}
+                {op.title && <span className={opTitleStyle}>{op.title}</span>}
               </span>
-              {op.operationId && <span className={opIdStyle}>{op.operationId}</span>}
-              {op.title && <span className={opTitleStyle}>{op.title}</span>}
+              {/* Summary stacks under the name line (flexBasis 100%) so it isn't
+                  crushed beside the operation name on narrow viewports (finding 5). */}
               {op.summary && <span className={opSummaryStyle}>{op.summary}</span>}
             </div>
 
@@ -354,8 +358,18 @@ const operationStyle = css({
 const opHeaderStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '0.5rem',
+  flexWrap: 'wrap',
+  gap: '0.25rem 0.5rem',
   marginBottom: '0.5rem',
+})
+
+// The action badge + operationId + title share one line; the summary (below)
+// stacks under them so it keeps its full width on narrow screens.
+const opNameLineStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '0.5rem',
 })
 
 const actionBadgeBase = css({
@@ -383,6 +397,7 @@ const opTitleStyle = css({
 })
 
 const opSummaryStyle = css({
+  flexBasis: '100%',
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
 })
