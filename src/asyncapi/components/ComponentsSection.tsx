@@ -40,12 +40,7 @@ export function ComponentsSection({ components }: ComponentsSectionProps) {
                   {message.title && <p className={messageSummaryStyle}>{message.title}</p>}
                   {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
                   {message.contentType && (
-                    <code className={contentTypeStyle}>
-                      {message.contentType}
-                      {message.contentTypeInherited && (
-                        <span className={contentTypeHintStyle}> (default)</span>
-                      )}
-                    </code>
+                    <code className={contentTypeStyle}>{message.contentType}</code>
                   )}
                   <MessagePayload message={message} idx={`message-${name}`} />
                   {message.correlationId && (
@@ -143,11 +138,6 @@ const contentTypeStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-muted)',
   marginBottom: '0.5rem',
-})
-
-const contentTypeHintStyle = css({
-  fontStyle: 'italic',
-  color: 'var(--omnispec-fg-muted)',
 })
 
 const correlationIdStyle = css({

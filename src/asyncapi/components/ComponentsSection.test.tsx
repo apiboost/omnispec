@@ -109,7 +109,7 @@ describe('ComponentsSection', () => {
     expect(screen.getByText('TracingTrait')).toBeInTheDocument()
   })
 
-  it('displays an inherited contentType', () => {
+  it('displays an inherited contentType consistently with the channel view (no "(default)" suffix)', () => {
     const components: AsyncApiComponents = {
       schemas: {},
       securitySchemes: {},
@@ -123,7 +123,9 @@ describe('ComponentsSection', () => {
       },
     }
     renderComponentsExpanded(components)
+    // Wording matches ChannelDetail: just the content type, no "(default)" hint,
+    // so the same message reads identically in both views.
     expect(screen.getByText('application/json')).toBeInTheDocument()
-    expect(screen.getByText(/default/i)).toBeInTheDocument()
+    expect(screen.queryByText(/default/i)).toBeNull()
   })
 })
