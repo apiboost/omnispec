@@ -9,7 +9,7 @@
  */
 
 import { css, cx } from '@core/styles/css'
-import { Icon } from '@core/components/common/Icon'
+import { ExternalLink } from '@asyncapi/components/ExternalLink'
 import type { AsyncApiExternalDocs } from '../types/asyncapi.types'
 
 interface ExternalDocsLinkProps {
@@ -31,32 +31,15 @@ interface ExternalDocsLinkProps {
  */
 export function ExternalDocsLink({ externalDocs, context, className }: ExternalDocsLinkProps) {
   const label = externalDocs.description ?? 'External docs'
-  const ariaLabel = `${context ? `${context} external docs` : 'External docs'}, opens in new tab`
+  const ariaLabel = context ? `${context} external docs` : 'External docs'
 
   return (
-    <a
-      href={externalDocs.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={ariaLabel}
-      className={cx(linkStyle, className)}
-    >
+    <ExternalLink href={externalDocs.url} label={ariaLabel} className={cx(docsLinkStyle, className)}>
       {label}
-      <Icon name="external-link" size="0.875em" />
-    </a>
+    </ExternalLink>
   )
 }
 
-const linkStyle = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.25rem',
+const docsLinkStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-link)',
-  textDecoration: 'none',
-  minWidth: 0,
-  overflowWrap: 'anywhere',
-  '&:hover': {
-    textDecoration: 'underline',
-  },
 })

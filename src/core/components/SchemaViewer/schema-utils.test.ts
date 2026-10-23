@@ -78,6 +78,32 @@ describe('schemaToNodes', () => {
     expect(nodes[0].children![0].name).toBe('id')
   })
 
+  it('composes a self-referential (circular) array item as array<object>, never the internal ref placeholder name', () => {
+    // A recursive schema (e.g. a tree whose `children` is `array<self>`) survives
+    // $ref resolution as a circular placeholder `{ $ref, 'x-circular': true }`.
+    // The array label must show the item's structural type — matching how the same
+    // shape reads when inlined at the top level — not leak the raw pointer name.
+    const nodes = schemaToNodes({
+      type: 'array',
+      items: { $ref: '#/components/schemas/TreeNode', 'x-circular': true } as never,
+    })
+    expect(nodes[0].type).toBe('array<object>')
+    expect(nodes[0].type).not.toContain('TreeNode')
+  })
+
+  it('renders a standalone circular ref as its structural type, not the pointer name', () => {
+    const nodes = schemaToNodes({ $ref: '#/components/schemas/TreeNode', 'x-circular': true } as never)
+    expect(nodes[0].type).not.toContain('TreeNode')
+  })
+
+  it('still composes a non-circular named $ref array item as array<Name>', () => {
+    const nodes = schemaToNodes({
+      type: 'array',
+      items: { $ref: '#/components/schemas/Order' } as never,
+    })
+    expect(nodes[0].type).toBe('array<Order>')
+  })
+
   it('handles enum', () => {
     const nodes = schemaToNodes({
       type: 'string',
