@@ -19,6 +19,7 @@ import { ExampleSelector, type NamedExample } from '@core/components/common/Exam
 import type { AsyncApiMessage } from '@asyncapi/types/asyncapi.types'
 import { avroToJsonSchema, detectSchemaFormat } from '@asyncapi/schema-formats'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
+import { TagChips } from '@asyncapi/components/TagChips'
 
 /**
  * Renders a message payload as Schema + Example tabs. Avro payloads are
@@ -32,10 +33,13 @@ export function MessagePayload({ message, idx }: { message: AsyncApiMessage; idx
 
   return (
     <>
-      {message.tags && message.tags.length > 0 && (
-        <div className={tagChipsStyle}>
-          {message.tags.map((tag) => (
-            <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
+      {message.tags && message.tags.length > 0 && <TagChips tags={message.tags} />}
+      {/* Which message traits were applied, in applied order (compact chips). */}
+      {message.appliedTraits && message.appliedTraits.length > 0 && (
+        <div className={traitsRowStyle}>
+          <span className={traitsLabelStyle}>Traits:</span>
+          {message.appliedTraits.map((trait, i) => (
+            <code key={`${trait}-${i}`} className={traitChipStyle}>{trait}</code>
           ))}
         </div>
       )}
@@ -80,14 +84,28 @@ function PayloadBody({
   const format = detectSchemaFormat(schemaFormat)
 
   // Protobuf: full `.proto` field-tree parsing is a Pro capability; the free core
-  // surfaces the raw payload content as a code block rather than collapsing it to
-  // the bare type word "any".
+  // surfaces the `.proto` source cleanly in a code block (inside a tab affordance
+  // matching JSON/Avro payloads) rather than collapsing it to the bare word "any"
+  // or dumping a JSON-escaped one-line string. A string payload is the raw
+  // `.proto` source and renders verbatim; a structured object is pretty-printed.
   if (format === 'protobuf') {
+    const isSource = typeof rawPayload === 'string'
+    const code = isSource ? (rawPayload as unknown as string) : JSON.stringify(rawPayload, null, 2)
     return (
-      <div>
-        <CodeBlock code={JSON.stringify(rawPayload, null, 2)} language="json" />
-        <p className={proNoteStyle}>Full Protobuf schema rendering is available in Pro.</p>
-      </div>
+      <Tabs
+        tabs={[
+          {
+            id: `schema-${idx}`,
+            label: 'Payload Schema',
+            content: (
+              <div>
+                <CodeBlock code={code} language={isSource ? 'text' : 'json'} />
+                <p className={proNoteStyle}>Full Protobuf schema rendering is available in Pro.</p>
+              </div>
+            ),
+          },
+        ]}
+      />
     )
   }
 
@@ -142,24 +160,31 @@ function MessageExample({ message, schema }: { message: AsyncApiMessage; schema?
   )
 }
 
-const tagChipsStyle = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '0.25rem',
-  marginBottom: '0.5rem',
-})
-
-const tagChipStyle = css({
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  color: 'var(--omnispec-fg-secondary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.5rem',
-  borderRadius: '0.625rem',
-})
-
 const externalDocsStyle = css({
   marginBottom: '0.5rem',
+})
+
+const traitsRowStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '0.375rem',
+  marginBottom: '0.5rem',
+})
+
+const traitsLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const traitChipStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  color: 'var(--omnispec-fg-secondary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '0.0625rem 0.375rem',
+  borderRadius: 'var(--omnispec-border-radius)',
 })
 
 const schemaFormatBadgeStyle = css({

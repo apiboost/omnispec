@@ -12,6 +12,7 @@ import { css, cx } from '@core/styles/css'
 import type { ParsedAsyncApiSpec } from '../types/asyncapi.types'
 import { MarkdownRenderer } from '@core/components/MarkdownRenderer'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
+import { ExternalLink } from '@asyncapi/components/ExternalLink'
 
 interface AsyncOverviewProps {
   spec: ParsedAsyncApiSpec
@@ -80,7 +81,10 @@ export function AsyncOverview({ spec }: AsyncOverviewProps) {
             <span> &lt;<a href={`mailto:${spec.contact.email}`} className={linkStyle}>{spec.contact.email}</a>&gt;</span>
           )}
           {spec.contact.url && (
-            <span> · <a href={spec.contact.url} target="_blank" rel="noopener noreferrer" className={linkStyle}>{spec.contact.url}</a></span>
+            <span> · <ExternalLink
+              href={spec.contact.url}
+              label={`${spec.contact.name ?? spec.title ?? 'Contact'} website`}
+            >{spec.contact.url}</ExternalLink></span>
           )}
         </div>
       )}
@@ -88,7 +92,7 @@ export function AsyncOverview({ spec }: AsyncOverviewProps) {
       {spec.license && (
         <div className={metaStyle}>
           License: {spec.license.url
-            ? <a href={spec.license.url} target="_blank" rel="noopener noreferrer" className={linkStyle}>{spec.license.name}</a>
+            ? <ExternalLink href={spec.license.url} label={`${spec.license.name} license`}>{spec.license.name}</ExternalLink>
             : spec.license.name
           }
         </div>

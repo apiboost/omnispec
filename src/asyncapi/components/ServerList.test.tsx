@@ -55,9 +55,10 @@ describe('ServerList', () => {
       },
     ]
     render(<ServerList servers={servers} />)
-    expect(screen.getByText('Client Id')).toBeInTheDocument()
+    // Binding field keys are shown verbatim (not title-cased).
+    expect(screen.getByText('clientId')).toBeInTheDocument()
     expect(screen.getByText('guest')).toBeInTheDocument()
-    expect(screen.getByText('Clean Session')).toBeInTheDocument()
+    expect(screen.getByText('cleanSession')).toBeInTheDocument()
   })
 
   it('highlights server variable placeholders and lists variable enums', () => {
