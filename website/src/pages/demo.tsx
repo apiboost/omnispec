@@ -5,9 +5,10 @@ import {useBaseUrlUtils} from '@docusaurus/useBaseUrl'
 import {useColorMode} from '@docusaurus/theme-common'
 import DemoConfigPanel, {
   DEFAULT_DEMO_CONFIG,
-  SPEC_OPTIONS,
+  SPEC_GROUPS,
   type DemoConfig,
 } from '@site/src/components/DemoConfigPanel'
+import SpecSidebar from '@site/src/components/SpecSidebar'
 import styles from './demo.module.css'
 
 // Renders the live library, driven by the config panel and Docusaurus's color
@@ -16,7 +17,13 @@ import styles from './demo.module.css'
 // the header switcher stays the single source of truth. This component only
 // mounts client-side (see BrowserOnly below), so useColorMode, useBaseUrl, and
 // the browser-only renderer are all safe here.
-function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
+function LiveRenderer({
+  config,
+  sidebarHeader,
+}: {
+  config: DemoConfig
+  sidebarHeader: React.ReactNode
+}): React.ReactNode {
   const {colorMode} = useColorMode() // 'light' | 'dark' — tracks the header switcher
   const {OmniSpecRenderer} = require('@apiboost/omnispec') as typeof import('@apiboost/omnispec')
 
@@ -40,6 +47,10 @@ function LiveRenderer({config}: {config: DemoConfig}): React.ReactNode {
       allowTryIt={config.allowTryIt}
       downloadLink={config.downloadLink}
       defaultExpandOperations={config.defaultExpandOperations}
+      // The spec picker rides in the renderer's own sidebar (top, above the
+      // generated nav) so it reads as part of the renderer, and the renderer's
+      // mobile drawer surfaces it on small screens.
+      slots={{sidebarHeader}}
     />
   )
 }
@@ -71,8 +82,16 @@ export default function Demo(): React.ReactNode {
   const {withBaseUrl} = useBaseUrlUtils()
   // Resolve the bundled preset paths to real URLs once; an absolute URL a user
   // pastes passes through withBaseUrl unchanged.
-  const specOptions = useMemo(
-    () => SPEC_OPTIONS.map((s) => ({label: s.label, value: withBaseUrl(s.value)})),
+  const specGroups = useMemo(
+    () =>
+      SPEC_GROUPS.map((group) => ({
+        label: group.label,
+        options: group.options.map((o) => ({
+          label: o.label,
+          value: withBaseUrl(o.value),
+          level: o.level,
+        })),
+      })),
     [withBaseUrl],
   )
   const defaults = useMemo(
@@ -82,6 +101,17 @@ export default function Demo(): React.ReactNode {
   const [config, setConfig] = useState<DemoConfig>(defaults)
   const [open, setOpen] = useState(false)
 
+  // The spec picker is injected into the renderer's own sidebar via its
+  // sidebarHeader slot, so it reads as part of the renderer rather than a
+  // separate column.
+  const specPicker = (
+    <SpecSidebar
+      groups={specGroups}
+      selected={config.spec}
+      onSelect={(spec) => setConfig((c) => ({...c, spec}))}
+    />
+  )
+
   return (
     <Layout
       title="Live Demo"
@@ -90,7 +120,7 @@ export default function Demo(): React.ReactNode {
       <div className={styles.stageWrap}>
         <div className={styles.stage}>
           <BrowserOnly fallback={<div className={styles.loading}>Loading the live renderer…</div>}>
-            {() => <LiveRenderer config={config} />}
+            {() => <LiveRenderer config={config} sidebarHeader={specPicker} />}
           </BrowserOnly>
         </div>
 
@@ -134,11 +164,7 @@ export default function Demo(): React.ReactNode {
           </div>
           <div className={styles.sheetBody}>
             <div className={styles.sheetInner}>
-              <DemoConfigPanel
-                config={config}
-                onChange={setConfig}
-                specOptions={specOptions}
-              />
+              <DemoConfigPanel config={config} onChange={setConfig} />
             </div>
           </div>
         </div>
