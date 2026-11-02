@@ -34,6 +34,8 @@ interface ChannelDetailProps {
    * tag name (e.g. to filter the spec by tag). When absent, chips render static.
    */
   onTagClick?: (tagName: string) => void
+  /** The active tag filter, forwarded to tag chips for their `aria-pressed` state. */
+  activeTag?: string | null
 }
 
 const actionLabels: Record<string, string> = {
@@ -50,7 +52,7 @@ const actionColors: Record<string, string> = {
   receive: 'var(--omnispec-color-subscribe)',
 }
 
-export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick }: ChannelDetailProps) {
+export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag }: ChannelDetailProps) {
   const primaryAction = channel.operations[0]?.action
   const primaryLabel = actionLabels[primaryAction] ?? primaryAction?.toUpperCase() ?? ''
   const primaryColor = actionColors[primaryAction] ?? 'var(--omnispec-fg-muted)'
@@ -76,7 +78,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
 
         {/* Channel's own tags (2.x and 3.x) — chips, each with its docs link */}
         {channel.tags && channel.tags.length > 0 && (
-          <TagChips tags={channel.tags} onTagClick={onTagClick} />
+          <TagChips tags={channel.tags} onTagClick={onTagClick} activeTag={activeTag} />
         )}
 
         {/* Channel-level external documentation (3.x) */}
@@ -150,7 +152,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
             </div>
 
             {op.tags && op.tags.length > 0 && (
-              <TagChips tags={op.tags} onTagClick={onTagClick} />
+              <TagChips tags={op.tags} onTagClick={onTagClick} activeTag={activeTag} />
             )}
 
             {op.description && (

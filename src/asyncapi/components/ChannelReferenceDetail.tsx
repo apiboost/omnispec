@@ -32,6 +32,8 @@ interface ChannelReferenceDetailProps {
    * tag name (e.g. to filter the spec by tag). When absent, chips render static.
    */
   onTagClick?: (tagName: string) => void
+  /** The active tag filter, forwarded to tag chips for their `aria-pressed` state. */
+  activeTag?: string | null
 }
 
 const actionLabels: Record<string, string> = {
@@ -59,7 +61,7 @@ const actionColors: Record<string, string> = {
  * Compact mode keeps using `ChannelDetail`; this wrapper is only mounted when
  * `displayMode === 'reference'`.
  */
-export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick }: ChannelReferenceDetailProps) {
+export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag }: ChannelReferenceDetailProps) {
   const primaryAction = channel.operations[0]?.action
   const primaryLabel = actionLabels[primaryAction] ?? primaryAction?.toUpperCase() ?? ''
   const primaryColor = actionColors[primaryAction] ?? 'var(--omnispec-fg-muted)'
@@ -94,6 +96,7 @@ export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneratio
                 channel={channel}
                 operation={op}
                 onTagClick={onTagClick}
+                activeTag={activeTag}
               />
             }
             samples={<OperationSamplesColumn operation={op} idx={idx} />}
@@ -114,10 +117,12 @@ function OperationSchemaColumn({
   channel,
   operation,
   onTagClick,
+  activeTag,
 }: {
   channel: AsyncApiChannel
   operation: AsyncApiOperation
   onTagClick?: (tagName: string) => void
+  activeTag?: string | null
 }) {
   return (
     <div>
@@ -143,6 +148,7 @@ function OperationSchemaColumn({
                 type="button"
                 className={tagChipButtonStyle}
                 title={tag.description}
+                aria-pressed={tag.name === activeTag}
                 onClick={() => onTagClick(tag.name)}
               >
                 {tag.name}

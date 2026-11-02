@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { css, cx } from '@core/styles/css'
 import type { BaseSpecProps } from '@core/types/common.types'
 import { SpecType } from '@core/types/spec-detection.types'
@@ -61,7 +61,9 @@ export function AsyncApiSpec({
   // else (including unset) stays compact single-column.
   const resolvedDisplayMode = displayMode ?? 'compact'
   const { data: parsedSpec, state } = useAsyncApiSpec(spec)
-  const [searchQuery, setSearchQuery] = useState('')
+  // Seed the filter from the URL (?tag=) so a shared/bookmarked filtered view
+  // renders filtered on first paint.
+  const [searchQuery, setSearchQuery] = useState(() => readTagParam() ?? '')
   const [allExpanded, setAllExpanded] = useState(defaultExpandOperations)
   const [expandGeneration, setExpandGeneration] = useState(0)
   // Sidebar grouping: by channel (default) or by operation. AsyncAPI 3.x treats
@@ -71,7 +73,7 @@ export function AsyncApiSpec({
   // When a tag chip is clicked it drives the same search filter, but we also
   // track which tag is active so the filter can be shown as a dismissible
   // indicator and toggled off by re-clicking the active chip.
-  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(() => readTagParam())
 
   const handleToggleExpand = useCallback(() => {
     setAllExpanded((prev) => !prev)
@@ -100,6 +102,23 @@ export function AsyncApiSpec({
     setActiveTagFilter(null)
     setSearchQuery('')
   }, [])
+
+  // Reflect the active tag filter in the URL (?tag=) so a filtered view can be
+  // shared or bookmarked; clearing it removes the param. Other query params and
+  // the hash are preserved, and we write only on an actual change.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tag') === activeTagFilter) return
+    if (activeTagFilter) params.set('tag', activeTagFilter)
+    else params.delete('tag')
+    const query = params.toString()
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    )
+  }, [activeTagFilter])
 
   useMemo(() => {
     if (parsedSpec && onSpecLoaded) {
@@ -333,7 +352,7 @@ export function AsyncApiSpec({
   const specNav = (
     <>
       <SearchBar
-        placeholder="Filter channels..."
+        placeholder={navGrouping === 'operation' ? 'Filter operations...' : 'Filter channels...'}
         onSearch={handleSearch}
         value={searchQuery}
       />
@@ -443,6 +462,7 @@ export function AsyncApiSpec({
                             expandAll={allExpanded}
                             expandGeneration={expandGeneration}
                             onTagClick={handleTagFilter}
+                            activeTag={activeTagFilter}
                           />
                         ))}
                       </section>
@@ -457,6 +477,7 @@ export function AsyncApiSpec({
                         expandAll={allExpanded}
                         expandGeneration={expandGeneration}
                         onTagClick={handleTagFilter}
+                        activeTag={activeTagFilter}
                       />
                     ))
                   )}
@@ -488,6 +509,7 @@ function ChannelCard({
   expandAll,
   expandGeneration,
   onTagClick,
+  activeTag,
 }: {
   channel: ParsedAsyncApiSpec['channels'][number]
   id: string
@@ -495,6 +517,7 @@ function ChannelCard({
   expandAll: boolean
   expandGeneration: number
   onTagClick: (tagName: string) => void
+  activeTag: string | null
 }) {
   const Renderer = displayMode === 'reference' ? ChannelReferenceDetail : ChannelDetail
   return (
@@ -504,8 +527,15 @@ function ChannelCard({
       expandAll={expandAll}
       expandGeneration={expandGeneration}
       onTagClick={onTagClick}
+      activeTag={activeTag}
     />
   )
+}
+
+/** Read the active-tag filter from the URL query string (`?tag=`), SSR-safe. */
+function readTagParam(): string | null {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get('tag')
 }
 
 /**
