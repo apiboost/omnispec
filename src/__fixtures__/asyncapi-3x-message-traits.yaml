@@ -1,0 +1,43 @@
+asyncapi: '3.0.0'
+info:
+  title: Message traits, fixed reply, correlationId
+  version: 1.0.0
+defaultContentType: application/json
+channels:
+  requests:
+    address: requests
+    messages:
+      AddOnlyMessage:
+        $ref: '#/components/messages/AddOnlyMessage'
+operations:
+  ask:
+    action: send
+    channel:
+      $ref: '#/channels/requests'
+    messages:
+      - $ref: '#/channels/requests/messages/AddOnlyMessage'
+    reply:
+      address: fixed/reply/queue
+components:
+  messages:
+    AddOnlyMessage:
+      name: AddOnlyMessage
+      payload:
+        type: object
+        properties:
+          id:
+            type: string
+      traits:
+        - $ref: '#/components/messageTraits/CommonHeaders'
+        - $ref: '#/components/messageTraits/Correlated'
+  messageTraits:
+    CommonHeaders:
+      headers:
+        type: object
+        properties:
+          X-Trace:
+            type: string
+    Correlated:
+      correlationId:
+        location: '$message.header#/correlationId'
+        description: Correlates replies to requests

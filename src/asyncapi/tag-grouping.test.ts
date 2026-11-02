@@ -88,6 +88,35 @@ describe('groupChannelsByTag', () => {
     expect(hasAnyTags([channelTagged('a', ['x'])])).toBe(true)
   })
 
+  it('orders groups by x-tagGroups when provided, matching the sidebar', () => {
+    // Declared tag order is [b, a], but x-tagGroups lists group "G" with tags
+    // [a, b] first. The main-content group order must follow x-tagGroups (a, b),
+    // not the declared/alphabetical order — so it matches the nav.
+    const channels = [channel('ch-a', ['a']), channel('ch-b', ['b'])]
+    const groups = groupChannelsByTag(
+      channels,
+      [{ name: 'b' }, { name: 'a' }],
+      [{ name: 'G', tags: ['a', 'b'] }],
+    )
+    expect(groups.map((g) => g.label)).toEqual(['a', 'b'])
+  })
+
+  it('appends groups not referenced by any x-tagGroup after the ordered ones', () => {
+    const channels = [
+      channel('ch-a', ['a']),
+      channel('ch-b', ['b']),
+      channel('ch-c', ['c']),
+      channel('misc', []),
+    ]
+    const groups = groupChannelsByTag(
+      channels,
+      [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
+      [{ name: 'G', tags: ['c'] }],
+    )
+    // "c" is x-grouped first; "a" and "b" (declared order) follow; Untagged last.
+    expect(groups.map((g) => g.label)).toEqual(['c', 'a', 'b', UNTAGGED_LABEL])
+  })
+
   it('assigns DOM-safe slug ids from the tag name, de-duplicated (finding 5)', () => {
     // Two distinct tag names that slugify to the same value must get unique ids,
     // and ids must not embed the raw display label with spaces.

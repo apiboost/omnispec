@@ -71,7 +71,45 @@ describe('ComponentsSection', () => {
     expect(screen.getByText('Headers')).toBeInTheDocument()
   })
 
-  it('displays an inherited contentType', () => {
+  // correlationId must render in the components Messages view, matching the
+  // channel view (it was previously only shown inside ChannelDetail).
+  it('renders a message correlationId', () => {
+    const components: AsyncApiComponents = {
+      schemas: {},
+      securitySchemes: {},
+      messages: {
+        AddOnlyMessage: {
+          name: 'AddOnlyMessage',
+          payload: { type: 'object' },
+          correlationId: { location: '$message.header#/correlationId', description: 'Correlates replies' },
+        },
+      },
+    }
+    renderComponentsExpanded(components)
+    expect(screen.getByText('correlationId')).toBeInTheDocument()
+    expect(screen.getByText('$message.header#/correlationId')).toBeInTheDocument()
+    expect(screen.getByText('Correlates replies')).toBeInTheDocument()
+  })
+
+  // Applied message trait identifiers are surfaced in the components Messages view.
+  it('renders applied message trait identifiers', () => {
+    const components: AsyncApiComponents = {
+      schemas: {},
+      securitySchemes: {},
+      messages: {
+        AddOnlyMessage: {
+          name: 'AddOnlyMessage',
+          payload: { type: 'object' },
+          appliedTraits: ['CommonHeaders', 'TracingTrait'],
+        },
+      },
+    }
+    renderComponentsExpanded(components)
+    expect(screen.getByText('CommonHeaders')).toBeInTheDocument()
+    expect(screen.getByText('TracingTrait')).toBeInTheDocument()
+  })
+
+  it('displays an inherited contentType consistently with the channel view (no "(default)" suffix)', () => {
     const components: AsyncApiComponents = {
       schemas: {},
       securitySchemes: {},
@@ -85,7 +123,9 @@ describe('ComponentsSection', () => {
       },
     }
     renderComponentsExpanded(components)
+    // Wording matches ChannelDetail: just the content type, no "(default)" hint,
+    // so the same message reads identically in both views.
     expect(screen.getByText('application/json')).toBeInTheDocument()
-    expect(screen.getByText(/default/i)).toBeInTheDocument()
+    expect(screen.queryByText(/default/i)).toBeNull()
   })
 })

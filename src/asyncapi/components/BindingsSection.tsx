@@ -52,7 +52,9 @@ export function BindingsSection({ bindings, title = 'Bindings' }: BindingsSectio
                 <ProtocolBadge protocol={protocol} />
               </div>
               {rows.length > 0 ? (
-                <FieldRows fields={rows} />
+                // Binding/config keys are shown verbatim — their acronyms (URL,
+                // ID) and dotted names (cleanup.policy) must not be title-cased.
+                <FieldRows fields={rows} verbatim />
               ) : (
                 <p className={emptyStyle}>No binding fields.</p>
               )}

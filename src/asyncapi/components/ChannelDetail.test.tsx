@@ -283,6 +283,54 @@ describe('ChannelDetail message rendering', () => {
     expect(screen.getByText(/pong-channel/)).toBeInTheDocument()
   })
 
+  // A fixed literal reply address (reply.address given as a plain string) must
+  // render, not only the dynamic/location form.
+  it('renders a fixed literal reply address', () => {
+    const channel: AsyncApiChannel = {
+      name: 'ping',
+      address: 'ping',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'ping',
+          messages: [{ name: 'Ping', payload: { type: 'object' } }],
+          reply: {
+            messages: [],
+            address: { value: 'fixed/reply/address' },
+            channelName: 'pong-channel',
+          },
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('fixed/reply/address')).toBeInTheDocument()
+  })
+
+  // Applied message traits are surfaced so a reader can see which traits a
+  // message uses.
+  it('renders the applied message trait identifiers', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'placeOrder',
+          messages: [
+            {
+              name: 'Order',
+              payload: { type: 'object' },
+              appliedTraits: ['CommonHeaders', 'TracingTrait'],
+            },
+          ],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('CommonHeaders')).toBeInTheDocument()
+    expect(screen.getByText('TracingTrait')).toBeInTheDocument()
+  })
+
   // filterable tag chips.
   it('renders operation tag chips as buttons that call onTagClick when the prop is given', () => {
     const channel: AsyncApiChannel = {
@@ -358,6 +406,79 @@ describe('ChannelDetail message rendering', () => {
     expect(link).toHaveAttribute('href', 'https://example.com/channel')
   })
 
+  // channel's own tags (2.x and 3.x) render as chips on the channel.
+  it('renders the channel\'s own tags as chips', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      tags: [{ name: 'channel-only-tag' }, { name: 'billing' }],
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    expect(screen.getByText('channel-only-tag')).toBeInTheDocument()
+    expect(screen.getByText('billing')).toBeInTheDocument()
+  })
+
+  // a channel tag that carries externalDocs surfaces its docs link.
+  it('renders the externalDocs link of a channel tag', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      tags: [
+        { name: 'billing', externalDocs: { description: 'Billing docs', url: 'https://example.com/billing' } },
+      ],
+      operations: [],
+    }
+    renderChannel(channel)
+    const link = screen.getByRole('link', { name: /billing external docs, opens in new tab/i })
+    expect(link).toHaveAttribute('href', 'https://example.com/billing')
+  })
+
+  // a channel tag is clickable (filter) when onTagClick is provided.
+  it('renders channel tag chips as filter buttons when onTagClick is given', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      tags: [{ name: 'billing' }],
+      operations: [],
+    }
+    const clicked: string[] = []
+    render(
+      <ConfigProvider config={{ defaultExpandOperations: true }}>
+        <ChannelDetail channel={channel} expandAll onTagClick={(name) => clicked.push(name)} />
+      </ConfigProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'billing' }))
+    expect(clicked).toEqual(['billing'])
+  })
+
+  // an operation tag that carries externalDocs surfaces its docs link.
+  it('renders the externalDocs link of an operation tag', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          tags: [
+            { name: 'alerts', externalDocs: { description: 'Alert docs', url: 'https://example.com/alerts' } },
+          ],
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    const link = screen.getByRole('link', { name: /alerts external docs, opens in new tab/i })
+    expect(link).toHaveAttribute('href', 'https://example.com/alerts')
+  })
+
   // operation security via the requirements API.
   it('renders operation-level security requirements with scopes', () => {
     const channel: AsyncApiChannel = {
@@ -376,5 +497,31 @@ describe('ChannelDetail message rendering', () => {
     const link = screen.getByRole('link', { name: /oauth2Scheme/ })
     expect(link).toBeInTheDocument()
     expect(link).toHaveTextContent('orders:write')
+  })
+
+  // finding 5: the operation summary must stack under the operation name rather
+  // than share its row and get crushed on narrow (~390-426px) viewports.
+  it('stacks the operation summary under the operation name line', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'send',
+          operationId: 'sendOrder',
+          title: 'Send Order',
+          summary: 'Places a new order and does quite a lot of narrative explaining',
+          messages: [{ name: 'Order', payload: { type: 'object' } }],
+        },
+      ],
+    }
+    renderChannel(channel)
+    const summary = screen.getByText(/Places a new order/)
+    const operationId = screen.getByText('sendOrder')
+    // The summary is not a direct sibling of the operationId inside one flex
+    // row; it lives in its own block that spans the full width (flexBasis 100%),
+    // so it wraps onto its own line.
+    expect(summary.parentElement).not.toBe(operationId.parentElement)
+    expect(getComputedStyle(summary).flexBasis).toBe('100%')
   })
 })

@@ -36,23 +36,31 @@ export function SecurityRequirementBadges({ requirements, label = 'Security' }: 
   return (
     <div className={rowStyle}>
       <span className={labelStyle}>{label}</span>
-      {requirements.map((alternative, altIndex) => (
-        <Fragment key={altIndex}>
-          {altIndex > 0 && <span className={orStyle}>OR</span>}
-          {alternative.map((scheme) => (
-            <a key={scheme.name} href={`#security-${scheme.name}`} className={badgeStyle}>
-              <Icon name="lock" size="0.625rem" strokeWidth={2.5} />
-              {scheme.name}
-              {scheme.scopes.length > 0 && (
-                <span className={scopesStyle}>
-                  <span className={scopeSepStyle}>·</span>
-                  {scheme.scopes.join(', ')}
-                </span>
-              )}
-            </a>
-          ))}
-        </Fragment>
-      ))}
+      {requirements.map((alternative, altIndex) => {
+        const chips = alternative.map((scheme) => (
+          <a key={scheme.name} href={`#security-${scheme.name}`} className={badgeStyle}>
+            <Icon name="lock" size="0.625rem" strokeWidth={2.5} />
+            {scheme.name}
+            {scheme.scopes.length > 0 && (
+              <span className={scopesStyle}>
+                <span className={scopeSepStyle}>·</span>
+                {scheme.scopes.join(', ')}
+              </span>
+            )}
+          </a>
+        ))
+        // Keep the "OR" divider glued to the chip(s) that follow it so the pair
+        // wraps together as a unit — the divider never strands alone at the end
+        // of a line on narrow screens (finding 4).
+        return altIndex === 0 ? (
+          <Fragment key={altIndex}>{chips}</Fragment>
+        ) : (
+          <span key={altIndex} className={orGroupStyle}>
+            <span className={orStyle}>OR</span>
+            {chips}
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -63,6 +71,18 @@ const rowStyle = css({
   gap: '0.375rem',
   flexWrap: 'wrap',
   marginTop: '0.5rem',
+  // Breathing room below the security row so it doesn't butt against the next
+  // section on narrow screens (finding 3).
+  marginBottom: '0.5rem',
+})
+
+// An OR divider and the chip(s) that follow it share a non-wrapping group so
+// the pair wraps as a single unit, never leaving "OR" stranded (finding 4).
+const orGroupStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.375rem',
+  whiteSpace: 'nowrap',
 })
 
 const labelStyle = css({

@@ -14,22 +14,30 @@ import { css } from '../../styles/css'
 interface SearchBarProps {
   placeholder?: string
   onSearch: (query: string) => void
+  /**
+   * Optional controlled value. When provided, the input reflects it (so an
+   * external filter — e.g. a clicked tag — shows in the box and can be cleared
+   * from outside). When omitted, the input manages its own state.
+   */
+  value?: string
 }
 
-export function SearchBar({ placeholder = 'Search...', onSearch }: SearchBarProps) {
-  const [value, setValue] = useState('')
+export function SearchBar({ placeholder = 'Search...', onSearch, value }: SearchBarProps) {
+  const [internalValue, setInternalValue] = useState('')
+  const isControlled = value !== undefined
+  const displayValue = isControlled ? value : internalValue
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value
-    setValue(query)
+    if (!isControlled) setInternalValue(query)
     onSearch(query)
-  }, [onSearch])
+  }, [onSearch, isControlled])
 
   return (
     <div className={`omnispec-search ${containerStyle}`}>
       <input
         type="text"
-        value={value}
+        value={displayValue}
         onChange={handleChange}
         placeholder={placeholder}
         className={inputStyle}

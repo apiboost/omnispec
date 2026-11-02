@@ -84,7 +84,10 @@ interface OperationObjectV3 {
   reply?: {
     channel?: unknown
     messages?: Array<{ $ref?: string } | MessageObject>
-    address?: { location?: string; description?: string }
+    // Per the 3.x spec the reply address is a Reply Address Object with a
+    // runtime-expression `location`; some documents also give a fixed literal
+    // address as a plain string. Accept both.
+    address?: { location?: string; description?: string } | string
   }
   traits?: Array<Partial<OperationObjectV3>>
 }
@@ -147,6 +150,27 @@ function mergeMessageLayer(base: MessageObject, override: MessageObject): Messag
     }
   }
   return result
+}
+
+/**
+ * Derive the identifier of each applied trait, in applied (declaration) order.
+ * Prefers the raw (pre-resolution) `$ref` target name (traits are commonly
+ * `$ref`s whose pointer resolveRefs has since inlined), then the resolved
+ * trait's `name`/`title`, then a positional fallback so every applied trait is
+ * still surfaced.
+ */
+function deriveAppliedTraitNames(
+  traits: MessageObject[],
+  rawTraits?: unknown[],
+): string[] {
+  return traits.map((trait, i) => {
+    const raw = rawTraits?.[i] as Record<string, unknown> | undefined
+    if (raw && typeof raw === 'object' && typeof raw.$ref === 'string') {
+      const last = raw.$ref.split('/').pop()
+      if (last) return decodeJsonPointerSegment(last)
+    }
+    return trait.name ?? trait.title ?? `trait ${i + 1}`
+  })
 }
 
 /**
@@ -224,7 +248,7 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   const channels = isV3
     ? extractChannelsV3(api, rawApi, defaultContentType)
     : extractChannelsV2(api, defaultContentType)
-  const components = extractComponents(api, isV3, defaultContentType)
+  const components = extractComponents(api, rawApi, isV3, defaultContentType)
 
   const root = api as unknown as Record<string, unknown>
 
@@ -385,18 +409,36 @@ function resolveChannelName(
   return undefined
 }
 
+type ReplyAddress = { location?: string; value?: string; description?: string }
+
+/**
+ * Normalize a 3.x reply `address` into the model shape. A plain string is a
+ * fixed literal address (`value`); an object carries a runtime-expression
+ * `location` (dynamic) plus an optional `description`.
+ */
+function normalizeReplyAddress(
+  address: { location?: string; description?: string } | string | undefined,
+): ReplyAddress | undefined {
+  if (typeof address === 'string') {
+    return address.length > 0 ? { value: address } : undefined
+  }
+  if (address && typeof address === 'object') {
+    const { location, description } = address
+    if (location || description) return { location, description }
+  }
+  return undefined
+}
+
 function extractChannelsV3(
   api: AsyncApiDocument,
   rawApi: AsyncApiDocument,
   defaultContentType?: string,
 ): AsyncApiChannel[] {
-  if (!api.channels) return []
-
   const channelMap = new Map<string, AsyncApiChannel>()
   const addressToName = new Map<string, string>()
 
-  // First, register all channels
-  for (const [channelName, ch] of Object.entries(api.channels)) {
+  // First, register all channels (a document may legally define none)
+  for (const [channelName, ch] of Object.entries(api.channels ?? {})) {
     const raw = ch as Record<string, unknown>
     const address = ch.address ?? channelName
     addressToName.set(address, channelName)
@@ -456,11 +498,12 @@ function extractChannelsV3(
       )
 
       const raw = op as unknown as Record<string, unknown>
+      const replyAddress = normalizeReplyAddress(op.reply?.address)
       const reply =
-        replyMessages.length > 0 || op.reply?.address || replyChannelName
+        replyMessages.length > 0 || replyAddress || replyChannelName
           ? {
             messages: replyMessages,
-            address: op.reply?.address,
+            address: replyAddress,
             channelName: replyChannelName,
           }
           : undefined
@@ -502,7 +545,10 @@ function extractChannelsV3(
     channels.push({
       name: '__unassigned__',
       address: 'Unassigned operations',
-      description: 'These operations reference a channel that is not defined in this document.',
+      description:
+        'Unresolved reference: these operations reference an undefined channel ' +
+        '(the channel is missing from this document, or the document defines no channels). ' +
+        'They are surfaced here rather than dropped.',
       operations: orphanOperations,
     })
   }
@@ -513,12 +559,17 @@ function convertMessage(
   rawMsg: MessageObject,
   isV3: boolean,
   defaultContentType?: string,
+  rawTraits?: unknown[],
 ): AsyncApiMessage {
   const msg = applyMessageTraits(rawMsg, isV3)
   const hasOwnContentType = typeof msg.contentType === 'string' && msg.contentType.length > 0
   const contentType = hasOwnContentType
     ? msg.contentType
     : defaultContentType ?? 'application/json'
+  const appliedTraits =
+    rawMsg.traits && rawMsg.traits.length > 0
+      ? deriveAppliedTraitNames(rawMsg.traits, rawTraits)
+      : undefined
   return {
     name: msg.name,
     title: msg.title,
@@ -534,11 +585,13 @@ function convertMessage(
     examples: msg.examples,
     bindings: msg.bindings,
     externalDocs: msg.externalDocs,
+    appliedTraits,
   }
 }
 
 function extractComponents(
   api: AsyncApiDocument,
+  rawApi: AsyncApiDocument,
   isV3: boolean,
   defaultContentType?: string,
 ): AsyncApiComponents {
@@ -548,9 +601,12 @@ function extractComponents(
   // messages take — so trait-merging, schemaFormat, examples, etc. apply in the
   // browsable Messages section too, not only inside ChannelDetail.
   const rawMessages = (api.components?.messages ?? {}) as Record<string, MessageObject>
+  // The pre-resolution component messages still hold their trait `$ref` pointers
+  // (resolveRefs inlines them), so read trait identifiers from there.
+  const rawComponentMessages = (rawApi.components?.messages ?? {}) as Record<string, MessageObject>
   const messages: Record<string, AsyncApiMessage> = {}
   for (const [name, msg] of Object.entries(rawMessages)) {
-    messages[name] = convertMessage(msg, isV3, defaultContentType)
+    messages[name] = convertMessage(msg, isV3, defaultContentType, rawComponentMessages[name]?.traits)
   }
 
   return {

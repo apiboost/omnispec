@@ -13,6 +13,17 @@ export interface AsyncApiExternalDocs {
   url: string
 }
 
+/**
+ * A tag as carried on a channel, operation, or message. Unlike the richer
+ * document-root tag (which also has `displayName`), these carry the tag's own
+ * `description` and `externalDocs` so a tag chip can surface its docs link.
+ */
+export interface AsyncApiTag {
+  name: string
+  description?: string
+  externalDocs?: AsyncApiExternalDocs
+}
+
 export interface AsyncApiSecurityRequirement {
   name: string
   scopes: string[]
@@ -63,7 +74,7 @@ export interface AsyncApiChannel {
   parameters?: Record<string, AsyncApiChannelParameter>
   bindings?: Record<string, unknown>
   externalDocs?: AsyncApiExternalDocs
-  tags?: Array<{ name: string; description?: string }>
+  tags?: AsyncApiTag[]
   xInternal?: boolean
 }
 
@@ -86,7 +97,7 @@ export interface AsyncApiOperation {
    */
   messages: AsyncApiMessage[]
   message?: AsyncApiMessage
-  tags?: Array<{ name: string; description?: string }>
+  tags?: AsyncApiTag[]
   bindings?: Record<string, unknown>
   externalDocs?: AsyncApiExternalDocs
   /** Names of security schemes required by this operation (OR semantics). */
@@ -99,7 +110,12 @@ export interface AsyncApiOperation {
   /** AsyncAPI 3.x request-reply: the message(s) sent back in response. */
   reply?: {
     messages: AsyncApiMessage[]
-    address?: { location?: string; description?: string }
+    /**
+     * The reply address. `location` is a runtime expression (dynamic address);
+     * `value` is a fixed literal address (`reply.address` given as a plain
+     * string). Either may be present.
+     */
+    address?: { location?: string; value?: string; description?: string }
     channelName?: string
   }
   xBadges?: Array<{ name: string; color?: string; position?: 'before' | 'after' }>
@@ -116,12 +132,18 @@ export interface AsyncApiMessage {
   payload?: Record<string, unknown>
   headers?: Record<string, unknown>
   correlationId?: { description?: string; location: string }
-  tags?: Array<{ name: string; description?: string }>
+  tags?: AsyncApiTag[]
   examples?: Array<{ name?: string; summary?: string; payload?: unknown; headers?: unknown }>
   bindings?: Record<string, unknown>
   externalDocs?: AsyncApiExternalDocs
   /** True when `contentType` was inherited from the document default, not declared. */
   contentTypeInherited?: boolean
+  /**
+   * Identifiers of the message traits applied to this message, in applied order
+   * (a trait's `name`/`title`, or the `$ref` target name). Empty/absent when the
+   * message uses no traits.
+   */
+  appliedTraits?: string[]
 }
 
 export interface AsyncApiOAuthFlow {

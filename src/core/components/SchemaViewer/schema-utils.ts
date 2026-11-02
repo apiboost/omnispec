@@ -92,6 +92,21 @@ export function schemaToNodes(
 
   // Handle $ref (shouldn't appear if spec is resolved, but just in case)
   if (schema.$ref) {
+    // A self-referential schema survives $ref resolution as a circular
+    // placeholder (`{ $ref, 'x-circular': true }`). The pointer's last segment is
+    // the resolver's internal schema id — surfacing it in the type signature
+    // (e.g. `array<TreeNode>`) leaks an implementation detail and reads
+    // inconsistently with the same shape inlined elsewhere (`array<object>`).
+    // Render the structural type instead.
+    if ((schema as JsonSchema & { 'x-circular'?: boolean })['x-circular']) {
+      return [{
+        name,
+        type: 'object',
+        required: requiredFields.includes(name),
+        constraints: [],
+        description: 'Circular reference',
+      }]
+    }
     const refName = schema.$ref.split('/').pop() ?? schema.$ref
     if (visited.has(refName)) {
       return [{

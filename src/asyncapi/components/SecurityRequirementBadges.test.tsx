@@ -95,4 +95,27 @@ describe('SecurityRequirementBadges', () => {
     render(<SecurityRequirementBadges requirements={requirements} />)
     expect(screen.getAllByText('OR')).toHaveLength(2)
   })
+
+  it('leaves breathing room below the security row (finding 3)', () => {
+    const requirements: AsyncApiSecurityRequirement[][] = [[{ name: 'userPass', scopes: [] }]]
+    const { container } = render(<SecurityRequirementBadges requirements={requirements} />)
+    const row = container.firstElementChild as HTMLElement
+    // The row carries a bottom margin so it doesn't butt against the next section.
+    expect(getComputedStyle(row).marginBottom).toBe('0.5rem')
+  })
+
+  it('keeps each OR divider grouped with the chip that follows it so they wrap as a unit (finding 4)', () => {
+    const requirements: AsyncApiSecurityRequirement[][] = [
+      [{ name: 'apiKey', scopes: [] }],
+      [{ name: 'oauth2Auth', scopes: ['read', 'write'] }],
+    ]
+    render(<SecurityRequirementBadges requirements={requirements} />)
+    const or = screen.getByText('OR')
+    // The "OR" and the following chip share a non-wrapping group, so the divider
+    // never strands at the end of a line alone.
+    const group = or.parentElement as HTMLElement
+    expect(getComputedStyle(group).whiteSpace).toBe('nowrap')
+    // The chip that follows the OR lives inside the same group.
+    expect(group).toContainElement(screen.getByRole('link', { name: /oauth2Auth/ }))
+  })
 })
