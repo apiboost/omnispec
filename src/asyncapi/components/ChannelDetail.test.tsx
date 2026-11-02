@@ -526,6 +526,34 @@ describe('ChannelDetail message rendering', () => {
   })
 })
 
+describe('ChannelDetail schema-level example', () => {
+  it('renders an example declared on the payload schema when the message has none', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          messages: [
+            {
+              name: 'Order',
+              payload: {
+                type: 'object',
+                properties: { orderId: { type: 'integer' }, status: { type: 'string' } },
+                examples: [{ orderId: 1111, status: 'paid' }],
+              },
+            },
+          ],
+        },
+      ],
+    }
+    renderChannel(channel)
+    fireEvent.click(screen.getByRole('tab', { name: /example/i }))
+    expect(screen.getByText(/1111/)).toBeInTheDocument()
+  })
+})
+
 describe('ChannelDetail header action badge', () => {
   it('shows every distinct action for a channel with both publish and subscribe', () => {
     const channel: AsyncApiChannel = {

@@ -175,6 +175,33 @@ function deriveAppliedTraitNames(
   })
 }
 
+/** Resolve a same-document JSON pointer (`#/a/b`) against the raw (pre-resolution) doc. */
+function resolveLocalPointer(root: unknown, ref: string): unknown {
+  if (!ref.startsWith('#/')) return undefined
+  let cur: unknown = root
+  for (const seg of ref.slice(2).split('/')) {
+    if (cur === null || typeof cur !== 'object') return undefined
+    cur = (cur as Record<string, unknown>)[decodeJsonPointerSegment(seg)]
+  }
+  return cur
+}
+
+/**
+ * The pre-resolution trait list for a message, so trait `$ref` names survive
+ * (resolveRefs inlines them, dropping the pointer). A message written inline
+ * carries its own `traits`; a `$ref`'d message's traits live on the referenced
+ * definition, so follow the ref first. Lets channel/operation messages show real
+ * trait names instead of the positional "trait N" fallback.
+ */
+function rawMessageTraits(rawMsg: unknown, rawApi: AsyncApiDocument): unknown[] | undefined {
+  if (!rawMsg || typeof rawMsg !== 'object') return undefined
+  const ref = (rawMsg as { $ref?: unknown }).$ref
+  if (typeof ref === 'string') {
+    return (resolveLocalPointer(rawApi, ref) as { traits?: unknown[] } | undefined)?.traits
+  }
+  return (rawMsg as { traits?: unknown[] }).traits
+}
+
 /**
  * Apply AsyncAPI message traits. `$ref`s in `traits` are already inlined by
  * resolveRefs. Version-aware per the AsyncAPI spec:
@@ -249,7 +276,7 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
   const defaultContentType = api.defaultContentType
   const channels = isV3
     ? extractChannelsV3(api, rawApi, defaultContentType)
-    : extractChannelsV2(api, defaultContentType)
+    : extractChannelsV2(api, rawApi, defaultContentType)
   const components = extractComponents(api, rawApi, isV3, defaultContentType)
 
   const root = api as unknown as Record<string, unknown>
@@ -316,17 +343,20 @@ function extractServers(api: AsyncApiDocument, rawApi: AsyncApiDocument): AsyncA
   return Object.entries(api.servers).map(([name, s]) => toServer(s, name, rawServers[name]?.security))
 }
 
-function extractChannelsV2(api: AsyncApiDocument, defaultContentType?: string): AsyncApiChannel[] {
+function extractChannelsV2(api: AsyncApiDocument, rawApi: AsyncApiDocument, defaultContentType?: string): AsyncApiChannel[] {
   if (!api.channels) return []
+
+  const rawChannels = (rawApi.channels ?? {}) as Record<string, ChannelObject>
 
   return Object.entries(api.channels).map(([channelName, ch]) => {
     const operations: AsyncApiOperation[] = []
+    const rawCh = rawChannels[channelName]
 
     if (ch.publish) {
-      operations.push(convertOperationV2('publish', ch.publish, defaultContentType))
+      operations.push(convertOperationV2('publish', ch.publish, rawCh?.publish, rawApi, defaultContentType))
     }
     if (ch.subscribe) {
-      operations.push(convertOperationV2('subscribe', ch.subscribe, defaultContentType))
+      operations.push(convertOperationV2('subscribe', ch.subscribe, rawCh?.subscribe, rawApi, defaultContentType))
     }
 
     const raw = ch as Record<string, unknown>
@@ -347,18 +377,26 @@ function extractChannelsV2(api: AsyncApiDocument, defaultContentType?: string): 
 function convertOperationV2(
   action: 'publish' | 'subscribe',
   rawOp: OperationObjectV2,
+  rawOperation: OperationObjectV2 | undefined,
+  rawApi: AsyncApiDocument,
   defaultContentType?: string,
 ): AsyncApiOperation {
   const op = applyOperationTraits(rawOp, false)
   const messages: AsyncApiMessage[] = []
 
   if (op.message) {
+    // Pair each resolved message with its pre-resolution counterpart so trait
+    // `$ref` names survive (they were inlined by resolveRefs).
+    const rawMessage = rawOperation?.message as { oneOf?: unknown[] } | Record<string, unknown> | undefined
     if ('oneOf' in op.message) {
-      for (const m of op.message.oneOf) {
-        messages.push(convertMessage(m, false, defaultContentType))
-      }
+      op.message.oneOf.forEach((m, i) => {
+        const rawOneOf = (rawMessage as { oneOf?: unknown[] } | undefined)?.oneOf
+        messages.push(convertMessage(m, false, defaultContentType, rawMessageTraits(rawOneOf?.[i], rawApi)))
+      })
     } else {
-      messages.push(convertMessage(op.message as MessageObject, false, defaultContentType))
+      messages.push(
+        convertMessage(op.message as MessageObject, false, defaultContentType, rawMessageTraits(rawMessage, rawApi)),
+      )
     }
   }
 
@@ -471,30 +509,40 @@ function extractChannelsV3(
       const rawOp = rawApi.operations?.[opKey]
       const channelName = resolveChannelName(rawOp?.channel, op.channel, addressToName)
 
-      const collectMessages = (list?: Array<{ $ref?: string } | MessageObject>): AsyncApiMessage[] => {
+      // `rawList` is the pre-resolution counterpart of `list` (same order) so
+      // each message's trait `$ref` names survive resolveRefs inlining.
+      const collectMessages = (
+        list?: Array<{ $ref?: string } | MessageObject>,
+        rawList?: unknown[],
+      ): AsyncApiMessage[] => {
         const out: AsyncApiMessage[] = []
-        for (const msg of list ?? []) {
+        ;(list ?? []).forEach((msg, i) => {
           // After resolveRefs a successfully-resolved message has no `$ref` (its
           // siblings are merged over the target). A surviving `$ref` means the
           // ref was unresolvable, or circular (`{ $ref, x-circular }`) — skip it
           // rather than emit an empty message, regardless of sibling keys.
-          if (msg && typeof msg === 'object' && '$ref' in msg) continue
-          out.push(convertMessage(msg as MessageObject, true, defaultContentType))
-        }
+          if (msg && typeof msg === 'object' && '$ref' in msg) return
+          out.push(convertMessage(msg as MessageObject, true, defaultContentType, rawMessageTraits(rawList?.[i], rawApi)))
+        })
         return out
       }
 
-      let messages = collectMessages(op.messages)
+      let messages = collectMessages(op.messages, rawOp?.messages)
       // Per the AsyncAPI 3.0 spec, an operation that declares no `messages`
       // applies to ALL of its channel's messages (not none).
       if (messages.length === 0 && channelName && api.channels?.[channelName]?.messages) {
+        const rawChannelMessages = (rawApi.channels?.[channelName]?.messages ?? {}) as Record<string, unknown>
         messages = collectMessages(
           Object.values(api.channels[channelName].messages as Record<string, unknown>) as Array<
             { $ref?: string } | MessageObject
           >,
+          Object.values(rawChannelMessages),
         )
       }
-      const replyMessages = collectMessages(op.reply?.messages)
+      const replyMessages = collectMessages(
+        op.reply?.messages,
+        (rawOp?.reply as { messages?: unknown[] } | undefined)?.messages,
+      )
       // The reply `channel` $ref tail (prefer the pre-resolution raw pointer).
       const rawReplyChannel = (rawOp?.reply as { channel?: unknown } | undefined)?.channel as
         | OperationObjectV3['channel']
