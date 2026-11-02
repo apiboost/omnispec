@@ -20,8 +20,11 @@ export function onExpandRequest(id: string, callback: () => void): () => void {
 }
 
 export function requestExpand(id: string) {
+  // `id` can originate from the URL hash (user-controlled), so only ever invoke
+  // an entry we registered ourselves and confirm it is callable before
+  // dispatching — never dispatch to an unexpected target.
   const listener = expandListeners.get(id)
-  if (listener) listener()
+  if (typeof listener === 'function') listener()
 }
 
 const SMOOTH_THRESHOLD = 50
