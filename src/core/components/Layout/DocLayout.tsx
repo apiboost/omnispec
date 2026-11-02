@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { css, cx } from '../../styles/css'
 import { mq } from '@core/styles/breakpoints'
@@ -48,6 +48,9 @@ export function DocLayout({
   const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
   const drawerTriggerRef = useRef<HTMLElement | null>(null)
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null)
+  // Stable id tying the "Open navigation" trigger to the drawer it controls
+  // (`aria-controls`), so assistive tech announces the relationship.
+  const drawerId = useId()
   const isRight = sidebarPosition === 'right'
   // Show the sidebar column when there's anything to put in it — spec-derived
   // nav OR host-provided slots (sidebarHeader/Footer). This keeps the host's
@@ -221,6 +224,7 @@ export function DocLayout({
               aria-label="Open navigation"
               aria-expanded={mobileSidebarOpen}
               aria-haspopup="dialog"
+              aria-controls={drawerId}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
@@ -244,6 +248,7 @@ export function DocLayout({
           {mobileSidebarOpen && (
             <motion.aside
               key="mobile-drawer"
+              id={drawerId}
               ref={drawerRef}
               className={mobileDrawerStyle}
               role="dialog"
