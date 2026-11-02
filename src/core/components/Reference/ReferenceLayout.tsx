@@ -144,7 +144,9 @@ const mobileTabActiveStyle = css({
 })
 
 const mobileContentStyle = css({
-  padding: '1rem 0',
+  // Horizontal padding so tab content (e.g. the Payload Schema) doesn't sit flush
+  // against the card edge on mobile — matches the desktop column padding.
+  padding: '1rem',
 })
 
 /* ── Desktop styles (display: none by default, flex on desktop) ── */

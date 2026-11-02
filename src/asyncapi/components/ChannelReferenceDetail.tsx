@@ -340,7 +340,9 @@ const paramConstraintsStyle = css({
 const opHeaderStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '0.5rem',
+  flexWrap: 'wrap',
+  gap: '0.25rem 0.5rem',
+  minWidth: 0,
   marginBottom: '0.5rem',
 })
 
@@ -360,17 +362,25 @@ const opIdStyle = css({
   fontWeight: 700,
   backgroundColor: 'transparent',
   padding: 0,
+  overflowWrap: 'anywhere',
 })
 
 const opTitleStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   fontWeight: 600,
   color: 'var(--omnispec-fg-primary)',
+  overflowWrap: 'anywhere',
 })
 
+// The summary stacks onto its own full-width line (and its text can break) so a
+// narrow reference column — e.g. at 1024px with the sidebar open — wraps instead
+// of spilling the operation detail into the Samples column.
 const opSummaryStyle = css({
+  flexBasis: '100%',
+  minWidth: 0,
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
+  overflowWrap: 'anywhere',
 })
 
 const messageTitleStyle = css({
