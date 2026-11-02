@@ -22,7 +22,9 @@ import type {
 
 interface AsyncApiDocument {
   asyncapi: string
-  info: { title: string; description?: string; version: string; contact?: Record<string, string>; license?: Record<string, string>; termsOfService?: string }
+  // AsyncAPI 3.0 relocated the document-root `tags` and `externalDocs` under `info`
+  // (2.x keeps them at the root), so both can appear here for a 3.x document.
+  info: { title: string; description?: string; version: string; contact?: Record<string, string>; license?: Record<string, string>; termsOfService?: string; tags?: Array<{ name: string; description?: string }>; externalDocs?: { description?: string; url: string } }
   servers?: Record<string, ServerObject> | Array<{ name?: string } & ServerObject>
   channels?: Record<string, ChannelObject>
   operations?: Record<string, OperationObjectV3>
@@ -252,7 +254,13 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
 
   const root = api as unknown as Record<string, unknown>
 
-  const tags = api.tags?.map((tag) => {
+  // 3.0 moved document-level `tags`/`externalDocs` under `info`; 2.x keeps them at
+  // the root. Read the version-correct location, preferring the 3.x `info.*`
+  // placement and falling back to the root so a mis-placed field still renders.
+  const rootTags = isV3 ? (api.info.tags ?? api.tags) : api.tags
+  const rootExternalDocs = isV3 ? (api.info.externalDocs ?? api.externalDocs) : api.externalDocs
+
+  const tags = rootTags?.map((tag) => {
     const raw = tag as Record<string, unknown>
     return {
       name: tag.name,
@@ -272,7 +280,7 @@ export async function parseAsyncApiSpec(specInput: string | Record<string, unkno
     components,
     tags,
     tagGroups: root['x-tagGroups'] as ParsedAsyncApiSpec['tagGroups'],
-    externalDocs: api.externalDocs,
+    externalDocs: rootExternalDocs,
     contact: api.info.contact as ParsedAsyncApiSpec['contact'],
     license: api.info.license as ParsedAsyncApiSpec['license'],
     termsOfService: api.info.termsOfService,

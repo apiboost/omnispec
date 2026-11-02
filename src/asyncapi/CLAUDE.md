@@ -43,6 +43,7 @@ AsyncAPI 3.x decoupled operations from channels — operations are now top-level
 
 - 2.x `channels[name].publish/subscribe` → internal `operations[]` with `action: 'publish' | 'subscribe'` + `channelRef`
 - 3.x `operations[name].action` + `channel: $ref` → internal `operations[]` with `action: 'send' | 'receive'` + `channelRef`
+- **Document-level `tags` and `externalDocs` moved under `info` in 3.0** (2.x keeps them at the document root). The parser reads the version-correct location — `info.tags`/`info.externalDocs` for 3.x, falling back to the root — so root `externalDocs`, tag descriptions, and tag `externalDocs` render for 3.x the same as 2.x. (Reading only the root was the bug behind the 3.x metadata gaps.)
 
 Components consume the normalized model. **Never branch on AsyncAPI version inside components** — push the normalization into the parser.
 
