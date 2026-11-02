@@ -36,6 +36,8 @@ interface ChannelReferenceDetailProps {
   onTagClick?: (tagName: string) => void
   /** The active tag filter, forwarded to tag chips for their `aria-pressed` state. */
   activeTag?: string | null
+  /** Resolves a channel name to an in-page href so a reply can link to its channel. */
+  channelHref?: (channelName: string) => string | undefined
 }
 
 /**
@@ -49,7 +51,7 @@ interface ChannelReferenceDetailProps {
  * Compact mode keeps using `ChannelDetail`; this wrapper is only mounted when
  * `displayMode === 'reference'`.
  */
-export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag }: ChannelReferenceDetailProps) {
+export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag, channelHref }: ChannelReferenceDetailProps) {
   const headerBadge = channelActionBadge(channel)
 
   return (
@@ -85,7 +87,7 @@ export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneratio
                 activeTag={activeTag}
               />
             }
-            samples={<OperationSamplesColumn operation={op} idx={idx} />}
+            samples={<OperationSamplesColumn operation={op} idx={idx} channelHref={channelHref} />}
             tryIt={<div className={tryItNaStyle}>Interactive testing is not available for AsyncAPI protocols.</div>}
           />
         </div>
@@ -209,7 +211,7 @@ function OperationSchemaColumn({
  * the operation carries (plus any reply messages). Composes the read-only
  * `MessagePayload`, the same renderer compact mode uses inline.
  */
-function OperationSamplesColumn({ operation, idx }: { operation: AsyncApiOperation; idx: number }) {
+function OperationSamplesColumn({ operation, idx, channelHref }: { operation: AsyncApiOperation; idx: number; channelHref?: (channelName: string) => string | undefined }) {
   const messages = operation.messages ?? []
   const reply = operation.reply
   // Reply metadata (channel/address) is shown even when the reply carries no
@@ -239,7 +241,7 @@ function OperationSamplesColumn({ operation, idx }: { operation: AsyncApiOperati
       {hasReply && reply && (
         <div className={replyStyle}>
           <h4 className={sectionTitleStyle}>Reply</h4>
-          <ReplyMeta reply={reply} />
+          <ReplyMeta reply={reply} channelHref={channelHref} />
           {reply.messages.map((message, i) => (
             <MessagePayload key={i} message={message} idx={`${idx}-reply-${i}`} />
           ))}

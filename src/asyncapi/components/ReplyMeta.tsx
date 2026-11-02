@@ -18,15 +18,27 @@ import type { AsyncApiOperation } from '@asyncapi/types/asyncapi.types'
  * produces: a fixed literal (`address.value`) and a dynamic runtime-expression
  * (`address.location`); both render, with an optional description.
  */
-export function ReplyMeta({ reply }: { reply: NonNullable<AsyncApiOperation['reply']> }) {
+export function ReplyMeta({
+  reply,
+  channelHref,
+}: {
+  reply: NonNullable<AsyncApiOperation['reply']>
+  /** Resolves a channel name to an in-page href (`#id`) so the reply channel links to its card. */
+  channelHref?: (channelName: string) => string | undefined
+}) {
   const hasAddress = reply.address && (reply.address.value || reply.address.location || reply.address.description)
+  const replyHref = reply.channelName ? channelHref?.(reply.channelName) : undefined
 
   return (
     <>
       {reply.channelName && (
         <div className={rowStyle}>
           <span className={labelStyle}>channel</span>
-          <code className={valueStyle}>{reply.channelName}</code>
+          {replyHref ? (
+            <a href={replyHref} className={linkStyle}>{reply.channelName}</a>
+          ) : (
+            <code className={valueStyle}>{reply.channelName}</code>
+          )}
         </div>
       )}
       {hasAddress && (
@@ -63,6 +75,17 @@ const valueStyle = css({
   backgroundColor: 'var(--omnispec-bg-tertiary)',
   padding: '1px 0.375rem',
   borderRadius: '0.1875rem',
+})
+
+const linkStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-color-primary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 0.375rem',
+  borderRadius: '0.1875rem',
+  textDecoration: 'none',
+  '&:hover': { textDecoration: 'underline' },
 })
 
 const descStyle = css({

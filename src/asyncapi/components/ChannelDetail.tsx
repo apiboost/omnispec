@@ -38,9 +38,11 @@ interface ChannelDetailProps {
   onTagClick?: (tagName: string) => void
   /** The active tag filter, forwarded to tag chips for their `aria-pressed` state. */
   activeTag?: string | null
+  /** Resolves a channel name to an in-page href so a reply can link to its channel. */
+  channelHref?: (channelName: string) => string | undefined
 }
 
-export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag }: ChannelDetailProps) {
+export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag, channelHref }: ChannelDetailProps) {
   // Surface every distinct action the channel carries (a 2.x channel can declare
   // both publish and subscribe), not just the first operation's — the header
   // otherwise mislabels a pub+sub channel as publish-only.
@@ -166,7 +168,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
             {op.reply && (op.reply.messages.length > 0 || op.reply.address || op.reply.channelName) && (
               <div className={replyStyle}>
                 <h4 className={replyTitleStyle}>Reply</h4>
-                <ReplyMeta reply={op.reply} />
+                <ReplyMeta reply={op.reply} channelHref={channelHref} />
                 {op.reply.messages.map((replyMsg, i) => (
                   <MessageView key={i} message={replyMsg} idx={`${idx}-reply-${i}`} />
                 ))}

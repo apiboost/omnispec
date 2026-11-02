@@ -54,6 +54,23 @@ export function useHashScroll(operationCount = 0) {
     return () => clearInterval(interval)
   }, [scrollBehavior])
 
+  // In-page anchor links (e.g. a reply's channel link) change the hash after
+  // mount; expand the target card and scroll to it, matching `navigateTo`. The
+  // mount effect above only runs once, so without this a bare `#id` link would
+  // neither expand a collapsed target nor scroll.
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      if (!hash) return
+      requestExpand(hash)
+      requestAnimationFrame(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: scrollBehavior, block: 'start' })
+      })
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [scrollBehavior])
+
   const navigateTo = useCallback((id: string) => {
     window.history.replaceState(null, '', `#${id}`)
     requestExpand(id)

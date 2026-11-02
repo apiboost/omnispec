@@ -186,6 +186,16 @@ export function AsyncApiSpec({
     return map
   }, [filteredChannels, channelDomId])
 
+  // Resolve a channel name to its card's in-page anchor so a reply can link to
+  // the channel it replies on (the target card expands + scrolls via useHashScroll).
+  const channelHref = useCallback(
+    (channelName: string) => {
+      const domId = channelDomId.get(channelName)
+      return domId ? `#${domId}` : undefined
+    },
+    [channelDomId],
+  )
+
   const hasOperations = useMemo(
     () => filteredChannels.some((ch) => ch.operations.length > 0),
     [filteredChannels],
@@ -463,6 +473,7 @@ export function AsyncApiSpec({
                             expandGeneration={expandGeneration}
                             onTagClick={handleTagFilter}
                             activeTag={activeTagFilter}
+                            channelHref={channelHref}
                           />
                         ))}
                       </section>
@@ -478,6 +489,7 @@ export function AsyncApiSpec({
                         expandGeneration={expandGeneration}
                         onTagClick={handleTagFilter}
                         activeTag={activeTagFilter}
+                        channelHref={channelHref}
                       />
                     ))
                   )}
@@ -510,6 +522,7 @@ function ChannelCard({
   expandGeneration,
   onTagClick,
   activeTag,
+  channelHref,
 }: {
   channel: ParsedAsyncApiSpec['channels'][number]
   id: string
@@ -518,6 +531,7 @@ function ChannelCard({
   expandGeneration: number
   onTagClick: (tagName: string) => void
   activeTag: string | null
+  channelHref: (channelName: string) => string | undefined
 }) {
   const Renderer = displayMode === 'reference' ? ChannelReferenceDetail : ChannelDetail
   return (
@@ -528,6 +542,7 @@ function ChannelCard({
       expandGeneration={expandGeneration}
       onTagClick={onTagClick}
       activeTag={activeTag}
+      channelHref={channelHref}
     />
   )
 }

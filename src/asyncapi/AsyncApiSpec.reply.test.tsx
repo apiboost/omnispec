@@ -49,6 +49,13 @@ describe('AsyncApiSpec reply address', () => {
     expect(await screen.findByText('pong/fixed-queue')).toBeInTheDocument()
   })
 
+  it('links the reply channel to that channel’s card', async () => {
+    render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} defaultExpandOperations />)
+
+    const link = await screen.findByRole('link', { name: 'pong' })
+    expect(link).toHaveAttribute('href', '#channel-pong')
+  })
+
   it('shows the fixed reply address in reference mode (was dropped before)', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} displayMode="reference" defaultExpandOperations />)
 
