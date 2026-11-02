@@ -525,3 +525,21 @@ describe('ChannelDetail message rendering', () => {
     expect(getComputedStyle(summary).flexBasis).toBe('100%')
   })
 })
+
+describe('ChannelDetail header action badge', () => {
+  it('shows every distinct action for a channel with both publish and subscribe', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders/created',
+      address: 'orders/created',
+      operations: [
+        { action: 'publish', operationId: 'pub', messages: [{ name: 'A', payload: { type: 'object' } }] },
+        { action: 'subscribe', operationId: 'sub', messages: [{ name: 'B', payload: { type: 'object' } }] },
+      ],
+    }
+    renderChannel(channel)
+    // The header MethodBar lists both actions ("PUB / SUB"); the per-operation
+    // badges render "PUB" and "SUB" separately, so the combined string is unique
+    // to the header.
+    expect(screen.getByText('PUB / SUB')).toBeInTheDocument()
+  })
+})

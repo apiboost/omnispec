@@ -21,6 +21,8 @@ import { BindingsSection } from './BindingsSection'
 import { SecurityRequirementBadges } from './SecurityRequirementBadges'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 import { MessagePayload } from './MessagePayload'
+import { actionLabels, actionColors, channelActionBadge } from './channel-actions'
+import { ReplyMeta } from './ReplyMeta'
 
 interface ChannelReferenceDetailProps {
   channel: AsyncApiChannel
@@ -36,20 +38,6 @@ interface ChannelReferenceDetailProps {
   activeTag?: string | null
 }
 
-const actionLabels: Record<string, string> = {
-  publish: 'PUB',
-  subscribe: 'SUB',
-  send: 'SEND',
-  receive: 'RECV',
-}
-
-const actionColors: Record<string, string> = {
-  publish: 'var(--omnispec-color-publish)',
-  subscribe: 'var(--omnispec-color-subscribe)',
-  send: 'var(--omnispec-color-publish)',
-  receive: 'var(--omnispec-color-subscribe)',
-}
-
 /**
  * Reference (three-panel) presentation of a channel — the AsyncAPI parallel to
  * the OpenAPI `displayMode: 'reference'` layout. Each operation renders in a
@@ -62,9 +50,7 @@ const actionColors: Record<string, string> = {
  * `displayMode === 'reference'`.
  */
 export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag }: ChannelReferenceDetailProps) {
-  const primaryAction = channel.operations[0]?.action
-  const primaryLabel = actionLabels[primaryAction] ?? primaryAction?.toUpperCase() ?? ''
-  const primaryColor = actionColors[primaryAction] ?? 'var(--omnispec-fg-muted)'
+  const headerBadge = channelActionBadge(channel)
 
   return (
     <ExpandableCard
@@ -74,7 +60,7 @@ export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneratio
       expandAll={expandAll}
       expandGeneration={expandGeneration}
     >
-      <MethodBar label={primaryLabel} path={channel.address} color={primaryColor} />
+      <MethodBar label={headerBadge.label} path={channel.address} color={headerBadge.color} />
 
       {channel.description && (
         <div className={channelMetaStyle}>
@@ -225,9 +211,13 @@ function OperationSchemaColumn({
  */
 function OperationSamplesColumn({ operation, idx }: { operation: AsyncApiOperation; idx: number }) {
   const messages = operation.messages ?? []
-  const replyMessages = operation.reply?.messages ?? []
+  const reply = operation.reply
+  // Reply metadata (channel/address) is shown even when the reply carries no
+  // messages — reference mode previously dropped the reply channel and address
+  // that compact mode shows.
+  const hasReply = !!(reply && (reply.messages.length > 0 || reply.address || reply.channelName))
 
-  if (messages.length === 0 && replyMessages.length === 0) {
+  if (messages.length === 0 && !hasReply) {
     return <div className={emptySamplesStyle}>No message payload is defined for this operation.</div>
   }
 
@@ -246,10 +236,11 @@ function OperationSamplesColumn({ operation, idx }: { operation: AsyncApiOperati
         </div>
       ))}
 
-      {replyMessages.length > 0 && (
+      {hasReply && reply && (
         <div className={replyStyle}>
           <h4 className={sectionTitleStyle}>Reply</h4>
-          {replyMessages.map((message, i) => (
+          <ReplyMeta reply={reply} />
+          {reply.messages.map((message, i) => (
             <MessagePayload key={i} message={message} idx={`${idx}-reply-${i}`} />
           ))}
         </div>
