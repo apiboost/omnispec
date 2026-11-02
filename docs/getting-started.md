@@ -22,7 +22,7 @@ Render interactive OpenAPI, Swagger, and AsyncAPI documentation in your React ap
 | Package | Specs | Install |
 |---------|-------|---------|
 | `@apiboost/omnispec` | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec` |
-| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, interactive OAuth | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
+| `@apiboost-inc/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, interactive OAuth | `npm install @apiboost/omnispec @apiboost-inc/omnispec-pro` |
 
 **Peer dependencies:** React 18 or 19 (`react`, `react-dom`). Everything else, including `@emotion/css` for styling, is bundled as a normal dependency — no separate install needed. (Pro additionally requires `@apiboost/omnispec` as a peer, shown above.)
 
@@ -50,10 +50,10 @@ New to how the pieces fit together? Read [Concepts](./concepts.md) for the menta
 GraphQL, SOAP/WSDL, and gRPC renderers, plus full theme-token white-labeling, require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, OpenAPI and AsyncAPI specs render fully; other spec types display a styled upgrade prompt.
 :::
 
-Pro is activated by importing the pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` — it needs no provider or extra configuration:
+Pro is activated by importing the pre-wired `OmniSpecRenderer` from `@apiboost-inc/omnispec-pro` — it needs no provider or extra configuration:
 
 ```tsx
-import { OmniSpecRenderer } from '@apiboost/omnispec-pro'
+import { OmniSpecRenderer } from '@apiboost-inc/omnispec-pro'
 
 function OmniSpec() {
   return <OmniSpecRenderer spec="/schema.graphql" />
@@ -120,11 +120,11 @@ OpenAPI and AsyncAPI accept JSON or YAML. GraphQL accepts SDL strings or introsp
 | `<OmniSpecRenderer>` | Auto-detect | All below | `@apiboost/omnispec` |
 | `<OpenApiSpec>` | OpenAPI / Swagger | 2.0, 3.0.x, 3.1 | `@apiboost/omnispec` |
 | `<AsyncApiSpec>` | AsyncAPI | 2.x — 3.x | `@apiboost/omnispec` |
-| `<GraphqlSpec>` | GraphQL SDL | Any | `@apiboost/omnispec-pro` |
-| `<SoapSpec>` | WSDL / SOAP | 1.1 | `@apiboost/omnispec-pro` |
-| `<GrpcSpec>` | Protocol Buffers | proto2, proto3 | `@apiboost/omnispec-pro` |
+| `<GraphqlSpec>` | GraphQL SDL | Any | `@apiboost-inc/omnispec-pro` |
+| `<SoapSpec>` | WSDL / SOAP | 1.1 | `@apiboost-inc/omnispec-pro` |
+| `<GrpcSpec>` | Protocol Buffers | proto2, proto3 | `@apiboost-inc/omnispec-pro` |
 
-`<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. When you render with `@apiboost/omnispec-pro` (or pass the `pro` prop), all spec types render automatically.
+`<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. When you render with `@apiboost-inc/omnispec-pro` (or pass the `pro` prop), all spec types render automatically.
 
 ## Next steps
 

@@ -38,9 +38,9 @@ export function UpgradePrompt({ specType, docsUrl, upgradeUrl }: UpgradePromptPr
         <h2 className={titleStyle}>{label} specification detected</h2>
         <p className={descStyle}>
           Rendering {label}, along with GraphQL, SOAP, and gRPC specifications,
-          requires <code className={codeStyle}>@apiboost/omnispec-pro</code>.
+          requires <code className={codeStyle}>@apiboost-inc/omnispec-pro</code>.
         </p>
-        <pre className={installStyle}>npm install @apiboost/omnispec-pro</pre>
+        <pre className={installStyle}>npm install @apiboost-inc/omnispec-pro</pre>
         <div className={actionsStyle}>
           {docsUrl && (
             <a href={docsUrl} className={linkStyle} target="_blank" rel="noopener noreferrer">

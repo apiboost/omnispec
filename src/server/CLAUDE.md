@@ -1,6 +1,6 @@
 # CLAUDE.md — `src/server/`
 
-Server-only code. Exported via the `@apiboost/omnispec-pro/server` subpath. Provides an Express-compatible proxy router for Try-It with CORS-blocked APIs.
+Server-only code. Exported via the `@apiboost/omnispec/server` subpath. Provides an Express-compatible proxy router for Try-It with CORS-blocked APIs.
 
 > **This module is the only `.ts` source that targets Node, not the browser.** Don't import browser-only modules (React, @emotion/css, etc.) here. Don't import this module from any other directory in `src/`.
 
@@ -22,7 +22,7 @@ server/
 ```ts
 // Consumer mounts this in their Express app:
 import express from 'express'
-import { createProxyRouter } from '@apiboost/omnispec-pro/server'
+import { createProxyRouter } from '@apiboost/omnispec/server'
 
 const app = express()
 app.use('/api/proxy', createProxyRouter({

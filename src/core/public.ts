@@ -7,7 +7,7 @@
  *
  * See LICENSE.md and LICENSING.md in the project root for license information.
  *
- * Public API for @apiboost/omnispec/core — consumed by @apiboost/omnispec-pro
+ * Public API for @apiboost/omnispec/core — consumed by @apiboost-inc/omnispec-pro
  * and other extension packages. This barrel export provides the shared
  * infrastructure that Pro renderers and components build on.
  */

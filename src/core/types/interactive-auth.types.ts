@@ -18,7 +18,7 @@ import type { AuthScheme, AppliedAuthValue } from './auth.types'
  * — deliberately NOT prop-drilled here.
  *
  * Interactive-auth components (the OAuth 2.0 "Get Token" flow, OIDC discovery)
- * live in `@apiboost/omnispec-pro` and are supplied to the free core by value on
+ * live in `@apiboost-inc/omnispec-pro` and are supplied to the free core by value on
  * `ProFeatures.interactiveAuth`. When none is supplied — or the consumer opts out
  * via `interactiveOAuth={false}` — `AuthPanel` renders the free manual shell.
  */

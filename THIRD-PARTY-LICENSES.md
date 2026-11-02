@@ -1,4 +1,4 @@
-# Third-Party Licenses — @apiboost/omnispec & @apiboost/omnispec-pro
+# Third-Party Licenses — @apiboost/omnispec & @apiboost-inc/omnispec-pro
 
 Inventory of the **production (shipped) dependency tree** for both omnispec packages
 and each package’s license. It guarantees the mixed OSS + commercial distribution
@@ -6,7 +6,7 @@ carries **no GPL / LGPL / AGPL or other copyleft / source-available dependency**
 
 - **Generated:** 2026-08-26 — `pnpm run licenses:report` (source: `pnpm licenses list --prod`).
 - **Scope:** runtime `dependencies` + full transitive closure of `@apiboost/omnispec` (Free)
-  and `@apiboost/omnispec-pro` (Pro). Excludes the packages’ own code and build-only devDependencies.
+  and `@apiboost-inc/omnispec-pro` (Pro). Excludes the packages’ own code and build-only devDependencies.
 - **Enforced in CI:** `pnpm run check:licenses` (`.github/workflows/license-check.yml`) fails any PR
   that introduces a disallowed license.
 

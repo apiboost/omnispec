@@ -49,13 +49,13 @@ function markdown({ rows, counts }) {
   const total = rows.length
   const licenses = Object.keys(counts).sort()
   let md = ''
-  md += '# Third-Party Licenses — @apiboost/omnispec & @apiboost/omnispec-pro\n\n'
+  md += '# Third-Party Licenses — @apiboost/omnispec & @apiboost-inc/omnispec-pro\n\n'
   md += 'Inventory of the **production (shipped) dependency tree** for both omnispec packages\n'
   md += 'and each package’s license. It guarantees the mixed OSS + commercial distribution\n'
   md += 'carries **no GPL / LGPL / AGPL or other copyleft / source-available dependency**.\n\n'
   md += `- **Generated:** ${GENERATED} — \`pnpm run licenses:report\` (source: \`pnpm licenses list --prod\`).\n`
   md += '- **Scope:** runtime `dependencies` + full transitive closure of `@apiboost/omnispec` (Free)\n'
-  md += '  and `@apiboost/omnispec-pro` (Pro). Excludes the packages’ own code and build-only devDependencies.\n'
+  md += '  and `@apiboost-inc/omnispec-pro` (Pro). Excludes the packages’ own code and build-only devDependencies.\n'
   md += '- **Enforced in CI:** `pnpm run check:licenses` (`.github/workflows/license-check.yml`) fails any PR\n'
   md += '  that introduces a disallowed license.\n\n'
   md += '## Verdict\n\n'

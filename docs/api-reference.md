@@ -35,7 +35,7 @@ All spec renderers accept these common props:
 ### `pro` (Pro)
 
 :::info[Pro]
-The `pro` prop accepts an **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** capability object that unlocks Pro renderers (GraphQL, SOAP/WSDL, gRPC), full theme-token white-labeling, the `table`/`card` schema styles, and the interactive OAuth Try-It flow. In the free core it is unset and these features are unavailable. The pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` sets it for you; the deprecated `<ProProvider>` is not the current pattern. Pro configuration syntax is documented in the Pro docs.
+The `pro` prop accepts an **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** capability object that unlocks Pro renderers (GraphQL, SOAP/WSDL, gRPC), full theme-token white-labeling, the `table`/`card` schema styles, and the interactive OAuth Try-It flow. In the free core it is unset and these features are unavailable. The pre-wired `OmniSpecRenderer` from `@apiboost-inc/omnispec-pro` sets it for you; the deprecated `<ProProvider>` is not the current pattern. Pro configuration syntax is documented in the Pro docs.
 :::
 
 ### `oauth` (Pro)

@@ -26,7 +26,7 @@ Consumer App
             └─ pro.premiumThemingEnabled: boolean (unlocks theme.overrides)
 ```
 
-Consumers importing from `@apiboost/omnispec-pro` get a pre-wired `OmniSpecRenderer` that already passes `proFeatures` as the `pro` prop — they don't have to wire it themselves.
+Consumers importing from `@apiboost-inc/omnispec-pro` get a pre-wired `OmniSpecRenderer` that already passes `proFeatures` as the `pro` prop — they don't have to wire it themselves.
 
 ---
 
@@ -40,7 +40,7 @@ Consumers importing from `@apiboost/omnispec-pro` get a pre-wired `OmniSpecRende
 Free defines a `ProFeatures` type and accepts it as a prop. Pro exports an object matching that shape:
 
 ```ts
-// In @apiboost/omnispec-pro
+// In @apiboost-inc/omnispec-pro
 export const proFeatures = {
   renderers: new Map([
     ['graphql-sdl', GraphqlSpec],
