@@ -51,3 +51,9 @@ Reach for [Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnis
 - Get **commercial support** with response-time commitments.
 
 Upgrading is a package swap: import `OmniSpecRenderer` from `@apiboost/omnispec-pro` instead of `@apiboost/omnispec`, and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
+
+:::tip[Building a full developer portal?]
+
+OmniSpec is the API reference renderer inside the [Apiboost developer portal](https://www.apiboost.com/?utm_source=omnispec&utm_medium=docs_callout&utm_campaign=portal&utm_content=free_vs_pro), which adds the rest of a portal around it: API catalog, developer apps and credentials, SSO and analytics, on Apigee and Azure API Management. Moving off an Apigee Drupal portal? Apiboost imports your existing developers, apps and keys.
+
+:::
