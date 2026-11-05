@@ -23,7 +23,7 @@ The public documentation site fully documents everything the free core does. Pro
 | **Try-It** | Yes — direct (browser) and proxied | Inherited from Free |
 | **Authentication** | API key, Basic, Bearer, OAuth2 with **manual token paste** | + Interactive OAuth: Authorization Code + PKCE "Get Token", OpenID Connect, the `oauth` prop |
 | **Code samples** | 6 languages (cURL, JavaScript, Python, Go, Java, C#), customizable with `x-codeSamples` | Inherited from Free |
-| **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 70+ design tokens |
+| **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 80+ design tokens |
 | **Vendor extensions** | `x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions` | + `x-flowVariables`, `x-tokenEndpointAuthMethod` (interactive-OAuth Try-It extensions) |
 | **Schema rendering** | Tree view with cross-links | + `schemaStyle` `'table'` / `'card'` layouts |
 | **Try-It proxy** | Express middleware (`@apiboost/omnispec/server`) with SSRF guard, rate limiting, allow-listing | Inherited from Free |

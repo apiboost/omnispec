@@ -29,7 +29,7 @@ Switching to `@apiboost/omnispec` from another renderer. Each section covers one
 | Compact + reference display modes | Free | Reference only | Compact only | Compact only | Reference only |
 | Grouped + segmented navigation | Free | Grouped only | Grouped only | Segmented only | Grouped only |
 | Light / dark / auto theme + CSS-variable overrides | Free | Limited (Pro) | CSS overrides | CSS overrides | Limited |
-| Full white-label theming (`theme.overrides`, 70+ tokens) | Pro | Limited (Pro) | — | — | — |
+| Full white-label theming (`theme.overrides`, 80+ tokens) | Pro | Limited (Pro) | — | — | — |
 | Auto theme (system preference) | Free | — | — | — | Free |
 | Built-in CORS proxy (SSRF-safe) | Free | — | — | — | — |
 | `x-tagGroups`, `x-codeSamples`, etc. | Free | Pro | — | — | Free |
@@ -103,7 +103,7 @@ import { OmniSpecRenderer } from '@apiboost/omnispec'
 | Redoc option | `@apiboost/omnispec` equivalent | Notes |
 |---|---|---|
 | `specUrl` | `spec` | Also accepts raw strings and objects |
-| `theme.colors.primary.main` | `theme.overrides['--omnispec-color-primary']` | See [Theming](./theming.md) for all 70+ tokens |
+| `theme.colors.primary.main` | `theme.overrides['--omnispec-color-primary']` | See [Theming](./theming.md) for all 80+ tokens |
 | `scrollYOffset` | `--omnispec-offset-top` CSS variable on `.omnispec-root` | CSS-only, not in `theme.overrides` |
 | `hideDownloadButton: true` | `downloadLink={false}` | |
 | `expandResponses` | `defaultExpandOperations` | Expands all operations on load |
@@ -527,7 +527,7 @@ theme={{
 }}
 ```
 
-See [Theming Guide](./theming.md) for all 70+ tokens.
+See [Theming Guide](./theming.md) for all 80+ tokens.
 
 ### Auto Theme
 
