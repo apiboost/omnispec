@@ -18,21 +18,38 @@ Switching to `@apiboost/omnispec` from another renderer. Each section covers one
 
 ## Why Switch
 
-| Capability | `@apiboost/omnispec` | Redoc CE | Swagger UI | Stoplight Elements | Scalar |
+What sets `@apiboost/omnispec` apart today:
+
+- **Try-It in the free core.** Send real requests from your OpenAPI docs, directly or through the built-in SSRF-safe proxy. Redoc CE has no console; Redocly's Try-It ("Replay") is hosted-only.
+- **SOAP/WSDL and gRPC alongside OpenAPI and AsyncAPI** (Pro). No mainstream open-source renderer covers either.
+- **OAuth that follows your environments** (Pro). Interactive Authorization Code + PKCE, with relative or templated (`x-flowVariables`) token URLs that resolve against the server you select, so one spec works across dev, staging and production. See [Try-It → Multi-environment token endpoints](./try-it.md#multi-environment-token-endpoints-relative-flow-urls).
+- **A React component and a Web Component**, self-hosted, with no SaaS account.
+
+If you only need read-only OpenAPI, AsyncAPI or GraphQL reference docs, Redoc CE 3 (MIT) renders all three for free, and it is a fair choice.
+
+| Capability | `@apiboost/omnispec` | Redoc CE 3 | Swagger UI | Stoplight Elements | Scalar |
 |---|---|---|---|---|---|
 | OpenAPI 2.0 / 3.0 / 3.1 | Free | Free | Free | Free | Free |
-| AsyncAPI 2.x / 3.x | Free | — | — | — | — |
-| GraphQL / SOAP / gRPC | Pro | — | — | — | — |
-| Try-It panel | Free | Pro only | Free | Free | Free |
+| AsyncAPI 2.x / 3.x | Free | Free | — | — | Free |
+| GraphQL | Pro | Free (SDL) | — | — | — |
+| SOAP / WSDL | Pro | Hosted Redocly only | — | — | — |
+| gRPC / Protobuf | Pro | Planned | — | — | — |
+| Try-It panel | Free | Hosted Redocly only | Free | Free | Free |
 | 6-language code samples | Free | Pro only | — | — | Free |
 | Custom sidebar nav | Free | — | — | — | — |
 | Compact + reference display modes | Free | Reference only | Compact only | Compact only | Reference only |
 | Grouped + segmented navigation | Free | Grouped only | Grouped only | Segmented only | Grouped only |
-| Light / dark / auto theme + CSS-variable overrides | Free | Limited (Pro) | CSS overrides | CSS overrides | Limited |
+| Light / dark / auto theme + CSS-variable overrides | Free | Free | CSS overrides | CSS overrides | Limited |
 | Full white-label theming (`theme.overrides`, 80+ tokens) | Pro | Limited (Pro) | — | — | — |
-| Auto theme (system preference) | Free | — | — | — | Free |
+| Auto theme (system preference) | Free | Free | — | — | Free |
 | Built-in CORS proxy (SSRF-safe) | Free | — | — | — | — |
-| `x-tagGroups`, `x-codeSamples`, etc. | Free | Pro | — | — | Free |
+| `x-tagGroups`, `x-codeSamples`, `x-logo` | Free | Free | — | — | Free |
+
+Comparison reviewed November 2026 against the
+[Redoc 3 release notes](https://redocly.com/blog/redoc-3-release) (Redoc CE 3.0,
+October 2026) and the [Scalar changelog](https://scalar.com/changelog/api-reference)
+(AsyncAPI support, May 2026). Competing tools move quickly; check their current
+docs before deciding.
 
 `@apiboost/omnispec` renders OpenAPI 2.0, 3.0.x, and 3.1, plus AsyncAPI 2.x and
 3.x, in a single component — all free, including the documentation vendor
@@ -178,8 +195,8 @@ Your existing Redoc vendor extensions carry over without spec changes:
 | `x-internal` | Supported (free) |
 
 The free core renders these documentation vendor extensions along with all
-OpenAPI + AsyncAPI content — the same set you would have used Redoc Pro for — at
-no cost.
+OpenAPI + AsyncAPI content, so a spec written for Redoc renders unchanged. What
+you gain by switching is the Try-It console, which Redoc CE does not include.
 
 ### Display Mode
 
