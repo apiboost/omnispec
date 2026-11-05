@@ -57,28 +57,37 @@ describe('AsyncApiSpec filter UI', () => {
     fireEvent.click(chip)
 
     await waitFor(() => {
-      expect(new URLSearchParams(window.location.search).get('tag')).toBe('orders')
+      expect(new URLSearchParams(window.location.search).get('omnispec-tag')).toBe('orders')
     })
   })
 
   it('clears the tag query param from the URL when the filter is cleared', async () => {
-    window.history.replaceState({}, '', '/?tag=orders')
+    window.history.replaceState({}, '', '/?omnispec-tag=orders')
     render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} />)
 
     fireEvent.click(await screen.findByRole('button', { name: /Clear tag filter/i }))
 
     await waitFor(() => {
-      expect(new URLSearchParams(window.location.search).get('tag')).toBeNull()
+      expect(new URLSearchParams(window.location.search).get('omnispec-tag')).toBeNull()
     })
   })
 
-  it('applies a tag filter supplied in the URL on first render', async () => {
-    window.history.replaceState({}, '', '/?tag=orders')
+  it('applies a tag filter supplied in the URL (namespaced param) on load', async () => {
+    window.history.replaceState({}, '', '/?omnispec-tag=orders')
     render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} />)
 
     // The dismissible "Filtered by tag" indicator reflects the URL-provided tag.
     expect(await screen.findByText('Filtered by tag:')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Clear tag filter: orders/i })).toBeInTheDocument()
+  })
+
+  it('ignores a URL tag the spec does not declare (no blind filter)', async () => {
+    window.history.replaceState({}, '', '/?omnispec-tag=not-a-real-tag')
+    render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} />)
+
+    // The spec renders and no filter indicator appears (the undeclared tag is ignored).
+    await screen.findByRole('navigation')
+    expect(screen.queryByText('Filtered by tag:')).toBeNull()
   })
 
   it('marks the active tag chip with aria-pressed for screen readers', async () => {

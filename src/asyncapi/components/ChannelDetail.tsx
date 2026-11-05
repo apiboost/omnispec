@@ -23,8 +23,8 @@ import { SecurityRequirementBadges } from './SecurityRequirementBadges'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 import { TagChips } from '@asyncapi/components/TagChips'
 import { MessagePayload } from './MessagePayload'
-import { actionLabels, actionColors, channelActionBadge } from './channel-actions'
-import { ReplyMeta } from './ReplyMeta'
+import { actionLabels, actionColors, channelActionBadge } from '@asyncapi/components/channel-actions'
+import { ReplyMeta } from '@asyncapi/components/ReplyMeta'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -40,9 +40,11 @@ interface ChannelDetailProps {
   activeTag?: string | null
   /** Resolves a channel name to an in-page href so a reply can link to its channel. */
   channelHref?: (channelName: string) => string | undefined
+  /** Navigates to a channel's card by name (expands + scrolls, even on a same-hash click). */
+  onChannelNavigate?: (channelName: string) => void
 }
 
-export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag, channelHref }: ChannelDetailProps) {
+export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag, channelHref, onChannelNavigate }: ChannelDetailProps) {
   // Surface every distinct action the channel carries (a 2.x channel can declare
   // both publish and subscribe), not just the first operation's — the header
   // otherwise mislabels a pub+sub channel as publish-only.
@@ -168,7 +170,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
             {op.reply && (op.reply.messages.length > 0 || op.reply.address || op.reply.channelName) && (
               <div className={replyStyle}>
                 <h4 className={replyTitleStyle}>Reply</h4>
-                <ReplyMeta reply={op.reply} channelHref={channelHref} />
+                <ReplyMeta reply={op.reply} channelHref={channelHref} onChannelNavigate={onChannelNavigate} />
                 {op.reply.messages.map((replyMsg, i) => (
                   <MessageView key={i} message={replyMsg} idx={`${idx}-reply-${i}`} />
                 ))}

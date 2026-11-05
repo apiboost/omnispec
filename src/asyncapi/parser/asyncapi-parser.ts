@@ -190,16 +190,23 @@ function resolveLocalPointer(root: unknown, ref: string): unknown {
  * The pre-resolution trait list for a message, so trait `$ref` names survive
  * (resolveRefs inlines them, dropping the pointer). A message written inline
  * carries its own `traits`; a `$ref`'d message's traits live on the referenced
- * definition, so follow the ref first. Lets channel/operation messages show real
- * trait names instead of the positional "trait N" fallback.
+ * definition. The common 3.x shape chains two hops — operation `messages` →
+ * `#/channels/x/messages/Y` → `#/components/messages/Y` — so follow the whole
+ * `$ref` chain (guarding against cycles) to the definition that actually holds
+ * the traits. Lets channel/operation messages show real trait names instead of
+ * the positional "trait N" fallback.
  */
 function rawMessageTraits(rawMsg: unknown, rawApi: AsyncApiDocument): unknown[] | undefined {
-  if (!rawMsg || typeof rawMsg !== 'object') return undefined
-  const ref = (rawMsg as { $ref?: unknown }).$ref
-  if (typeof ref === 'string') {
-    return (resolveLocalPointer(rawApi, ref) as { traits?: unknown[] } | undefined)?.traits
+  let msg = rawMsg
+  const seen = new Set<string>()
+  while (msg && typeof msg === 'object' && typeof (msg as { $ref?: unknown }).$ref === 'string') {
+    const ref = (msg as { $ref: string }).$ref
+    if (seen.has(ref)) return undefined
+    seen.add(ref)
+    msg = resolveLocalPointer(rawApi, ref)
   }
-  return (rawMsg as { traits?: unknown[] }).traits
+  if (!msg || typeof msg !== 'object') return undefined
+  return (msg as { traits?: unknown[] }).traits
 }
 
 /**

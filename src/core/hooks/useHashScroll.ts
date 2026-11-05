@@ -20,9 +20,9 @@ export function onExpandRequest(id: string, callback: () => void): () => void {
 }
 
 export function requestExpand(id: string) {
-  // `id` can originate from the URL hash (user-controlled), so only ever invoke
-  // an entry we registered ourselves and confirm it is callable before
-  // dispatching — never dispatch to an unexpected target.
+  // `id` may come from the URL hash. `expandListeners` only ever holds callbacks
+  // we register, so this invokes the matching one when present; the `typeof`
+  // check keeps that explicit and quiets static analysis of the hash → call flow.
   const listener = expandListeners.get(id)
   if (typeof listener === 'function') listener()
 }

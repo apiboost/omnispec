@@ -47,7 +47,7 @@ AsyncAPI 3.x decoupled operations from channels — operations are now top-level
 
 Components consume the normalized model. **Never branch on AsyncAPI version inside components** — push the normalization into the parser.
 
-The internal action vocabulary deliberately keeps both 2.x and 3.x labels because they have slightly different semantics (`publish`/`subscribe` is producer-side; `send`/`receive` is consumer-side).
+The internal action vocabulary deliberately keeps both 2.x and 3.x labels because they have different semantics: 2.x `publish`/`subscribe` are written from the **client's** point of view (`publish` = the application *receives*; `subscribe` = the application *sends*), while 3.x `send`/`receive` are from the **application's own** point of view (which is why 3.0 renamed them). The renderer surfaces them as badges and never reinterprets their direction.
 
 The channel header `MethodBar` lists **every distinct action** a channel carries (e.g. `PUB / SUB`) so a channel with both publish and subscribe is not mislabelled as one-way; the per-operation badges stay per-action. The shared action label/colour maps and the `channelActionBadge` helper live in `components/channel-actions.ts` (used by both `ChannelDetail` and `ChannelReferenceDetail`).
 

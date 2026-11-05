@@ -21,10 +21,13 @@ import type { AsyncApiOperation } from '@asyncapi/types/asyncapi.types'
 export function ReplyMeta({
   reply,
   channelHref,
+  onChannelNavigate,
 }: {
   reply: NonNullable<AsyncApiOperation['reply']>
   /** Resolves a channel name to an in-page href (`#id`) so the reply channel links to its card. */
   channelHref?: (channelName: string) => string | undefined
+  /** Navigates to the reply channel's card; used on click so it works even when the hash already matches. */
+  onChannelNavigate?: (channelName: string) => void
 }) {
   const hasAddress = reply.address && (reply.address.value || reply.address.location || reply.address.description)
   const replyHref = reply.channelName ? channelHref?.(reply.channelName) : undefined
@@ -35,7 +38,20 @@ export function ReplyMeta({
         <div className={rowStyle}>
           <span className={labelStyle}>channel</span>
           {replyHref ? (
-            <a href={replyHref} className={linkStyle}>{reply.channelName}</a>
+            <a
+              href={replyHref}
+              className={linkStyle}
+              onClick={
+                onChannelNavigate
+                  ? (e) => {
+                    e.preventDefault()
+                    onChannelNavigate(reply.channelName as string)
+                  }
+                  : undefined
+              }
+            >
+              {reply.channelName}
+            </a>
           ) : (
             <code className={valueStyle}>{reply.channelName}</code>
           )}
@@ -73,7 +89,7 @@ const valueStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-fg-code)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.375rem',
+  padding: '0.0625rem 0.375rem',
   borderRadius: '0.1875rem',
 })
 
@@ -82,7 +98,7 @@ const linkStyle = css({
   fontSize: 'var(--omnispec-font-size-xs)',
   color: 'var(--omnispec-color-primary)',
   backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.375rem',
+  padding: '0.0625rem 0.375rem',
   borderRadius: '0.1875rem',
   textDecoration: 'none',
   '&:hover': { textDecoration: 'underline' },

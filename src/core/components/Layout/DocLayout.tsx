@@ -10,11 +10,11 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { css, cx } from '../../styles/css'
+import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
 import { AnimatePresence, motion } from 'motion/react'
-import { Icon } from '../common/Icon'
-import { useConfig } from '../../context/ConfigContext'
+import { Icon } from '@core/components/common/Icon'
+import { useConfig } from '@core/context/ConfigContext'
 import { MobileDrawerDismissContext } from './MobileDrawerDismissContext'
 
 interface DocLayoutProps {
