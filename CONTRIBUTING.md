@@ -145,6 +145,25 @@ Disclosure is about transparency, not disapproval — it will not, by itself,
 cause a contribution to be rejected. Failing to review AI-generated code, or
 submitting code you do not have the right to contribute, will.
 
+## Automated AI review
+
+Maintainers may request an **advisory AI review** of a pull request by applying the `ai-review` label.
+It is advisory only: it posts comments and never approves or blocks a pull request. It doesn't replace
+human review or the required DCO check.
+
+The review covers two things:
+
+- **The code change.** Security, licensing, coding standards, architecture and documentation, posted as
+  inline comments.
+- **Contribution compliance.** It checks the pull request against this guide and the pull request
+  template, and posts a checklist in a summary comment:
+  - DCO sign-off and Conventional Commits. The workflow verifies these directly, not the AI.
+  - Whether the template is filled in, and whether tests and docs were updated.
+  - Whether your `Assisted-by` disclosure is consistent between the commits and the pull request.
+
+The label is removed when the review starts. After you push new commits, a maintainer can re-apply it to
+review the latest changes.
+
 ## Licensing of your contributions
 
 Unless you explicitly state otherwise, any contribution you intentionally submit

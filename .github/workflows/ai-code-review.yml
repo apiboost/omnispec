@@ -1,0 +1,51 @@
+# This source file is part of the Apiboost(R) OmniSpec Core.
+#
+# Copyright (c) Apiboost, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# See LICENSE.md and LICENSING.md in the project root for license information.
+name: AI Code Review
+
+# On-request, advisory AI review of code and contribution compliance (DCO,
+# Conventional Commits, PR template, AI disclosure). A maintainer with write
+# access requests it by applying the `ai-review` label; the label is removed
+# when the run starts, so re-apply it after new pushes.
+#
+# The logic lives in the public, reusable apiboost/ai-code-review workflow; see
+# its README for the threat model. The engine secret is an environment secret
+# of the `ai-review` environment and is deliberately not passed from here.
+#
+# pull_request_target runs this file from the PR's BASE branch, so it must exist
+# on both `next` and `main`.
+
+on:
+  # Label-gated and write-access-checked; the PR head is only ever read as data.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
+    types: [labeled]
+    branches: [main, next]
+
+permissions: {}
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: AI review
+    if: github.event.label.name == 'ai-review'
+    uses: apiboost/ai-code-review/.github/workflows/review.yml@f65cf51599c8679719f62ad270167896b39c0d45 # v1.0.0
+    permissions:
+      contents: read # base checkout + PR head fetch (as data)
+      issues: write # remove the request label, sticky summary comment
+      pull-requests: write # post the review
+    with:
+      engine: ${{ vars.AI_REVIEW_ENGINE || 'claude' }}
+      model: ${{ vars.AI_REVIEW_MODEL || 'sonnet' }}
+      prompt-file: .github/ai-review/prompt.md
+      contribution-docs: CONTRIBUTING.md,.github/PULL_REQUEST_TEMPLATE.md,DEVELOPER_CERTIFICATE_OF_ORIGIN.md
+      require-dco: true
+      conventional-commits: true
+      # Matches the type-enum in commitlint.config.mjs.
+      conventional-types: feat,fix,chore,refactor,docs,test,hotfix,build
