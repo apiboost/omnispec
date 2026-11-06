@@ -97,6 +97,13 @@ git commit -s -m "fix(openapi): handle missing servers array"
 Pull requests whose commits are not signed off cannot be merged. If you forget,
 you can amend or rebase to add the sign-off before your PR is merged.
 
+This repo also ships a `pre-push` git hook (installed by `pnpm install` via
+husky) that blocks a push when any branch commit is missing a sign-off, so you
+catch it locally instead of in CI. A common cause is GitHub's **"Update branch"**
+button, which creates an unsigned merge commit — bring the base into your branch
+with `git rebase origin/<base>` instead. If you ever need to bypass the hook, push
+with `git push --no-verify` (the DCO check still runs in CI).
+
 ## AI-assisted contributions
 
 We welcome contributions created with the help of AI coding tools (e.g., code
