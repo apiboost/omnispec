@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { css, cx } from '@core/styles/css'
 import type { BaseSpecProps } from '@core/types/common.types'
 import { SpecType } from '@core/types/spec-detection.types'
@@ -84,6 +84,7 @@ export function AsyncApiSpec({
     setActiveTagFilter((prev) => {
       const next = prev === tagName ? null : tagName
       setSearchQuery(next ?? '')
+      writeTagParam(next)
       return next
     })
   }, [])
@@ -94,12 +95,41 @@ export function AsyncApiSpec({
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query)
     setActiveTagFilter(null)
+    writeTagParam(null)
   }, [])
 
   const clearTagFilter = useCallback(() => {
     setActiveTagFilter(null)
     setSearchQuery('')
+    writeTagParam(null)
   }, [])
+
+  // The tag names the spec actually declares (document tags + channel/operation
+  // tags). A tag supplied in the URL is only honored if it's one of these, so an
+  // unrelated host-page `?omnispec-tag` value can't trigger a blind search.
+  const availableTags = useMemo(() => {
+    const names = new Set<string>()
+    for (const tag of parsedSpec?.tags ?? []) names.add(tag.name)
+    for (const ch of parsedSpec?.channels ?? []) {
+      for (const tag of ch.tags ?? []) names.add(tag.name)
+      for (const op of ch.operations) for (const t of op.tags ?? []) names.add(t.name)
+    }
+    return names
+  }, [parsedSpec])
+
+  // Apply a tag filter supplied in the URL once the spec has loaded. Done in an
+  // effect (not a useState initializer) so the server and first client render
+  // match — reading the URL during render would hydrate-mismatch on SSR hosts.
+  const didInitFromUrl = useRef(false)
+  useEffect(() => {
+    if (didInitFromUrl.current || !parsedSpec) return
+    didInitFromUrl.current = true
+    const urlTag = readTagParam()
+    if (urlTag && availableTags.has(urlTag)) {
+      setActiveTagFilter(urlTag)
+      setSearchQuery(urlTag)
+    }
+  }, [parsedSpec, availableTags])
 
   useMemo(() => {
     if (parsedSpec && onSpecLoaded) {
@@ -166,6 +196,16 @@ export function AsyncApiSpec({
     }
     return map
   }, [filteredChannels, channelDomId])
+
+  // Resolve a channel name to its card's in-page anchor so a reply can link to
+  // the channel it replies on (the target card expands + scrolls via useHashScroll).
+  const channelHref = useCallback(
+    (channelName: string) => {
+      const domId = channelDomId.get(channelName)
+      return domId ? `#${domId}` : undefined
+    },
+    [channelDomId],
+  )
 
   const hasOperations = useMemo(
     () => filteredChannels.some((ch) => ch.operations.length > 0),
@@ -298,6 +338,15 @@ export function AsyncApiSpec({
     navigateTo(id)
   }, [navigateTo, opToCard])
 
+  // Navigate to a channel's card by name (reply → channel links). Routes through
+  // navigateTo so it also works when the URL hash already matches the target — a
+  // plain anchor wouldn't fire `hashchange` in that case, leaving a collapsed
+  // card unexpanded.
+  const onChannelNavigate = useCallback((channelName: string) => {
+    const domId = channelDomId.get(channelName)
+    if (domId) navigateTo(domId)
+  }, [channelDomId, navigateTo])
+
   // Highlight the sidebar entry for the channel/section currently in view.
   const navSectionIds = useMemo(() => flattenNavItemIds(navItems), [navItems])
   const activeSection = useScrollSpy(navSectionIds)
@@ -333,7 +382,7 @@ export function AsyncApiSpec({
   const specNav = (
     <>
       <SearchBar
-        placeholder="Filter channels..."
+        placeholder={navGrouping === 'operation' ? 'Filter operations...' : 'Filter channels...'}
         onSearch={handleSearch}
         value={searchQuery}
       />
@@ -443,6 +492,9 @@ export function AsyncApiSpec({
                             expandAll={allExpanded}
                             expandGeneration={expandGeneration}
                             onTagClick={handleTagFilter}
+                            activeTag={activeTagFilter}
+                            channelHref={channelHref}
+                            onChannelNavigate={onChannelNavigate}
                           />
                         ))}
                       </section>
@@ -457,6 +509,9 @@ export function AsyncApiSpec({
                         expandAll={allExpanded}
                         expandGeneration={expandGeneration}
                         onTagClick={handleTagFilter}
+                        activeTag={activeTagFilter}
+                        channelHref={channelHref}
+                        onChannelNavigate={onChannelNavigate}
                       />
                     ))
                   )}
@@ -488,6 +543,9 @@ function ChannelCard({
   expandAll,
   expandGeneration,
   onTagClick,
+  activeTag,
+  channelHref,
+  onChannelNavigate,
 }: {
   channel: ParsedAsyncApiSpec['channels'][number]
   id: string
@@ -495,6 +553,9 @@ function ChannelCard({
   expandAll: boolean
   expandGeneration: number
   onTagClick: (tagName: string) => void
+  activeTag: string | null
+  channelHref: (channelName: string) => string | undefined
+  onChannelNavigate: (channelName: string) => void
 }) {
   const Renderer = displayMode === 'reference' ? ChannelReferenceDetail : ChannelDetail
   return (
@@ -504,7 +565,36 @@ function ChannelCard({
       expandAll={expandAll}
       expandGeneration={expandGeneration}
       onTagClick={onTagClick}
+      activeTag={activeTag}
+      channelHref={channelHref}
+      onChannelNavigate={onChannelNavigate}
     />
+  )
+}
+
+// The tag filter is mirrored to a namespaced query param so it can be shared or
+// bookmarked without colliding with a host page's own `?tag=` (common in Drupal
+// and other CMS hosts).
+const TAG_PARAM = 'omnispec-tag'
+
+/** Read the active-tag filter from the URL query string, SSR-safe. */
+function readTagParam(): string | null {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get(TAG_PARAM)
+}
+
+/** Write (or, when `tag` is null, remove) the tag filter in the URL, SSR-safe. */
+function writeTagParam(tag: string | null): void {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  if (params.get(TAG_PARAM) === (tag ?? null)) return
+  if (tag) params.set(TAG_PARAM, tag)
+  else params.delete(TAG_PARAM)
+  const query = params.toString()
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
   )
 }
 

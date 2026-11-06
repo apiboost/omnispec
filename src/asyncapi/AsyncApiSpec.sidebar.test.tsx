@@ -16,7 +16,12 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = () => {}
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  // Clicking a tag chip now writes the active tag to the URL (?tag=); reset it
+  // so a filtered URL from one case doesn't pre-filter the next.
+  window.history.replaceState({}, '', '/')
+})
 
 const spec = {
   asyncapi: '2.6.0',

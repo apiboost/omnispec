@@ -176,3 +176,24 @@ describe('DocLayout back-to-top', () => {
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }))
   })
 })
+
+describe('DocLayout mobile drawer a11y', () => {
+  it('links the Open navigation trigger to the drawer via aria-controls', () => {
+    const { getByRole } = render(
+      <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>}>
+        <div>content</div>
+      </DocLayout>,
+    )
+
+    const trigger = getByRole('button', { name: 'Open navigation' })
+    const controls = trigger.getAttribute('aria-controls')
+    expect(controls).toBeTruthy()
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
+
+    fireEvent.click(trigger)
+
+    // The trigger's aria-controls resolves to the opened drawer dialog.
+    const drawer = getByRole('dialog', { name: 'Navigation' })
+    expect(drawer.getAttribute('id')).toBe(controls)
+  })
+})

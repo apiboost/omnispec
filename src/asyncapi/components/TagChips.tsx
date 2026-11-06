@@ -19,6 +19,11 @@ interface TagChipsProps {
    * name (e.g. to filter by tag). When absent, chips render as static spans.
    */
   onTagClick?: (tagName: string) => void
+  /**
+   * The currently active tag filter, if any. A clickable chip whose tag matches
+   * exposes `aria-pressed="true"` so screen readers announce its toggle state.
+   */
+  activeTag?: string | null
 }
 
 /**
@@ -27,7 +32,7 @@ interface TagChipsProps {
  * own `externalDocs`, that tag's docs link via the shared `ExternalDocsLink`
  * (↗ icon + accessible "opens in new tab" label).
  */
-export function TagChips({ tags, onTagClick }: TagChipsProps) {
+export function TagChips({ tags, onTagClick, activeTag }: TagChipsProps) {
   if (!tags || tags.length === 0) return null
 
   return (
@@ -39,6 +44,7 @@ export function TagChips({ tags, onTagClick }: TagChipsProps) {
               type="button"
               className={tagChipButtonStyle}
               title={tag.description}
+              aria-pressed={tag.name === activeTag}
               onClick={() => onTagClick(tag.name)}
             >
               {tag.name}

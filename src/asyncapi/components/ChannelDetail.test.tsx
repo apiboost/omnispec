@@ -525,3 +525,49 @@ describe('ChannelDetail message rendering', () => {
     expect(getComputedStyle(summary).flexBasis).toBe('100%')
   })
 })
+
+describe('ChannelDetail schema-level example', () => {
+  it('renders an example declared on the payload schema when the message has none', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders',
+      address: 'orders',
+      operations: [
+        {
+          action: 'subscribe',
+          operationId: 'onOrder',
+          messages: [
+            {
+              name: 'Order',
+              payload: {
+                type: 'object',
+                properties: { orderId: { type: 'integer' }, status: { type: 'string' } },
+                examples: [{ orderId: 1111, status: 'paid' }],
+              },
+            },
+          ],
+        },
+      ],
+    }
+    renderChannel(channel)
+    fireEvent.click(screen.getByRole('tab', { name: /example/i }))
+    expect(screen.getByText(/1111/)).toBeInTheDocument()
+  })
+})
+
+describe('ChannelDetail header action badge', () => {
+  it('shows every distinct action for a channel with both publish and subscribe', () => {
+    const channel: AsyncApiChannel = {
+      name: 'orders/created',
+      address: 'orders/created',
+      operations: [
+        { action: 'publish', operationId: 'pub', messages: [{ name: 'A', payload: { type: 'object' } }] },
+        { action: 'subscribe', operationId: 'sub', messages: [{ name: 'B', payload: { type: 'object' } }] },
+      ],
+    }
+    renderChannel(channel)
+    // The header MethodBar lists both actions ("PUB / SUB"); the per-operation
+    // badges render "PUB" and "SUB" separately, so the combined string is unique
+    // to the header.
+    expect(screen.getByText('PUB / SUB')).toBeInTheDocument()
+  })
+})
