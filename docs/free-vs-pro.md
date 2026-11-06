@@ -23,7 +23,7 @@ The public documentation site fully documents everything the free core does. Pro
 | **Try-It** | Yes — direct (browser) and proxied | Inherited from Free |
 | **Authentication** | API key, Basic, Bearer, OAuth2 with **manual token paste** | + Interactive OAuth: Authorization Code + PKCE "Get Token", OpenID Connect, the `oauth` prop |
 | **Code samples** | 6 languages (cURL, JavaScript, Python, Go, Java, C#), customizable with `x-codeSamples` | Inherited from Free |
-| **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 70+ design tokens |
+| **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 80+ design tokens |
 | **Vendor extensions** | `x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions` | + `x-flowVariables`, `x-tokenEndpointAuthMethod` (interactive-OAuth Try-It extensions) |
 | **Schema rendering** | Tree view with cross-links | + `schemaStyle` `'table'` / `'card'` layouts |
 | **Try-It proxy** | Express middleware (`@apiboost/omnispec/server`) with SSRF guard, rate limiting, allow-listing | Inherited from Free |
@@ -51,3 +51,9 @@ Reach for [Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnis
 - Get **commercial support** with response-time commitments.
 
 Upgrading is a package swap: import `OmniSpecRenderer` from `@apiboost/omnispec-pro` instead of `@apiboost/omnispec`, and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
+
+:::tip[Building a full developer portal?]
+
+OmniSpec is the API reference renderer inside the [Apiboost developer portal](https://www.apiboost.com/?utm_source=omnispec&utm_medium=docs_callout&utm_campaign=portal&utm_content=free_vs_pro), which adds the rest of a portal around it: API catalog, developer apps and credentials, SSO and analytics, on Apigee and Azure API Management. Moving off an Apigee Drupal portal? Apiboost imports your existing developers, apps and keys.
+
+:::
