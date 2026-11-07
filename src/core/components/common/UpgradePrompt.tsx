@@ -38,9 +38,8 @@ export function UpgradePrompt({ specType, docsUrl, upgradeUrl }: UpgradePromptPr
         <h2 className={titleStyle}>{label} specification detected</h2>
         <p className={descStyle}>
           Rendering {label}, along with GraphQL, SOAP, and gRPC specifications,
-          requires <code className={codeStyle}>@apiboost/omnispec-pro</code>.
+          is available in Apiboost OmniSpec Pro.
         </p>
-        <pre className={installStyle}>npm install @apiboost/omnispec-pro</pre>
         <div className={actionsStyle}>
           {docsUrl && (
             <a href={docsUrl} className={linkStyle} target="_blank" rel="noopener noreferrer">
@@ -103,26 +102,6 @@ const descStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
   lineHeight: 1.6,
-})
-
-const codeStyle = css({
-  backgroundColor: 'var(--omnispec-bg-code)',
-  color: 'var(--omnispec-fg-code)',
-  padding: '0.125rem 0.375rem',
-  borderRadius: '0.25rem',
-  fontSize: '0.875em',
-  fontFamily: 'var(--omnispec-font-mono)',
-})
-
-const installStyle = css({
-  margin: 0,
-  padding: '0.625rem 1rem',
-  backgroundColor: 'var(--omnispec-bg-code)',
-  color: 'var(--omnispec-fg-primary)',
-  borderRadius: 'var(--omnispec-border-radius)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-sm)',
-  userSelect: 'all',
 })
 
 const actionsStyle = css({
