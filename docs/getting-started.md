@@ -19,12 +19,12 @@ Render interactive OpenAPI, Swagger, and AsyncAPI documentation in your React ap
 
 ## Packages
 
-| Package | Specs | Install |
+| Edition | Specs | Install |
 |---------|-------|---------|
-| `@apiboost/omnispec` | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec` |
-| `@apiboost/omnispec-pro` | + GraphQL, SOAP/WSDL, gRPC, theme overrides, interactive OAuth | `npm install @apiboost/omnispec @apiboost/omnispec-pro` |
+| `@apiboost/omnispec` (Free) | OpenAPI 2.0–3.1, AsyncAPI 2.x–3.x | `npm install @apiboost/omnispec` |
+| **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** | + GraphQL, SOAP/WSDL, gRPC, theme overrides, interactive OAuth | [Get access →](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) |
 
-**Peer dependencies:** React 18 or 19 (`react`, `react-dom`). Everything else, including `@emotion/css` for styling, is bundled as a normal dependency — no separate install needed. (Pro additionally requires `@apiboost/omnispec` as a peer, shown above.)
+**Peer dependencies:** React 18 or 19 (`react`, `react-dom`). Everything else, including `@emotion/css` for styling, is bundled as a normal dependency — no separate install needed.
 
 ## Quick Start
 
@@ -50,17 +50,9 @@ New to how the pieces fit together? Read [Concepts](./concepts.md) for the menta
 GraphQL, SOAP/WSDL, and gRPC renderers, plus full theme-token white-labeling, require **[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**. In the free core, OpenAPI and AsyncAPI specs render fully; other spec types display a styled upgrade prompt.
 :::
 
-Pro is activated by importing the pre-wired `OmniSpecRenderer` from `@apiboost/omnispec-pro` — it needs no provider or extra configuration:
+Pro is a drop-in superset: its pre-wired `OmniSpecRenderer` enables every spec type with no provider or extra configuration, and keeps the same component API you already use in Free — so nothing you build on Free is thrown away when you upgrade. Access and setup are covered in the **[Pro docs](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
 
-```tsx
-import { OmniSpecRenderer } from '@apiboost/omnispec-pro'
-
-function OmniSpec() {
-  return <OmniSpecRenderer spec="/schema.graphql" />
-}
-```
-
-Alternatively, keep importing from `@apiboost/omnispec` and pass the Pro capability object through the `pro` prop. (The deprecated `<ProProvider>` wrapper still works but should not be used in new code.) See [Free vs Pro](./free-vs-pro.md).
+If you already have Pro, you can also keep importing from `@apiboost/omnispec` and pass the Pro capability object through the `pro` prop. See [Free vs Pro](./free-vs-pro.md).
 
 ## Choose your integration
 
@@ -120,11 +112,11 @@ OpenAPI and AsyncAPI accept JSON or YAML. GraphQL accepts SDL strings or introsp
 | `<OmniSpecRenderer>` | Auto-detect | All below | `@apiboost/omnispec` |
 | `<OpenApiSpec>` | OpenAPI / Swagger | 2.0, 3.0.x, 3.1 | `@apiboost/omnispec` |
 | `<AsyncApiSpec>` | AsyncAPI | 2.x — 3.x | `@apiboost/omnispec` |
-| `<GraphqlSpec>` | GraphQL SDL | Any | `@apiboost/omnispec-pro` |
-| `<SoapSpec>` | WSDL / SOAP | 1.1 | `@apiboost/omnispec-pro` |
-| `<GrpcSpec>` | Protocol Buffers | proto2, proto3 | `@apiboost/omnispec-pro` |
+| `<GraphqlSpec>` | GraphQL SDL | Any | [Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) |
+| `<SoapSpec>` | WSDL / SOAP | 1.1 | [Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) |
+| `<GrpcSpec>` | Protocol Buffers | proto2, proto3 | [Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) |
 
-`<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. When you render with `@apiboost/omnispec-pro` (or pass the `pro` prop), all spec types render automatically.
+`<OmniSpecRenderer>` auto-detects the spec type and lazy-loads only the renderer needed. With Pro (or by passing the `pro` prop), all spec types render automatically.
 
 ## Next steps
 
