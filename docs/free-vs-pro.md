@@ -18,7 +18,7 @@ The public documentation site fully documents everything the free core does. Pro
 | Dimension | Free (`@apiboost/omnispec`) | Pro |
 |---|---|---|
 | **License** | Apache-2.0 (open source) | Proprietary (commercial) |
-| **Registry** | Public npm | GitHub Packages (license-validated) |
+| **Registry** | Public npm | Licensed access via [apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) (KeyGen-validated) |
 | **Renderers** | OpenAPI 2.0 / 3.0 / 3.1, AsyncAPI 2.x / 3.x | + GraphQL (SDL + introspection), SOAP / WSDL, gRPC / Protobuf |
 | **Try-It** | Yes — direct (browser) and proxied | Inherited from Free |
 | **Authentication** | API key, Basic, Bearer, OAuth2 with **manual token paste** | + Interactive OAuth: Authorization Code + PKCE "Get Token", OpenID Connect, the `oauth` prop |
