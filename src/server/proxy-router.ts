@@ -18,8 +18,25 @@ import { ResponseTooLargeError, sendUpstream } from './upstream-request'
 import { isBinaryContentType } from '../core/utils/binary-response'
 
 export interface ProxyRouterOptions {
-  /** Max requests per minute per IP. Default: 60. */
+  /**
+   * Max requests per minute per client. Default: 60. Clients are keyed by
+   * `req.ip` unless `keyGenerator` is set. Behind a reverse proxy or load
+   * balancer the host app MUST set Express's `trust proxy` (e.g.
+   * `app.set('trust proxy', 1)`), otherwise every user shares the proxy's IP
+   * and one bucket.
+   */
   rateLimitPerMinute?: number
+  /**
+   * Derives the rate-limit key from the request. Default: `req.ip`. Use it to
+   * key on an authenticated user/session id, or on a client-IP header your
+   * edge sets, when `trust proxy` alone can't identify clients.
+   */
+  keyGenerator?: (req: Request) => string
+  /**
+   * Receives one-time configuration warnings (e.g. `X-Forwarded-For` seen
+   * while `trust proxy` is off). Default: `console`.
+   */
+  logger?: { warn: (message: string) => void }
   /** Max timeout for proxied requests in ms. Default: 30000. */
   maxTimeout?: number
   /** Max request/response body size in bytes. Default: 1048576 (1MB). */
@@ -98,6 +115,9 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     onRequest,
     dnsLookup,
     maxRedirects = DEFAULT_MAX_REDIRECTS,
+    keyGenerator,
+    // eslint-disable-next-line no-console
+    logger = { warn: (message: string) => console.warn(message) },
   } = options
 
   const guardedLookup = createGuardedLookup(dnsLookup)
@@ -126,6 +146,25 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
 
   const router = Router()
 
+  const rateLimitKey = (req: Request): string => keyGenerator?.(req) ?? req.ip ?? 'unknown'
+
+  // The router can't set the host app's `trust proxy`, but it can notice the
+  // classic misconfiguration — requests arriving through a reverse proxy
+  // (X-Forwarded-For present) while Express ignores that header — and say so
+  // once, since it collapses every user into one rate-limit bucket.
+  let warnedTrustProxy = false
+  router.use((req: Request, _res: Response, next) => {
+    if (!warnedTrustProxy && !keyGenerator && req.headers['x-forwarded-for'] && !req.app.get('trust proxy')) {
+      warnedTrustProxy = true
+      logger.warn(
+        '[omnispec proxy] X-Forwarded-For is set but Express "trust proxy" is disabled, so every client ' +
+        'shares the reverse proxy\'s IP and one rate-limit bucket. Set app.set(\'trust proxy\', <hops>) in the ' +
+        'host app, or pass a keyGenerator to createProxyRouter().',
+      )
+    }
+    next()
+  })
+
   // Rate limiting — try to use express-rate-limit if available, otherwise
   // fall back to a simple in-memory counter.
   try {
@@ -138,17 +177,25 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
         standardHeaders: true,
         legacyHeaders: false,
         message: { error: 'Too many proxy requests. Please try again later.' },
+        keyGenerator: rateLimitKey,
+        // The router reports the trust-proxy misconfiguration itself (above),
+        // through the configurable logger.
+        validate: { xForwardedForHeader: false },
       }),
     )
   } catch {
     // express-rate-limit not installed — use basic in-memory limiter.
     const hits = new Map<string, { count: number; resetAt: number }>()
     router.use((req: Request, res: Response, next) => {
-      const key = req.ip ?? 'unknown'
+      const key = rateLimitKey(req)
       const now = Date.now()
       const entry = hits.get(key)
 
       if (!entry || now > entry.resetAt) {
+        // Drop expired buckets so the map can't grow without bound.
+        if (hits.size > 10_000) {
+          for (const [k, v] of hits) if (now > v.resetAt) hits.delete(k)
+        }
         hits.set(key, { count: 1, resetAt: now + 60_000 })
         return next()
       }

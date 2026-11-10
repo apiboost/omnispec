@@ -414,3 +414,48 @@ describe('createProxyRouter — opt-in redirect following (maxRedirects)', () =>
     }
   })
 })
+
+describe('createProxyRouter — rate limiting behind a reverse proxy', () => {
+  const ok = () => ({ url: upstreamUrl('/ok'), method: 'GET', headers: {} })
+
+  it('keys the limit with a custom keyGenerator', async () => {
+    const proxy = await startProxy(
+      { rateLimitPerMinute: 1, keyGenerator: (req) => String(req.headers['x-user'] ?? 'anon'), logger: { warn: vi.fn() } },
+      (app) => app.use(express.json()),
+    )
+    try {
+      expect((await proxy.send(ok(), { 'x-user': 'alice' })).status).toBe(200)
+      expect((await proxy.send(ok(), { 'x-user': 'bob' })).status).toBe(200)
+      expect((await proxy.send(ok(), { 'x-user': 'alice' })).status).toBe(429)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('warns once when X-Forwarded-For arrives but the host app does not trust proxies', async () => {
+    const warn = vi.fn()
+    const proxy = await startProxy({ logger: { warn } }, (app) => app.use(express.json()))
+    try {
+      await proxy.send(ok(), { 'x-forwarded-for': '203.0.113.9' })
+      await proxy.send(ok(), { 'x-forwarded-for': '203.0.113.10' })
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0][0])).toMatch(/trust proxy/)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('does not warn when the host app sets trust proxy', async () => {
+    const warn = vi.fn()
+    const proxy = await startProxy({ logger: { warn } }, (app) => {
+      app.set('trust proxy', 1)
+      app.use(express.json())
+    })
+    try {
+      await proxy.send(ok(), { 'x-forwarded-for': '203.0.113.9' })
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      await proxy.close()
+    }
+  })
+})
