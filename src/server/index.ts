@@ -9,4 +9,6 @@
  */
 
 export { createProxyRouter } from './proxy-router'
-export type { ProxyRouterOptions } from './proxy-router'
+export type { ProxyRouterOptions, ProxyAuditEntry } from './proxy-router'
+export type { ProxyDnsLookup, ResolvedAddress } from './guarded-lookup'
+export { isPrivateIp, isBlockedAddress } from './ssrf-guard'

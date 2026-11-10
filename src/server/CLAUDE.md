@@ -10,9 +10,12 @@ Server-only code. Exported via the `@apiboost/omnispec/server` subpath (part of 
 
 ```
 server/
-├── index.ts          Public exports: createProxyRouter, ssrf-guard utilities
-├── proxy-router.ts   Express middleware factory
-└── ssrf-guard.ts     SSRF guard (private network blocklist, host validator)
+├── index.ts             Public exports: createProxyRouter, isPrivateIp, isBlockedAddress, types
+├── proxy-router.ts      Express middleware factory (validation, rate limit, envelope parsing, redirects)
+├── ssrf-guard.ts        Re-exports the isomorphic IP classifier (src/core/utils/ip-classify.ts)
+├── guarded-lookup.ts    DNS lookup that validates every resolved address and pins the socket to it
+├── upstream-request.ts  http/https transport (no fetch): pinned lookup, no redirects, capped/decoded body
+└── headers.ts           Request/response header sanitizing (hop-by-hop, Host, Content-Length, CRLF)
 ```
 
 ---
@@ -36,11 +39,13 @@ The frontend Try-It panel posts requests to the mounted route. The proxy validat
 
 ## Security Layers
 
-1. **SSRF guard** — blocks loopback (`127.0.0.1`, `::1`) and RFC1918 private network ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) and link-local (`169.254.0.0/16`). Resolves DNS before forwarding to prevent rebinding attacks
-2. **Rate limiting** — configurable per-IP. Default sensible for public deployment
-3. **Allowed-hosts allowlist** — optional (`allowedDomains`). If set, only requests targeting these hosts are forwarded. When a spec uses an `openIdConnect` scheme, the OpenID discovery host and any endpoint hosts it advertises (`authorization_endpoint` / `token_endpoint`) must be covered by this list too — the discovery fetch and the token exchange both route through this proxy as a CORS fallback
-4. **Body size limit** — `maxBodySize` option caps the forwarded request body
-5. **Header filtering** — strips host-related and credentialed headers from the inbound request before forwarding
+1. **SSRF guard, pre-connect** (`ssrf-guard.ts`) — rejects non-http(s) schemes, `localhost`/`*.localhost`, and IP literals in any blocked range: loopback, RFC 1918, link-local/metadata, CGNAT, documentation/benchmarking, multicast/reserved, IPv6 ULA/link-local/site-local, and prefixes that embed IPv4 (mapped, NAT64, 6to4). Hostnames are canonicalized via the WHATWG URL parser first, so `2130706433`, `0x7f.1`, `[::ffff:127.0.0.1]` and `localhost.` are caught
+2. **SSRF guard, at connect** (`guarded-lookup.ts`) — resolves the hostname once, rejects if **any** address is blocked, and hands the socket the validated address (DNS-rebinding safe). The transport is Node `http`/`https` with `agent: false`, not `fetch`, precisely so the lookup can be pinned
+3. **No redirect following** — default `maxRedirects: 0` returns the 3xx to the client. When enabled, every hop re-runs layers 1, 2 and the allowlist, and cross-origin hops forward only `CROSS_ORIGIN_SAFE_HEADERS`
+4. **Rate limiting** — per client, keyed by `req.ip` or `keyGenerator`. Behind a reverse proxy the *host app* must set `trust proxy`; the router warns once (via `logger`) when it sees `X-Forwarded-For` without it
+5. **Allowed-domains allowlist** — optional (`allowedDomains`), checked on every hop. When a spec uses an `openIdConnect` scheme, the OpenID discovery host and any endpoint hosts it advertises (`authorization_endpoint` / `token_endpoint`) must be covered by this list too — the discovery fetch and the token exchange both route through this proxy as a CORS fallback
+6. **Body size limits** — the router parses its own JSON envelope (`maxEnvelopeSize`, default `2 * maxBodySize + 64 KiB`); `maxBodySize` caps the decoded request body and the decompressed response body
+7. **Header filtering** (`headers.ts`) — only envelope headers are forwarded (never the inbound request's own headers/cookies). Hop-by-hop headers, anything named in `Connection`, `Host` and `Content-Length` are dropped; invalid names/values (CR/LF) are rejected with 400. `Cookie` **is** forwarded — it carries `in: cookie` API keys, which only the proxy can deliver. Hop-by-hop headers are also stripped from the response envelope
 
 Do not bypass any of these guards. They are the primary defense against SSRF / abuse when the proxy is exposed publicly.
 
@@ -48,18 +53,24 @@ Do not bypass any of these guards. They are the primary defense against SSRF / a
 
 ## Configuration Surface
 
-The `createProxyRouter` options (see `proxy-router.ts` for the canonical shape):
+The `createProxyRouter` options (see `ProxyRouterOptions` in `proxy-router.ts` for the canonical shape):
 
-- `allowedHosts?: string[]` — host allowlist
-- `maxBodySize?: number` — bytes
-- `rateLimit?: { windowMs, max }`
-- `customHeaders?: Record<string, string>` — added to all forwarded requests (e.g. an Apiboost-specific routing header)
+- `rateLimitPerMinute?: number` — default 60
+- `keyGenerator?: (req) => string` — rate-limit key, default `req.ip`
+- `logger?: { warn(msg) }` — one-time config warnings, default `console`
+- `maxTimeout?: number` — ms, default 30000
+- `maxBodySize?: number` — bytes, default 1 MB (request after base64 decode; response after decompression)
+- `maxEnvelopeSize?: number` — bytes, JSON envelope parse limit
+- `allowedDomains?: string[]` — host allowlist (exact or subdomain)
+- `maxRedirects?: number` — default 0 (don't follow)
+- `dnsLookup?: (hostname) => Promise<{ address, family }[]>` — custom resolver; results are still validated
+- `onRequest?: (audit) => void` — audit callback
 
 If you add an option:
 
 1. Default it sensibly so existing consumers don't break
 2. Add a test in `proxy-router.test.ts`
-3. Document it in `packages/omnispec/docs/client_docs/try-it.md` and `backend-integration.md`
+3. Document it in `docs/backend-integration.md` (options table) and, if security-relevant, `docs/security.md`
 
 ---
 
@@ -81,9 +92,9 @@ If you're tempted to add audit logging, telemetry, or generic logging here: ther
 
 ## Testing
 
-- Unit tests with vitest, co-located as `*.test.ts`
-- Mock outbound HTTP in tests — don't hit real network
-- SSRF guard tests should include tricky cases: IPv6, hostname → IP DNS rebinding, normalized hostnames
+- Unit tests with vitest, co-located as `*.test.ts`, with `// @vitest-environment node` (the default env is jsdom)
+- `proxy-router.test.ts` runs the router against a local upstream `http` server on 127.0.0.1; it mocks `./ssrf-guard` to treat exactly that address as public, and injects `dnsLookup` to simulate hostnames, rebinding and private resolutions. Never hit the real network
+- SSRF guard tests should include tricky cases: IPv6, IPv4-mapped/NAT64, numeric IPv4 forms, trailing dots, DNS rebinding
 
 ---
 

@@ -17,11 +17,13 @@
 import { parse as parseYaml } from 'yaml'
 import {
   isOriginAllowed,
+  normalizeAllowedOrigins,
   resolveRefUrl,
   fetchExternalRef,
   MAX_EXTERNAL_FILES,
   MAX_EXTERNAL_DEPTH,
 } from '../../core/utils/ref-security'
+import { isPrivateIp } from '../../core/utils/ip-classify'
 import type { ExternalRefOptions } from '../../core/utils/ref-security'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,25 +40,71 @@ const externalCache = new Map<string, JsonObject>()
 export async function resolveRefs(doc: JsonObject, options?: ResolveRefsOptions): Promise<JsonObject> {
   const resolved = new Map<string, JsonValue>()
   const externalCount = { value: 0 }
+  const { baseUrl, specOrigin } = resolveBase(options?.specUrl)
 
-  let specOrigin: string | undefined
-  if (options?.specUrl) {
-    try {
-      const base = typeof window !== 'undefined' ? window.location.origin : undefined
-      specOrigin = new URL(options.specUrl, base).origin
-    } catch {
-      specOrigin = undefined
-    }
+  // Ref checks always apply, however the spec was provided (URL, string or
+  // object). Normalizing here also emits the invalid-entry warning every time.
+  const refOptions: ExternalRefOptions = {
+    specOrigin,
+    allowedOrigins: normalizeAllowedOrigins(options?.externalRefOrigins ?? []),
   }
 
-  const refOptions: ExternalRefOptions | undefined = specOrigin
-    ? {
-      specOrigin,
-      allowedOrigins: options?.externalRefOrigins ?? [],
-    }
-    : undefined
+  return resolveNode(doc, doc, '#', resolved, baseUrl, refOptions, externalCount, 0) as Promise<JsonObject>
+}
 
-  return resolveNode(doc, doc, '#', resolved, options?.specUrl ?? '', refOptions, externalCount, 0) as Promise<JsonObject>
+/**
+ * Works out the base URL relative refs resolve against, and the base origin
+ * whose refs are allowed without an `externalRefOrigins` entry.
+ *
+ * - Spec loaded from a URL: that URL (resolved against the page in a browser).
+ * - Spec passed as a string or object in a browser: the page URL, so
+ *   same-origin and relative refs keep working.
+ * - Spec passed as a string or object without `window` (SSR/Node): no base and
+ *   no base origin; absolute refs must match `externalRefOrigins`.
+ */
+function resolveBase(specUrl: string | undefined): { baseUrl: string; specOrigin: string | null } {
+  const pageHref = typeof window !== 'undefined' ? window?.location?.href : undefined
+  const source = specUrl ?? pageHref
+  if (!source) {
+    return { baseUrl: '', specOrigin: null }
+  }
+  try {
+    const url = new URL(source, pageHref)
+    const isHttp = url.protocol === 'http:' || url.protocol === 'https:'
+    return { baseUrl: url.href, specOrigin: isHttp ? url.origin : null }
+  } catch {
+    // A relative specUrl with no page to resolve it against.
+    return { baseUrl: specUrl ?? '', specOrigin: null }
+  }
+}
+
+/**
+ * True when `ref` (after resolution against the base URL) still points at a
+ * network location. A path-relative ref that could not be made absolute (no
+ * base URL, e.g. SSR) is not; a protocol-relative `//host/...` ref is.
+ */
+function isAbsoluteRef(ref: string): boolean {
+  try {
+    new URL(ref)
+    return true
+  } catch {
+    return /^[\\/]{2}/.test(ref)
+  }
+}
+
+/** Explains why `fullUrl` was blocked, naming the origin and the option to set. */
+function blockedRefError(fullUrl: string): string {
+  let origin: string
+  try {
+    const url = new URL(fullUrl)
+    origin = url.origin
+    if (isPrivateIp(url.hostname)) {
+      return `External $ref to ${origin} blocked: private, loopback, link-local and reserved addresses are never resolved (externalRefOrigins cannot allow them).`
+    }
+  } catch {
+    return `External $ref ${fullUrl} blocked: only same-origin refs and origins listed in externalRefOrigins are resolved.`
+  }
+  return `External $ref origin ${origin} is not allowed. Add "${origin}" to externalRefOrigins to resolve it.`
 }
 
 async function resolveNode(
@@ -65,7 +113,7 @@ async function resolveNode(
   path: string,
   resolved: Map<string, JsonValue>,
   baseUrl: string,
-  refOptions: ExternalRefOptions | undefined,
+  refOptions: ExternalRefOptions,
   externalCount: { value: number },
   externalDepth: number,
 ): Promise<JsonValue> {
@@ -129,7 +177,7 @@ async function mergeSiblings(
   siblingKeys: string[],
   root: JsonObject,
   baseUrl: string,
-  refOptions: ExternalRefOptions | undefined,
+  refOptions: ExternalRefOptions,
   externalCount: { value: number },
   externalDepth: number,
   path: string,
@@ -163,7 +211,7 @@ async function resolveExternalRef(
   _root: JsonObject,
   resolved: Map<string, JsonValue>,
   baseUrl: string,
-  refOptions: ExternalRefOptions | undefined,
+  refOptions: ExternalRefOptions,
   externalCount: { value: number },
   externalDepth: number,
 ): Promise<JsonValue> {
@@ -177,11 +225,11 @@ async function resolveExternalRef(
   const [filePart, fragment] = ref.split('#')
   const fullUrl = resolveRefUrl(filePart, baseUrl)
 
-  if (refOptions && !isOriginAllowed(fullUrl, refOptions)) {
+  if (isAbsoluteRef(fullUrl) && !isOriginAllowed(fullUrl, refOptions)) {
     return {
       'x-external-ref': ref,
       'x-blocked': true,
-      'x-error': 'External origin not in allowlist. Add origin to externalRefOrigins to resolve.',
+      'x-error': blockedRefError(fullUrl),
     }
   }
 

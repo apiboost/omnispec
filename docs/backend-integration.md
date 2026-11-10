@@ -90,24 +90,82 @@ import express from 'express'
 import { createProxyRouter } from '@apiboost/omnispec/server'
 
 const app = express()
-app.use(express.json())
+
+// Behind a reverse proxy / load balancer / CDN, tell Express how many hops to
+// trust so req.ip is the real client (see "Rate limiting behind a reverse
+// proxy" below).
+app.set('trust proxy', 1)
+
+// Mount the proxy BEFORE any global body parser. The router parses its own
+// JSON envelope with a limit sized for maxBodySize; a global express.json()
+// that runs first applies its own limit (100 KB by default) instead.
 app.use('/api/proxy', createProxyRouter({
-  rateLimitPerMinute: 60,       // per-IP rate limit (default 60)
+  rateLimitPerMinute: 60,       // per-client rate limit (default 60)
   maxTimeout: 30000,            // max request timeout in ms (default 30s)
-  maxBodySize: 1048576,         // max body size in bytes (default 1MB)
+  maxBodySize: 1048576,         // max forwarded request / upstream response body, bytes (default 1MB)
   allowedDomains: [],           // empty = allow all external domains
   onRequest: (audit) => {       // optional audit/logging callback
     // { targetUrl, method, statusCode, duration, timestamp, ip }
   },
 }))
+
+app.use(express.json())         // the rest of your app
 ```
 
 The built-in proxy includes:
-- **SSRF protection** — blocks requests to private IPs (127.0.0.1, 10.x, 172.16-31.x, 192.168.x, ::1, fc00::/7)
-- **Rate limiting** — configurable per-IP limit via `express-rate-limit` (falls back to in-memory limiter if not installed)
+- **SSRF protection** — blocks private, loopback, link-local, CGNAT, multicast and other reserved addresses, in any spelling (`2130706433`, `0x7f.1`, `[::ffff:127.0.0.1]`, `localhost.`), **after DNS resolution**, with the connection pinned to the validated address
+- **No redirect following** — a `3xx` is returned to the browser as-is (opt in with `maxRedirects`)
+- **Header filtering** — hop-by-hop headers, `Host` and `Content-Length` are never relayed; invalid headers are rejected
+- **Rate limiting** — configurable per-client limit via `express-rate-limit` (falls back to an in-memory limiter if not installed)
 - **Timeout enforcement** — caps at `maxTimeout`, prevents slow-loris
 - **Body size limits** — rejects oversized request and response bodies
 - **Domain allowlisting** — optional restriction to specific target domains
+
+See the [Security Model](./security.md#the-built-in-proxy) for how each protection works.
+
+### Proxy options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `rateLimitPerMinute` | `number` | `60` | Requests per minute per client key. |
+| `keyGenerator` | `(req) => string` | `req.ip` | Rate-limit key. Use a user/session id or an edge-supplied client IP when `trust proxy` can't identify clients. |
+| `logger` | `{ warn(msg) }` | `console` | Receives one-time configuration warnings (e.g. `trust proxy` missing). |
+| `maxTimeout` | `number` | `30000` | Upper bound (ms) on each proxied request; the envelope's `timeout` can only lower it. |
+| `maxBodySize` | `number` | `1048576` | Max bytes of the forwarded request body (after base64 decoding) **and** of the upstream response body (after decompression). Over-limit requests get `413`, over-limit responses `502`. |
+| `maxEnvelopeSize` | `number` | `2 × maxBodySize + 64 KiB` | Max bytes of the JSON envelope the router parses. Sized for base64 uploads (~4/3) and escaped XML/JSON. |
+| `allowedDomains` | `string[]` | `[]` | Target host allow-list (exact host or any subdomain). Empty allows any public host. |
+| `maxRedirects` | `number` | `0` | Upstream redirects to follow. `0` returns the `3xx` to the browser. When > 0, every hop is re-validated (SSRF guard, DNS check, `allowedDomains`) and a cross-origin hop forwards only `Accept`, `Accept-Language`, `Content-Language`, `Content-Type` and `User-Agent`. |
+| `dnsLookup` | `(hostname) => Promise<{ address, family }[]>` | OS resolver | Custom DNS resolver. Every address it returns is still validated. |
+| `onRequest` | `(audit) => void` | — | Audit callback after each proxied request. |
+
+### Request body size (SOAP envelopes, uploads)
+
+The router parses the browser's JSON envelope itself, with `maxEnvelopeSize`
+as the limit, so you don't need `express.json()` for it. If your app installs
+a **global** `express.json()` before the proxy route, that parser runs first
+and its `limit` (100 KB by default) caps every Try-It request: large SOAP
+envelopes and file uploads fail with `413` before the proxy sees them. Either
+mount the proxy before the global parser (as above), or raise that parser's
+limit to at least `maxEnvelopeSize`.
+
+Raise `maxBodySize` for larger payloads; `maxEnvelopeSize` follows it
+automatically unless you set it explicitly.
+
+### Rate limiting behind a reverse proxy
+
+The limit is keyed on `req.ip`. Behind a reverse proxy, load balancer or CDN,
+`req.ip` is the proxy's address unless the host app sets Express's
+[`trust proxy`](https://expressjs.com/en/guide/behind-proxies.html), so every
+user shares one bucket and a single busy user throttles everyone. The router
+can't change your app's settings, so:
+
+- Set `app.set('trust proxy', <number of hops>)` (or the proxy's subnets), not
+  `true`, which lets clients spoof `X-Forwarded-For` and rotate their key.
+- Or pass `keyGenerator` to key on something your app already trusts, such as
+  an authenticated user id.
+
+When a request arrives with `X-Forwarded-For` while `trust proxy` is off and no
+`keyGenerator` is set, the router logs a one-time warning through `logger`.
 
 Then pass `proxyUrl` to the renderer:
 
@@ -205,6 +263,9 @@ Content-Type: application/json
 
 ### Example: Node.js / Express
 
+A minimal sketch of the contract, without the protections the built-in router
+adds — see [Security Considerations](#security-considerations) before exposing it.
+
 ```javascript
 const express = require('express')
 const app = express()
@@ -223,6 +284,7 @@ app.post('/api/proxy', async (req, res) => {
       headers,
       body: body || undefined,
       signal: controller.signal,
+      redirect: 'manual', // never follow redirects: return the 3xx to the browser
     })
 
     const responseBody = await response.text()
@@ -303,8 +365,11 @@ SOAP services almost never support browser CORS. The proxy is effectively requir
 
 ## Security Considerations
 
-- Validate the `url` field to prevent SSRF attacks (restrict to allowed domains/IPs)
-- Apply rate limiting to the proxy endpoint
-- Do not forward sensitive internal headers
+If you implement the proxy yourself, mirror what the built-in router does:
+
+- Validate the `url` field to prevent SSRF attacks: allow only `http`/`https`, restrict to allowed domains, and block private/reserved IPs **after resolving DNS**, connecting to the address you validated (not re-resolving), so DNS rebinding can't slip through
+- Don't follow redirects automatically; if you must, re-validate every hop and drop credential headers when the origin changes
+- Apply rate limiting to the proxy endpoint, keyed on the real client (configure your framework's trusted-proxy setting)
+- Forward only the envelope's `headers`, never the headers or cookies the browser sent to your proxy route; drop hop-by-hop headers and set `Host`/`Content-Length` yourself
 - Log proxy requests for audit purposes
 - Consider restricting HTTP methods (e.g., block DELETE in read-only environments)
