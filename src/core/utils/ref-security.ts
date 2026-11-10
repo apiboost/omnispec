@@ -42,9 +42,78 @@ export interface ExternalRefOptions {
 
   /**
    * List of additional origins that are allowed for external references.
-   * Origins must match exactly (scheme + host + port).
+   * Entries are normalized with `normalizeOrigin()` before comparison; the
+   * normalized origins must then match exactly (scheme + host + port).
    */
   allowedOrigins: string[]
+}
+
+/**
+ * Normalizes an `externalRefOrigins` entry to its WHATWG URL origin
+ * (`scheme://host[:port]`): the scheme and host are lowercased, IDN hosts are
+ * converted to punycode, a default port (`:443` / `:80`) and a bare trailing
+ * slash are dropped.
+ *
+ * Returns `null` for anything that is not a bare http(s) origin: unparseable
+ * values, other schemes, and entries with a path, query, fragment,
+ * credentials, or a wildcard host. No wildcard matching is supported.
+ *
+ * @param entry - A configured origin string.
+ * @returns The normalized origin, or null when the entry is not a valid origin.
+ */
+export const normalizeOrigin = (entry: string): string | null => {
+  let url: URL
+  try {
+    url = new URL(entry)
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    return null
+  }
+  if (url.username || url.password) {
+    return null
+  }
+  // A non-empty search/hash, or a `?`/`#` with nothing after it, is not a bare origin.
+  if (url.pathname !== '/' || url.search || url.hash || /[?#]/.test(entry)) {
+    return null
+  }
+  if (url.hostname.includes('*')) {
+    return null
+  }
+  return url.origin
+}
+
+/**
+ * Normalizes a list of `externalRefOrigins` entries with `normalizeOrigin()`,
+ * dropping duplicates. Invalid entries are ignored (never thrown on) and
+ * reported in a single warning that lists all of them.
+ *
+ * @param entries - The configured origins.
+ * @param warn - Warning sink; defaults to `console.warn`.
+ * @returns The normalized, de-duplicated origins.
+ */
+export const normalizeAllowedOrigins = (
+  entries: readonly string[],
+  // eslint-disable-next-line no-console
+  warn: (message: string) => void = (message) => console.warn(message),
+): string[] => {
+  const origins = new Set<string>()
+  const ignored: string[] = []
+  for (const entry of entries) {
+    const origin = typeof entry === 'string' ? normalizeOrigin(entry) : null
+    if (origin) {
+      origins.add(origin)
+    } else {
+      ignored.push(String(entry))
+    }
+  }
+  if (ignored.length > 0) {
+    warn(
+      `[omnispec] Ignoring invalid externalRefOrigins entries (expected bare http(s) origins such as "https://schemas.example.com", without path, query, credentials or wildcards): ${ignored.map((e) => JSON.stringify(e)).join(', ')}`,
+    )
+  }
+  return [...origins]
 }
 
 /**
@@ -56,7 +125,7 @@ export interface ExternalRefOptions {
  *
  * Allows:
  * - The spec's own origin (specOrigin)
- * - Any origin in allowedOrigins
+ * - Any origin in allowedOrigins (entries are normalized; invalid ones never match)
  *
  * @param refUrl - The full URL of the external reference.
  * @param options - Configuration with specOrigin and allowedOrigins.
@@ -72,7 +141,7 @@ export const isOriginAllowed = (refUrl: string, options: ExternalRefOptions): bo
       return false
     }
 
-    const refOrigin = `${url.protocol}//${url.host}`
+    const refOrigin = url.origin
 
     // Allow references to the spec's own origin.
     if (refOrigin === options.specOrigin) {
@@ -80,7 +149,7 @@ export const isOriginAllowed = (refUrl: string, options: ExternalRefOptions): bo
     }
 
     // Allow references to any configured allowed origin.
-    if (options.allowedOrigins.includes(refOrigin)) {
+    if (options.allowedOrigins.some((entry) => normalizeOrigin(entry) === refOrigin)) {
       return true
     }
 

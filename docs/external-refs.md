@@ -50,7 +50,7 @@ Cross-origin refs are blocked by default. To allow them, pass an `externalRefOri
 />
 ```
 
-Origins must be written in URL origin form: scheme and host, lowercase, with no trailing slash or path. Include the port only when it is non-standard (a ref to `https://host:443/...` is treated as `https://host`). Entries are compared as plain strings, so `https://schemas.example.com/` or `https://schemas.example.com:443` never match:
+Each entry is normalized with the WHATWG URL parser to its origin (`scheme://host[:port]`) before matching, and so is the origin of every `$ref` URL. Normalization lowercases the scheme and host, converts internationalized (IDN) hosts to punycode, drops a default port (`:443` for https, `:80` for http), and drops a bare trailing slash. `https://schemas.example.com/`, `https://schemas.example.com:443` and `https://Schemas.Example.com` all match `https://schemas.example.com`. Include the port only when it is non-standard:
 
 ```tsx
 externalRefOrigins={[
@@ -61,9 +61,11 @@ externalRefOrigins={[
 
 Any ref whose origin is not in the list renders the blocked indicator instead of the schema. No error is thrown.
 
+Entries that are not bare http(s) origins are ignored: anything with a path (`https://schemas.example.com/v1`), a query or fragment, credentials (`https://user:pass@host`), a non-http(s) scheme, a wildcard, or a value that does not parse as a URL. The renderer logs one `console.warn` listing all ignored entries and does not throw.
+
 ### Exact-origin matching
 
-Origins are matched **exactly** — wildcard subdomains are not supported. Each origin you want to allow must be listed in full (`scheme://host[:port]`):
+After normalization, origins are matched **exactly** — wildcard subdomains are not supported. Each origin you want to allow must be listed in full (`scheme://host[:port]`):
 
 ```tsx
 externalRefOrigins={[
@@ -150,7 +152,7 @@ The rest of the spec renders normally. Try-It panels for operations that referen
 
 **Cross-origin refs are still blocked after adding the origin**
 
-Check that the origin in `externalRefOrigins` exactly matches the scheme, host, and port of the ref URL. `https://schemas.example.com` does not cover `http://schemas.example.com` or `https://schemas.example.com:8443`. Remove any trailing slash or default port (`:443` for https, `:80` for http) from the entry, and write the host in lowercase.
+Check that the origin in `externalRefOrigins` matches the scheme, host, and port of the ref URL. Case, a trailing slash and a default port are normalized away, but the scheme and any non-default port must match: `https://schemas.example.com` does not cover `http://schemas.example.com` or `https://schemas.example.com:8443`. Also check the browser console for an "Ignoring invalid externalRefOrigins entries" warning — entries with a path, query, credentials or wildcard are ignored.
 
 **The renderer shows the blocked indicator for a same-origin ref**
 

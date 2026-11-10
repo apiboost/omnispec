@@ -17,6 +17,7 @@
 import { parse as parseYaml } from 'yaml'
 import {
   isOriginAllowed,
+  normalizeAllowedOrigins,
   resolveRefUrl,
   fetchExternalRef,
   MAX_EXTERNAL_FILES,
@@ -52,7 +53,7 @@ export async function resolveRefs(doc: JsonObject, options?: ResolveRefsOptions)
   const refOptions: ExternalRefOptions | undefined = specOrigin
     ? {
       specOrigin,
-      allowedOrigins: options?.externalRefOrigins ?? [],
+      allowedOrigins: normalizeAllowedOrigins(options?.externalRefOrigins ?? []),
     }
     : undefined
 

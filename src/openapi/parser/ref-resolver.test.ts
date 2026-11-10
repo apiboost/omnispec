@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { resolveRefs } from './ref-resolver'
 
 describe('resolveRefs', () => {
@@ -222,5 +222,49 @@ describe('resolveRefs', () => {
 
     const resolved = await resolveRefs(doc) as Record<string, unknown>
     expect(resolved.test).toEqual({ type: 'object' })
+  })
+})
+
+describe('resolveRefs externalRefOrigins normalization', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('resolves a cross-origin ref when the allow-list entry has a trailing slash, default port and uppercase host', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ type: 'string', title: 'Normalized' })))
+    vi.stubGlobal('fetch', fetchMock)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const doc = { test: { $ref: 'https://norm-schemas.example.com/pet.json' } }
+    const resolved = await resolveRefs(doc, {
+      specUrl: 'https://docs.example.com/openapi.json',
+      externalRefOrigins: ['HTTPS://Norm-Schemas.Example.com:443/'],
+    }) as Record<string, unknown>
+
+    expect(resolved.test).toEqual({ type: 'string', title: 'Normalized' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('ignores invalid entries with one warning and still blocks the ref', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const doc = {
+      a: { $ref: 'https://blocked-schemas.example.com/a.json' },
+      b: { $ref: 'https://blocked-schemas.example.com/b.json' },
+    }
+    const resolved = await resolveRefs(doc, {
+      specUrl: 'https://docs.example.com/openapi.json',
+      externalRefOrigins: ['https://blocked-schemas.example.com/v1', 'https://u:p@blocked-schemas.example.com'],
+    }) as Record<string, Record<string, unknown>>
+
+    expect(resolved.a['x-blocked']).toBe(true)
+    expect(resolved.b['x-blocked']).toBe(true)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toContain('https://blocked-schemas.example.com/v1')
   })
 })

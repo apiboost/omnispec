@@ -126,7 +126,7 @@ If you implement the proxy yourself in another language (PHP, Go, etc.), you own
 Specs split across multiple files reference each other with `$ref`. The renderer resolves these with the same security-first posture as the proxy.
 
 - **Same-origin refs** (relative paths, or absolute paths on the spec's origin) resolve automatically.
-- **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Matching is **exact** — each allowed origin must be listed in full (`scheme://host[:port]`, no trailing slash or path, and no port when it is the scheme default); wildcard subdomains such as `https://*.example.com` are not supported and never match. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
+- **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Entries and ref URLs are both normalized with the WHATWG URL parser to `scheme://host[:port]` (lowercased, IDN hosts in punycode, default port and trailing slash dropped), then matched **exactly** — the scheme and any non-default port must agree. Entries that are not bare http(s) origins (a path, query, fragment, credentials, or wildcard) are ignored with a single console warning; wildcard subdomains such as `https://*.example.com` are not supported and never match. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
 
 ```tsx
 <OmniSpecRenderer
