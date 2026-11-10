@@ -15,6 +15,7 @@ import { isPrivateIp, normalizeHostname } from './ssrf-guard'
 import { createGuardedLookup, SsrfBlockedError } from './guarded-lookup'
 import type { ProxyDnsLookup } from './guarded-lookup'
 import { ResponseTooLargeError, sendUpstream } from './upstream-request'
+import { InvalidHeaderError, sanitizeRequestHeaders, sanitizeResponseHeaders } from './headers'
 import { isBinaryContentType } from '../core/utils/binary-response'
 
 export interface ProxyRouterOptions {
@@ -265,6 +266,14 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
       }
     }
 
+    let forwardHeaders: Record<string, string>
+    try {
+      forwardHeaders = sanitizeRequestHeaders(proxyReq.headers)
+    } catch (err) {
+      if (err instanceof InvalidHeaderError) return res.status(400).json({ error: err.message })
+      throw err
+    }
+
     // Enforce the body size limit on the bytes actually forwarded.
     if (outboundBody !== undefined && Buffer.byteLength(outboundBody) > maxBodySize) {
       return res.status(413).json({ error: `Request body exceeds ${maxBodySize} byte limit` })
@@ -278,7 +287,7 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     try {
       let url = targetUrl
       let method = proxyReq.method
-      let headers: Record<string, string> = { ...(proxyReq.headers ?? {}) }
+      let headers = forwardHeaders
       let body = outboundBody
       let upstream = await sendUpstream({
         url,
@@ -340,7 +349,7 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
       const proxyRes: ProxyResponse = {
         status: upstream.status,
         statusText: upstream.statusText,
-        headers: upstream.headers,
+        headers: sanitizeResponseHeaders(upstream.headers),
         body: responseBody,
         bodyEncoding: isBinary ? 'base64' : 'utf-8',
         duration,

@@ -540,3 +540,96 @@ describe('createProxyRouter — request body parsing and limits', () => {
     }
   })
 })
+
+describe('createProxyRouter — header handling', () => {
+  it('forwards an envelope Cookie header (apiKey in: cookie) to the target', async () => {
+    const proxy = await startProxy()
+    try {
+      await proxy.send({ url: upstreamUrl('/echo'), method: 'GET', headers: { Cookie: 'sid=abc; theme=dark' } })
+      expect(hits[0].headers.cookie).toBe('sid=abc; theme=dark')
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it("never forwards the browser's own cookies or headers sent to the proxy route", async () => {
+    const proxy = await startProxy()
+    try {
+      await proxy.send(
+        { url: upstreamUrl('/echo'), method: 'GET', headers: {} },
+        { cookie: 'portal_session=SECRET', authorization: 'Bearer portal-token' },
+      )
+      expect(hits[0].headers.cookie).toBeUndefined()
+      expect(hits[0].headers.authorization).toBeUndefined()
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('strips hop-by-hop, Host and caller-supplied Content-Length headers', async () => {
+    const proxy = await startProxy()
+    try {
+      await proxy.send({
+        url: upstreamUrl('/echo'),
+        method: 'POST',
+        headers: {
+          Host: 'internal.admin',
+          Connection: 'keep-alive, X-Hop',
+          'X-Hop': 'drop-me',
+          'Keep-Alive': 'timeout=5',
+          'Proxy-Authorization': 'Basic Zm9vOmJhcg==',
+          'Proxy-Connection': 'keep-alive',
+          TE: 'trailers',
+          Trailer: 'X-Foo',
+          Upgrade: 'websocket',
+          'Content-Length': '999',
+          'X-API-Key': 'kept',
+        },
+        body: 'hello',
+      })
+      const h = hits[0].headers
+      expect(h.host).toBe(`${TEST_UPSTREAM_IP}:${upstreamPort}`)
+      expect(h['x-hop']).toBeUndefined()
+      expect(h['keep-alive']).toBeUndefined()
+      expect(h['proxy-authorization']).toBeUndefined()
+      expect(h['proxy-connection']).toBeUndefined()
+      expect(h.te).toBeUndefined()
+      expect(h.trailer).toBeUndefined()
+      expect(h.upgrade).toBeUndefined()
+      expect(h['content-length']).toBe('5')
+      expect(h['x-api-key']).toBe('kept')
+      expect(hits[0].body).toBe('hello')
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('rejects header names or values that would split the request', async () => {
+    const proxy = await startProxy()
+    try {
+      const { status } = await proxy.send({
+        url: upstreamUrl('/echo'),
+        method: 'GET',
+        headers: { 'X-Evil': 'a\r\nX-Injected: 1' },
+      })
+      expect(status).toBe(400)
+      expect(hits).toHaveLength(0)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('drops hop-by-hop headers from the response envelope', async () => {
+    const proxy = await startProxy()
+    try {
+      const { json } = await proxy.send({ url: upstreamUrl('/ok'), method: 'GET', headers: {} })
+      const headers = json.headers as Record<string, string>
+      expect(headers.connection).toBeUndefined()
+      expect(headers['transfer-encoding']).toBeUndefined()
+      expect(headers['keep-alive']).toBeUndefined()
+      expect(headers['content-type']).toBe('application/json')
+    } finally {
+      await proxy.close()
+    }
+  })
+})
