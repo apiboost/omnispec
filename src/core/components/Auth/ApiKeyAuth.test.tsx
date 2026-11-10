@@ -42,4 +42,12 @@ describe('ApiKeyAuth', () => {
     expect(onRemove).toHaveBeenCalledWith('ApiKeyAuth')
     expect(field.value).toBe('')
   })
+
+  it.each(['header', 'query', 'cookie'] as const)('records the scheme location (`in: %s`) on the applied value', (location) => {
+    const onApply = vi.fn()
+    render(<ApiKeyAuth scheme={{ ...scheme, in: location, name: 'apikey' }} onApply={onApply} onRemove={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText('ApiKeyAuth value'), { target: { value: 'k' } })
+    fireEvent.click(screen.getByRole('button', { name: /apply/i }))
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ headerName: 'apikey', headerValue: 'k', in: location }))
+  })
 })
