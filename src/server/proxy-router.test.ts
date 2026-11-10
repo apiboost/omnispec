@@ -459,3 +459,84 @@ describe('createProxyRouter — rate limiting behind a reverse proxy', () => {
     }
   })
 })
+
+describe('createProxyRouter — request body parsing and limits', () => {
+  it('parses the JSON envelope itself when the host app has no body parser', async () => {
+    const proxy = await startProxy()
+    try {
+      const { status, json } = await proxy.send({ url: upstreamUrl('/ok'), method: 'GET', headers: {} })
+      expect(status).toBe(200)
+      expect(json.status).toBe(200)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('forwards a SOAP-sized body larger than the usual 100 KB parser default', async () => {
+    const envelope = `<?xml version="1.0"?><soap:Envelope>${'<item attr="v">x</item>'.repeat(20_000)}</soap:Envelope>`
+    expect(envelope.length).toBeGreaterThan(400_000)
+    const proxy = await startProxy()
+    try {
+      const { json } = await proxy.send({
+        url: upstreamUrl('/echo'),
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: envelope,
+      })
+      expect(json.status).toBe(200)
+      expect(JSON.parse(String(json.body)).length).toBe(Buffer.byteLength(envelope))
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('applies maxBodySize to decoded bytes, so a base64 upload just under the limit passes', async () => {
+    const raw = Buffer.alloc(900_000, 7)
+    const proxy = await startProxy({ maxBodySize: 1_000_000 })
+    try {
+      const { json } = await proxy.send({
+        url: upstreamUrl('/echo'),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: raw.toString('base64'),
+        bodyEncoding: 'base64',
+      })
+      expect(json.status).toBe(200)
+      expect(JSON.parse(String(json.body)).length).toBe(900_000)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('rejects a decoded body over maxBodySize with 413', async () => {
+    const proxy = await startProxy({ maxBodySize: 1000 })
+    try {
+      const { status } = await proxy.send({ url: upstreamUrl('/echo'), method: 'POST', headers: {}, body: 'x'.repeat(1001) })
+      expect(status).toBe(413)
+      expect(hits).toHaveLength(0)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('rejects a JSON envelope over maxEnvelopeSize with a JSON 413', async () => {
+    const proxy = await startProxy({ maxEnvelopeSize: 2000 })
+    try {
+      const { status, json } = await proxy.send({ url: upstreamUrl('/echo'), method: 'POST', headers: {}, body: 'x'.repeat(5000) })
+      expect(status).toBe(413)
+      expect(String(json.error)).toMatch(/envelope/i)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('uses a body the host app already parsed', async () => {
+    const proxy = await startProxy({}, (app) => app.use(express.json({ limit: '5mb' })))
+    try {
+      const { json } = await proxy.send({ url: upstreamUrl('/ok'), method: 'GET', headers: {} })
+      expect(json.status).toBe(200)
+    } finally {
+      await proxy.close()
+    }
+  })
+})

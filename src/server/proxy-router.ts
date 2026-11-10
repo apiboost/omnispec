@@ -8,8 +8,8 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { Router } from 'express'
-import type { Request, Response } from 'express'
+import { Router, json } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import type { ProxyRequest, ProxyResponse } from '../core/types/try-it.types'
 import { isPrivateIp, normalizeHostname } from './ssrf-guard'
 import { createGuardedLookup, SsrfBlockedError } from './guarded-lookup'
@@ -39,8 +39,20 @@ export interface ProxyRouterOptions {
   logger?: { warn: (message: string) => void }
   /** Max timeout for proxied requests in ms. Default: 30000. */
   maxTimeout?: number
-  /** Max request/response body size in bytes. Default: 1048576 (1MB). */
+  /**
+   * Max size in bytes of the forwarded request body (after base64 decoding)
+   * and of the upstream response body (after decompression).
+   * Default: 1048576 (1 MB).
+   */
   maxBodySize?: number
+  /**
+   * Max size in bytes of the JSON envelope the router parses from the
+   * browser. Default: `2 * maxBodySize + 64 KiB`, enough for a base64 upload
+   * (4/3 expansion) or a heavily-escaped XML/JSON body of `maxBodySize`.
+   * Only applies when the router parses the envelope itself — if the host
+   * app's own `express.json()` runs first, that parser's `limit` wins.
+   */
+  maxEnvelopeSize?: number
   /** Allowed target domains. Empty array = allow all external. */
   allowedDomains?: string[]
   /** Audit callback fired after each proxy request completes. */
@@ -74,6 +86,7 @@ const DEFAULT_RATE_LIMIT = 60
 const DEFAULT_TIMEOUT = 30_000
 const DEFAULT_MAX_BODY = 1_048_576
 const DEFAULT_MAX_REDIRECTS = 0
+const ENVELOPE_OVERHEAD = 64 * 1024
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
@@ -111,6 +124,7 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     rateLimitPerMinute = DEFAULT_RATE_LIMIT,
     maxTimeout = DEFAULT_TIMEOUT,
     maxBodySize = DEFAULT_MAX_BODY,
+    maxEnvelopeSize = 2 * (options.maxBodySize ?? DEFAULT_MAX_BODY) + ENVELOPE_OVERHEAD,
     allowedDomains = [],
     onRequest,
     dnsLookup,
@@ -209,7 +223,13 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     })
   }
 
-  router.post('/', async (req: Request, res: Response) => {
+  // Parse the JSON envelope here, with a limit sized for `maxBodySize`, so
+  // the proxy doesn't depend on (or get capped by) the host app's parser.
+  // body-parser skips requests that were already parsed, so a host-level
+  // `express.json()` mounted *before* this router still takes precedence.
+  const parseEnvelope = json({ limit: maxEnvelopeSize })
+
+  router.post('/', parseEnvelope, async (req: Request, res: Response) => {
     const proxyReq = req.body as ProxyRequest
 
     // Validate required fields.
@@ -230,19 +250,12 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
       return res.status(rejection.status).json({ error: rejection.error })
     }
 
-    // Enforce body size limit.
-    if (proxyReq.body && proxyReq.body.length > maxBodySize) {
-      return res.status(413).json({ error: `Request body exceeds ${maxBodySize} byte limit` })
-    }
-
-    const timeout = Math.min(proxyReq.timeout ?? maxTimeout, maxTimeout)
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeout)
-    const startTime = Date.now()
-
     // Decode base64-encoded bodies (used for multipart/form-data uploads —
     // the client serializes the real multipart payload and base64-encodes it
     // to fit the JSON envelope) back to raw bytes before forwarding.
+    if (proxyReq.body !== undefined && proxyReq.body !== null && typeof proxyReq.body !== 'string') {
+      return res.status(400).json({ error: 'Request body must be a string' })
+    }
     let outboundBody: string | Buffer | undefined = proxyReq.body ?? undefined
     if (outboundBody !== undefined && proxyReq.bodyEncoding === 'base64') {
       try {
@@ -251,6 +264,16 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
         return res.status(400).json({ error: 'Invalid base64 request body' })
       }
     }
+
+    // Enforce the body size limit on the bytes actually forwarded.
+    if (outboundBody !== undefined && Buffer.byteLength(outboundBody) > maxBodySize) {
+      return res.status(413).json({ error: `Request body exceeds ${maxBodySize} byte limit` })
+    }
+
+    const timeout = Math.min(proxyReq.timeout ?? maxTimeout, maxTimeout)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeout)
+    const startTime = Date.now()
 
     try {
       let url = targetUrl
@@ -369,6 +392,18 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     } finally {
       clearTimeout(timeoutId)
     }
+  })
+
+  // Envelope parse errors (too large, malformed JSON) answer in JSON like
+  // every other proxy error instead of falling through to the host app.
+  router.use((err: { type?: string; status?: number }, _req: Request, res: Response, next: NextFunction) => {
+    if (err?.type === 'entity.too.large') {
+      return res.status(413).json({ error: `Proxy request envelope exceeds ${maxEnvelopeSize} byte limit` })
+    }
+    if (err?.type === 'entity.parse.failed') {
+      return res.status(400).json({ error: 'Invalid JSON request envelope' })
+    }
+    return next(err)
   })
 
   return router
