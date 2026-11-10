@@ -229,3 +229,31 @@ describe('TryItPanel apiKey placement', () => {
     expect(sample).not.toMatch(/-H\s+'apikey: k4'/)
   })
 })
+
+describe('TryItPanel request/response callbacks', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('fires the renderer-level onTryItRequest/onTryItResponse from config with the resolved request', async () => {
+    stubFetch(false)
+    const onTryItRequest = vi.fn()
+    const onTryItResponse = vi.fn()
+    render(
+      <ConfigProvider config={{ onTryItRequest, onTryItResponse }}>
+        <AuthProvider schemes={[]}>
+          <TryItPanel method="get" path="/pets/{id}" serverUrl="https://api.example.com/v1" parameters={[{ name: 'id', in: 'path', required: true, example: '7' }]} />
+        </AuthProvider>
+      </ConfigProvider>,
+    )
+    await clickSend()
+    expect(onTryItRequest).toHaveBeenCalledTimes(1)
+    expect(onTryItRequest.mock.calls[0][0]).toMatchObject({
+      url: 'https://api.example.com/v1/pets/{id}',
+      method: 'GET',
+      pathParams: { id: '7' },
+      queryParams: {},
+      headers: {},
+    })
+    await waitFor(() => expect(onTryItResponse).toHaveBeenCalledTimes(1))
+    expect(onTryItResponse.mock.calls[0][0]).toMatchObject({ status: 200, body: '{}' })
+  })
+})

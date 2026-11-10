@@ -525,6 +525,19 @@ You can listen to Try It requests and responses:
 />
 ```
 
+`onTryItRequest` fires when **Send** is clicked, just before the request goes
+out. Its `TryItRequest` carries `method`, `url` (the selected server URL plus
+the path template, e.g. `https://api.example.com/pets/{id}`), `pathParams`,
+`queryParams`, `headers`, and the body. `onTryItResponse` fires once the
+response (direct or proxied) is received. Both are observe-only.
+
+:::warning
+The request payload includes the applied credentials exactly as they are sent:
+the `Authorization` header, API-key headers, an `in: query` API key in
+`queryParams`, and the `Cookie` header for `in: cookie` keys. Redact them
+before logging or forwarding the payload to analytics.
+:::
+
 ## Props Reference
 
 | Prop | Type | Default | Description |

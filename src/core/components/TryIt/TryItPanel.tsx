@@ -51,7 +51,9 @@ interface TryItPanelProps {
    * `docked={false}` to disable the sticky/maxHeight/overflow behavior.
    */
   docked?: boolean
+  /** Fired just before a request is sent. Defaults to the renderer-level `onTryItRequest`. */
   onRequest?: (request: TryItRequest) => void
+  /** Fired when a response is received. Defaults to the renderer-level `onTryItResponse`. */
   onResponse?: (response: TryItResponse) => void
 }
 
@@ -70,7 +72,12 @@ export function TryItPanel({
   onRequest,
   onResponse,
 }: TryItPanelProps) {
-  const { allowTryIt, proxyUrl, proxyHeaders, specKey, tryItPersistTtl } = useConfig()
+  const { allowTryIt, proxyUrl, proxyHeaders, specKey, tryItPersistTtl, onTryItRequest, onTryItResponse } = useConfig()
+  // An explicit prop wins; otherwise report to the renderer-level callbacks
+  // (`onTryItRequest` / `onTryItResponse`, which also drive the web
+  // component's `try-it-request` / `try-it-response` events).
+  const emitRequest = onRequest ?? onTryItRequest
+  const emitResponse = onResponse ?? onTryItResponse
   const { getAuthPlacement, appliedAuth, openAuthPanel, hasAuth, clearAuth } = useAuth()
 
   // Reflect whether any credential has been applied so the header button
@@ -315,12 +322,13 @@ export function TryItPanel({
     setResponse(null)
 
     const request = buildRequest()
-    onRequest?.(request)
-
     const fullRequest: TryItRequest = {
       ...request,
       url: serverUrl + request.url,
     }
+    // Report the request with its absolute URL (server + path template); path
+    // and query values stay in pathParams / queryParams.
+    emitRequest?.(fullRequest)
 
     try {
       // Use proxy if configured, otherwise send directly from the browser
@@ -329,7 +337,7 @@ export function TryItPanel({
         : await sendDirectRequest(fullRequest)
 
       setResponse(res)
-      onResponse?.(res)
+      emitResponse?.(res)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Request failed'
       if (!proxyUrl && message.includes('Failed to fetch')) {
@@ -349,7 +357,7 @@ export function TryItPanel({
     } finally {
       setLoading(false)
     }
-  }, [proxyUrl, proxyHeaders, buildRequest, serverUrl, onRequest, onResponse])
+  }, [proxyUrl, proxyHeaders, buildRequest, serverUrl, emitRequest, emitResponse])
 
   // Generate a fallback body from schema required fields for curl display
   const schemaBody = useMemo(() => {
