@@ -12,10 +12,12 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import http from 'node:http'
+import zlib from 'node:zlib'
 import type { AddressInfo } from 'node:net'
 import express from 'express'
 import { createProxyRouter } from './proxy-router'
 import type { ProxyRouterOptions } from './proxy-router'
+import type * as SsrfGuard from './ssrf-guard'
 
 /**
  * The upstream test server listens on 127.0.0.1, which the real guard blocks.
@@ -24,7 +26,7 @@ import type { ProxyRouterOptions } from './proxy-router'
  */
 const TEST_UPSTREAM_IP = '127.0.0.1'
 vi.mock('./ssrf-guard', async (importActual) => {
-  const actual = await importActual<typeof import('./ssrf-guard')>()
+  const actual = await importActual<typeof SsrfGuard>()
   return {
     ...actual,
     isPrivateIp: (h: string) => (h === TEST_UPSTREAM_IP ? false : actual.isPrivateIp(h)),
@@ -60,6 +62,14 @@ const routes: Record<string, (req: http.IncomingMessage, res: http.ServerRespons
   '/redirect-same-host': (_req, res) => {
     res.writeHead(302, { location: '/final' })
     res.end()
+  },
+  '/gzip': (_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json', 'content-encoding': 'gzip' })
+    res.end(zlib.gzipSync('{"compressed":true}'))
+  },
+  '/big': (_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/plain' })
+    res.end('x'.repeat(4096))
   },
   '/final': (_req, res) => {
     res.writeHead(200, { 'content-type': 'text/plain' })
@@ -150,6 +160,132 @@ describe('createProxyRouter — redirects', () => {
       const { json } = await proxy.send({ url: upstreamUrl('/redirect-same-host'), method: 'GET', headers: {} })
       expect(json.status).toBe(302)
       expect(hits.map((h) => h.url)).toEqual(['/redirect-same-host'])
+    } finally {
+      await proxy.close()
+    }
+  })
+})
+
+/** A mocked resolver that answers per-hostname and records every call. */
+const mockResolver = (table: Record<string, string[] | (() => string[])>) => {
+  const calls: string[] = []
+  const lookup = vi.fn(async (hostname: string) => {
+    calls.push(hostname)
+    const entry = table[hostname]
+    const addrs = typeof entry === 'function' ? entry() : entry
+    if (!addrs) throw Object.assign(new Error(`getaddrinfo ENOTFOUND ${hostname}`), { code: 'ENOTFOUND' })
+    return addrs.map((address) => ({ address, family: address.includes(':') ? 6 : 4 }))
+  })
+  return { lookup, calls }
+}
+
+describe('createProxyRouter — DNS resolution and pinning', () => {
+  it('blocks a public hostname that resolves to the metadata address', async () => {
+    const { lookup } = mockResolver({ 'evil.example': ['169.254.169.254'] })
+    const proxy = await startProxy({ dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      const { status, json } = await proxy.send({ url: 'http://evil.example/latest/meta-data/', method: 'GET', headers: {} })
+      expect(status).toBe(403)
+      expect(String(json.error)).toMatch(/private|internal/i)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it.each([
+    [['10.0.0.5']],
+    [['127.0.0.2']],
+    [['::1']],
+    [['::ffff:7f00:1']],
+    [['fd00:ec2::254']],
+    [['100.64.1.1']],
+  ])('blocks a hostname resolving to %j', async (addrs) => {
+    const { lookup } = mockResolver({ 'internal.example': addrs })
+    const proxy = await startProxy({ dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      const { status } = await proxy.send({ url: 'http://internal.example/', method: 'GET', headers: {} })
+      expect(status).toBe(403)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('validates every resolved address, not just the first', async () => {
+    const { lookup } = mockResolver({ 'mixed.example': [TEST_UPSTREAM_IP, '10.0.0.1'] })
+    const proxy = await startProxy({ dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      const { status } = await proxy.send({ url: `http://mixed.example:${upstreamPort}/ok`, method: 'GET', headers: {} })
+      expect(status).toBe(403)
+      expect(hits).toHaveLength(0)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('pins the connection to the validated address (DNS rebinding)', async () => {
+    // First answer is acceptable; any later re-resolution flips to metadata.
+    let n = 0
+    const { lookup, calls } = mockResolver({
+      'rebind.example': () => (n++ === 0 ? [TEST_UPSTREAM_IP] : ['169.254.169.254']),
+    })
+    const proxy = await startProxy({ dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      const { status, json } = await proxy.send({
+        url: `http://rebind.example:${upstreamPort}/ok`,
+        method: 'GET',
+        headers: {},
+        timeout: 2000,
+      })
+      expect(status).toBe(200)
+      expect(json.status).toBe(200)
+      expect(json.body).toBe('{"ok":true}')
+      // Resolved once, checked once, connected to exactly that address.
+      expect(calls).toEqual(['rebind.example'])
+      expect(hits).toHaveLength(1)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('keeps the original Host header when connecting to the pinned address', async () => {
+    const { lookup } = mockResolver({ 'api.example': [TEST_UPSTREAM_IP] })
+    const proxy = await startProxy({ dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      await proxy.send({ url: `http://api.example:${upstreamPort}/echo`, method: 'GET', headers: {} })
+      expect(hits[0].headers.host).toBe(`api.example:${upstreamPort}`)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('rejects non-http(s) target schemes', async () => {
+    const proxy = await startProxy({}, (app) => app.use(express.json()))
+    try {
+      const { status } = await proxy.send({ url: 'file:///etc/passwd', method: 'GET', headers: {} })
+      expect(status).toBe(400)
+    } finally {
+      await proxy.close()
+    }
+  })
+})
+
+describe('createProxyRouter — upstream responses', () => {
+  it('decompresses gzip responses like fetch did', async () => {
+    const proxy = await startProxy({}, (app) => app.use(express.json()))
+    try {
+      const { json } = await proxy.send({ url: upstreamUrl('/gzip'), method: 'GET', headers: {} })
+      expect(json.body).toBe('{"compressed":true}')
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('rejects an upstream response larger than maxBodySize with 502', async () => {
+    const proxy = await startProxy({ maxBodySize: 1024 }, (app) => app.use(express.json()))
+    try {
+      const { status, json } = await proxy.send({ url: upstreamUrl('/big'), method: 'GET', headers: {} })
+      expect(status).toBe(502)
+      expect(json.statusText).toBe('Response too large')
     } finally {
       await proxy.close()
     }

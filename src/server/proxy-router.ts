@@ -11,7 +11,10 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import type { ProxyRequest, ProxyResponse } from '../core/types/try-it.types'
-import { isPrivateIp } from './ssrf-guard'
+import { isPrivateIp, normalizeHostname } from './ssrf-guard'
+import { createGuardedLookup, SsrfBlockedError } from './guarded-lookup'
+import type { ProxyDnsLookup } from './guarded-lookup'
+import { ResponseTooLargeError, sendUpstream } from './upstream-request'
 import { isBinaryContentType } from '../core/utils/binary-response'
 
 export interface ProxyRouterOptions {
@@ -25,6 +28,12 @@ export interface ProxyRouterOptions {
   allowedDomains?: string[]
   /** Audit callback fired after each proxy request completes. */
   onRequest?: (audit: ProxyAuditEntry) => void
+  /**
+   * Custom DNS resolver for target hostnames. Defaults to the OS resolver
+   * (`dns.lookup`). Every address it returns is validated against the SSRF
+   * blocklist, and the connection is pinned to a validated address.
+   */
+  dnsLookup?: ProxyDnsLookup
 }
 
 export interface ProxyAuditEntry {
@@ -59,7 +68,10 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     maxBodySize = DEFAULT_MAX_BODY,
     allowedDomains = [],
     onRequest,
+    dnsLookup,
   } = options
+
+  const guardedLookup = createGuardedLookup(dnsLookup)
 
   const router = Router()
 
@@ -115,9 +127,15 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
       return res.status(400).json({ error: 'Invalid target URL' })
     }
 
-    // SSRF protection — block private IPs.
-    const hostname = targetUrl.hostname
-    if (isPrivateIp(hostname)) {
+    if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') {
+      return res.status(400).json({ error: 'Only http and https target URLs are supported' })
+    }
+
+    // SSRF protection, step 1 — block private IP literals and localhost
+    // before any network activity. Step 2 (resolved addresses) runs in the
+    // guarded DNS lookup at connect time.
+    const hostname = normalizeHostname(targetUrl.hostname) ?? ''
+    if (isPrivateIp(targetUrl.hostname)) {
       return res.status(403).json({ error: 'Requests to private/internal addresses are not allowed' })
     }
 
@@ -154,50 +172,29 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
     }
 
     try {
-      const fetchResponse = await fetch(proxyReq.url, {
+      const upstream = await sendUpstream({
+        url: targetUrl,
         method: proxyReq.method,
         headers: proxyReq.headers ?? {},
-        // Buffer is a Uint8Array at runtime; Node's fetch accepts it. The DOM
-        // BodyInit typing doesn't know that, hence the cast.
-        body: outboundBody as BodyInit | undefined,
+        body: outboundBody,
         signal: controller.signal,
-        // Never follow redirects: an allowed host could otherwise bounce the
-        // request (and its API-key headers) to an internal or metadata
-        // address that the checks above never saw. The 3xx and its Location
-        // header go back to the client as-is.
-        redirect: 'manual',
+        // Resolve once, validate every address, connect to a validated one.
+        lookup: guardedLookup,
+        maxResponseBytes: maxBodySize,
       })
 
-      // Binary content types are read as bytes and base64-encoded so file
-      // downloads survive the JSON envelope; text flows are unchanged.
-      const responseContentType = fetchResponse.headers.get('content-type') ?? ''
+      // Binary content types are base64-encoded so file downloads survive
+      // the JSON envelope; text flows are unchanged. Redirects are never
+      // followed: a 3xx and its Location header go back to the client as-is.
+      const responseContentType = upstream.headers['content-type'] ?? ''
       const isBinary = isBinaryContentType(responseContentType)
-      const responseBody = isBinary
-        ? Buffer.from(await fetchResponse.arrayBuffer()).toString('base64')
-        : await fetchResponse.text()
+      const responseBody = isBinary ? upstream.body.toString('base64') : upstream.body.toString('utf8')
       const duration = Date.now() - startTime
 
-      // Enforce response body size limit.
-      if (responseBody.length > maxBodySize) {
-        return res.status(502).json({
-          status: 502,
-          statusText: 'Response too large',
-          headers: {},
-          body: `Response body exceeds ${maxBodySize} byte limit`,
-          bodyEncoding: 'utf-8' as const,
-          duration,
-        })
-      }
-
-      const responseHeaders: Record<string, string> = {}
-      fetchResponse.headers.forEach((value, key) => {
-        responseHeaders[key] = value
-      })
-
       const proxyRes: ProxyResponse = {
-        status: fetchResponse.status,
-        statusText: fetchResponse.statusText,
-        headers: responseHeaders,
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: upstream.headers,
         body: responseBody,
         bodyEncoding: isBinary ? 'base64' : 'utf-8',
         duration,
@@ -209,7 +206,7 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
           onRequest({
             targetUrl: proxyReq.url,
             method: proxyReq.method,
-            statusCode: fetchResponse.status,
+            statusCode: upstream.status,
             duration,
             timestamp: new Date().toISOString(),
             ip: req.ip ?? 'unknown',
@@ -222,8 +219,21 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
       return res.json(proxyRes)
     } catch (err) {
       const duration = Date.now() - startTime
+      if (err instanceof SsrfBlockedError) {
+        return res.status(403).json({ error: 'Requests to private/internal addresses are not allowed' })
+      }
+      if (err instanceof ResponseTooLargeError) {
+        return res.status(502).json({
+          status: 502,
+          statusText: 'Response too large',
+          headers: {},
+          body: err.message,
+          bodyEncoding: 'utf-8',
+          duration,
+        } satisfies ProxyResponse)
+      }
       const message = err instanceof Error ? err.message : 'Unknown error'
-      const isTimeout = message.includes('abort')
+      const isTimeout = controller.signal.aborted
 
       return res.status(isTimeout ? 504 : 502).json({
         status: isTimeout ? 504 : 502,
