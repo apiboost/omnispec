@@ -154,4 +154,48 @@ describe('OmniSpecRendererElement', () => {
     expect(observed).toContain('sidebar-nav')
     expect(observed).toContain('spec')
   })
+
+  it('dispatches try-it-request and try-it-response events when Send is clicked', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"ok":true}', {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })))
+    try {
+      defineOmniSpecRenderer()
+      const el = document.createElement(TAG_NAME) as OmniSpecRendererElement
+      const requests: unknown[] = []
+      const responses: unknown[] = []
+      el.addEventListener('try-it-request', (e) => requests.push((e as CustomEvent).detail))
+      el.addEventListener('try-it-response', (e) => responses.push((e as CustomEvent).detail))
+      el.setAttribute('default-expand-operations', 'true')
+      document.body.appendChild(el)
+      el.spec = {
+        openapi: '3.0.3',
+        info: { title: 'Pets', version: '1' },
+        servers: [{ url: 'https://api.example.com' }],
+        paths: { '/pets': { get: { operationId: 'listPets', responses: { 200: { description: 'ok' } } } } },
+      }
+
+      const findButton = async (label: RegExp): Promise<HTMLButtonElement> => {
+        for (let i = 0; i < 100; i++) {
+          const match = Array.from(el.shadowRoot?.querySelectorAll('button') ?? [])
+            .find((b) => label.test(b.textContent?.trim() ?? ''))
+          if (match) return match
+          await flush()
+        }
+        throw new Error(`button ${label} not found`)
+      }
+
+      ;(await findButton(/^try it$/i)).click()
+      ;(await findButton(/^send$/i)).click()
+      for (let i = 0; i < 50 && responses.length === 0; i++) await flush()
+
+      expect(requests).toHaveLength(1)
+      expect(requests[0]).toMatchObject({ method: 'GET', url: 'https://api.example.com/pets' })
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toMatchObject({ status: 200 })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
