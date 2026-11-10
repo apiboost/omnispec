@@ -59,6 +59,12 @@ const routes: Record<string, (req: http.IncomingMessage, res: http.ServerRespons
     res.writeHead(302, { location: 'http://169.254.169.254/latest/meta-data/iam/security-credentials/' })
     res.end()
   },
+  // Generic redirect: /redirect?to=<url>&code=<3xx>
+  '/redirect': (req, res) => {
+    const q = new URL(req.url ?? '/', 'http://x').searchParams
+    res.writeHead(Number(q.get('code') ?? 302), { location: q.get('to') ?? '/final' })
+    res.end()
+  },
   '/redirect-same-host': (_req, res) => {
     res.writeHead(302, { location: '/final' })
     res.end()
@@ -286,6 +292,123 @@ describe('createProxyRouter — upstream responses', () => {
       const { status, json } = await proxy.send({ url: upstreamUrl('/big'), method: 'GET', headers: {} })
       expect(status).toBe(502)
       expect(json.statusText).toBe('Response too large')
+    } finally {
+      await proxy.close()
+    }
+  })
+})
+
+describe('createProxyRouter — opt-in redirect following (maxRedirects)', () => {
+  const redirectTo = (to: string, code = 302) =>
+    upstreamUrl(`/redirect?to=${encodeURIComponent(to)}&code=${code}`)
+
+  it('follows a same-origin redirect and keeps the request headers', async () => {
+    const proxy = await startProxy({ maxRedirects: 3 }, (app) => app.use(express.json()))
+    try {
+      const { json } = await proxy.send({
+        url: redirectTo('/echo'),
+        method: 'GET',
+        headers: { 'X-API-Key': 'k', Authorization: 'Bearer t' },
+      })
+      expect(json.status).toBe(200)
+      expect(hits.map((h) => h.url.split('?')[0])).toEqual(['/redirect', '/echo'])
+      expect(hits[1].headers['x-api-key']).toBe('k')
+      expect(hits[1].headers.authorization).toBe('Bearer t')
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('re-runs the SSRF guard on every hop (redirect to metadata is blocked)', async () => {
+    const proxy = await startProxy({ maxRedirects: 3 }, (app) => app.use(express.json()))
+    try {
+      const { status } = await proxy.send({
+        url: redirectTo('http://169.254.169.254/latest/meta-data/'),
+        method: 'GET',
+        headers: { 'X-API-Key': 'k' },
+        timeout: 1000,
+      })
+      expect(status).toBe(403)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('re-runs the guarded DNS lookup on every hop', async () => {
+    const { lookup } = mockResolver({ 'rebound.example': ['10.1.1.1'] })
+    const proxy = await startProxy({ maxRedirects: 3, dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      const { status } = await proxy.send({ url: redirectTo('http://rebound.example/'), method: 'GET', headers: {} })
+      expect(status).toBe(403)
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('re-checks allowedDomains on every hop', async () => {
+    const { lookup } = mockResolver({
+      'api.allowed.example': [TEST_UPSTREAM_IP],
+      'elsewhere.example': [TEST_UPSTREAM_IP],
+    })
+    const proxy = await startProxy(
+      { maxRedirects: 3, dnsLookup: lookup, allowedDomains: ['allowed.example'] },
+      (app) => app.use(express.json()),
+    )
+    try {
+      const to = `http://elsewhere.example:${upstreamPort}/echo`
+      const { status } = await proxy.send({
+        url: `http://api.allowed.example:${upstreamPort}/redirect?to=${encodeURIComponent(to)}`,
+        method: 'GET',
+        headers: {},
+      })
+      expect(status).toBe(403)
+      expect(hits.map((h) => h.url.split('?')[0])).toEqual(['/redirect'])
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('drops credentials and custom headers on a cross-origin hop', async () => {
+    const { lookup } = mockResolver({ 'other.example': [TEST_UPSTREAM_IP] })
+    const proxy = await startProxy({ maxRedirects: 3, dnsLookup: lookup }, (app) => app.use(express.json()))
+    try {
+      const { json } = await proxy.send({
+        url: redirectTo(`http://other.example:${upstreamPort}/echo`),
+        method: 'GET',
+        headers: { 'X-API-Key': 'k', Authorization: 'Bearer t', Cookie: 'sid=1', Accept: 'application/json' },
+      })
+      expect(json.status).toBe(200)
+      const second = hits[1].headers
+      expect(second['x-api-key']).toBeUndefined()
+      expect(second.authorization).toBeUndefined()
+      expect(second.cookie).toBeUndefined()
+      expect(second.accept).toBe('application/json')
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('switches POST to GET without a body on 303, keeps method and body on 307', async () => {
+    const proxy = await startProxy({ maxRedirects: 3 }, (app) => app.use(express.json()))
+    try {
+      await proxy.send({ url: redirectTo('/echo', 303), method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'hi' })
+      expect(hits[1].method).toBe('GET')
+      expect(hits[1].body).toBe('')
+      hits = []
+      await proxy.send({ url: redirectTo('/echo', 307), method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'hi' })
+      expect(hits[1].method).toBe('POST')
+      expect(hits[1].body).toBe('hi')
+    } finally {
+      await proxy.close()
+    }
+  })
+
+  it('returns the last 3xx once maxRedirects is exhausted', async () => {
+    const proxy = await startProxy({ maxRedirects: 1 }, (app) => app.use(express.json()))
+    try {
+      const { json } = await proxy.send({ url: redirectTo(redirectTo('/final')), method: 'GET', headers: {} })
+      expect(json.status).toBe(302)
+      expect(hits).toHaveLength(2)
     } finally {
       await proxy.close()
     }
