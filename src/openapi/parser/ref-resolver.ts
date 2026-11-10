@@ -23,7 +23,7 @@ import {
   MAX_EXTERNAL_FILES,
   MAX_EXTERNAL_DEPTH,
 } from '../../core/utils/ref-security'
-import { isPrivateIp } from '../../server/ssrf-guard'
+import { isPrivateIp } from '../../core/utils/ip-classify'
 import type { ExternalRefOptions } from '../../core/utils/ref-security'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { isPrivateIp } from '../../server/ssrf-guard'
+import { isPrivateIp } from './ip-classify'
 
 /**
  * Maximum number of external files that can be resolved in a single spec.
@@ -130,7 +130,7 @@ export const normalizeAllowedOrigins = (
  * - Non-http(s) URLs
  * - Literal private/reserved addresses (RFC 1918, loopback, link-local, CGNAT,
  *   IPv6 equivalents) and `localhost` / `*.localhost`, even when allow-listed.
- *   Uses the proxy's `isPrivateIp()`; no DNS lookup is done, so a public
+ *   Uses the shared `isPrivateIp()` (core/utils/ip-classify); no DNS lookup is done, so a public
  *   hostname that resolves to a private address is not caught here.
  *
  * Then allows:

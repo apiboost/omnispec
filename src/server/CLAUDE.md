@@ -12,7 +12,7 @@ Server-only code. Exported via the `@apiboost/omnispec/server` subpath (part of 
 server/
 ├── index.ts             Public exports: createProxyRouter, isPrivateIp, isBlockedAddress, types
 ├── proxy-router.ts      Express middleware factory (validation, rate limit, envelope parsing, redirects)
-├── ssrf-guard.ts        Blocklist (net.BlockList over IANA special-purpose ranges) + hostname canonicalization
+├── ssrf-guard.ts        Re-exports the isomorphic IP classifier (src/core/utils/ip-classify.ts)
 ├── guarded-lookup.ts    DNS lookup that validates every resolved address and pins the socket to it
 ├── upstream-request.ts  http/https transport (no fetch): pinned lookup, no redirects, capped/decoded body
 └── headers.ts           Request/response header sanitizing (hop-by-hop, Host, Content-Length, CRLF)
