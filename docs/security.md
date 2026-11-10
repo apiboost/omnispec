@@ -45,48 +45,80 @@ The package ships a hardened proxy router at `@apiboost/omnispec/server`:
 ```js
 import { createProxyRouter } from '@apiboost/omnispec/server'
 
+app.set('trust proxy', 1) // when behind a reverse proxy / load balancer
 app.use('/api/proxy', createProxyRouter({
-  rateLimitPerMinute: 60,   // per-IP rate limit (default 60)
+  rateLimitPerMinute: 60,   // per-client rate limit (default 60)
   maxTimeout: 30000,        // max request timeout in ms (default 30s)
   maxBodySize: 1048576,     // max request/response body in bytes (default 1MB)
   allowedDomains: [],       // empty = allow all external domains
+  maxRedirects: 0,          // default: never follow upstream redirects
   onRequest: (audit) => {   // optional audit callback
     // { targetUrl, method, statusCode, duration, timestamp, ip }
   },
 }))
 ```
 
-It provides the following protections out of the box:
+All options are listed in [Backend Integration](./backend-integration.md#proxy-options). It provides the following protections out of the box:
 
 ### SSRF protection
 
-The proxy refuses to forward requests to private and internal network addresses, regardless of what URL the browser submits. Blocked ranges include:
+The proxy refuses to connect to private and internal network addresses, regardless of what URL the browser submits. Checks happen in two steps:
 
-- **Loopback** — `127.0.0.0/8`, `::1`, `localhost`
+1. **Before any network activity**, the target must be `http`/`https`, and the hostname must not be `localhost`, `*.localhost` or a blocked IP literal. Hostnames are canonicalized the way the URL parser does first, so alternative spellings — `2130706433`, `0177.0.0.1`, `0x7f.1`, `[::ffff:127.0.0.1]`, `localhost.` — are caught.
+2. **At connect time**, the hostname is resolved once and **every** resolved address is checked. If any of them is blocked the request fails with `403`. The socket then connects to the validated address itself; the name is never resolved a second time, so a DNS rebind between check and connect can't redirect it. TLS SNI and the `Host` header still use the original hostname.
+
+Blocked ranges (from the IANA special-purpose registries):
+
+- **Loopback / unspecified** — `127.0.0.0/8`, `0.0.0.0/8`, `::1`, `::`, `localhost`
 - **RFC 1918 private ranges** — `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
-- **IPv6 unique-local** — `fc00::/7`
-- **Link-local** — `169.254.0.0/16`, `fe80::/10`
+- **Link-local and cloud metadata** — `169.254.0.0/16` (incl. `169.254.169.254`), `fe80::/10`
+- **IPv6 unique-local** — `fc00::/7` (incl. AWS `fd00:ec2::254`), and deprecated site-local `fec0::/10`
+- **Carrier-grade NAT** — `100.64.0.0/10`
+- **Documentation, benchmarking and protocol ranges** — `192.0.0.0/24`, `192.0.2.0/24`, `198.18.0.0/15`, `198.51.100.0/24`, `203.0.113.0/24`, `2001:db8::/32`, `2001::/23`, `100::/64`
+- **Multicast, reserved and broadcast** — `224.0.0.0/4`, `240.0.0.0/4`, `ff00::/8`
+- **Addresses that embed IPv4** — IPv4-mapped `::ffff:0:0/96` (checked against the IPv4 list), NAT64 `64:ff9b::/96` and `64:ff9b:1::/48`, 6to4 `2002::/16`, relay `192.88.99.0/24`
 
-This stops a Try-It form from being used to probe your internal network via the proxy.
+This stops a Try-It form from being used to probe your internal network via the proxy. The same checks are exported as `isPrivateIp()` (hostname, pre-DNS) and `isBlockedAddress()` (resolved IP) from `@apiboost/omnispec/server`.
+
+### Redirects
+
+By default the proxy **does not follow redirects**. A `3xx` response, with its `Location` header, goes back to the browser as-is. Following redirects server-side would let any allowed host bounce the request, with its API-key headers, to an address the checks never saw, such as the metadata service.
+
+If your APIs legitimately redirect, set `maxRedirects` to a small number. Each hop is then re-validated exactly like the original target (scheme, IP literal, `allowedDomains`, resolved-address check and pinning). A hop to a **different origin** forwards only `Accept`, `Accept-Language`, `Content-Language`, `Content-Type` and `User-Agent`. `Authorization`, `Cookie` and any custom API-key header are dropped, because the proxy can't tell which custom headers carry credentials. `303` (and `301`/`302` after a `POST`) switch to `GET` without a body, as browsers do.
+
+### Header handling
+
+Only the `headers` inside the Try-It JSON envelope are forwarded. The headers and cookies the browser sends to your proxy route, such as your portal's own session cookie, never reach the target API. From the envelope headers, the proxy:
+
+- forwards `Cookie`, because it carries `in: cookie` API keys, which only a proxy can deliver (browsers forbid scripts from setting it);
+- drops hop-by-hop headers (`Connection` and the headers it lists, `Keep-Alive`, `Proxy-Authorization`, `Proxy-Connection`, `TE`, `Trailer`, `Transfer-Encoding`, `Upgrade`);
+- sets `Host` and `Content-Length` itself from the target URL and the actual body;
+- rejects invalid header names or values (including CR/LF injection) with `400`.
+
+Hop-by-hop headers are also removed from the response envelope.
 
 ### Rate limiting
 
-A per-IP limit (default **60 requests/minute**) throttles abuse. When [`express-rate-limit`](https://www.npmjs.com/package/express-rate-limit) is installed it is used; otherwise the middleware falls back to an in-memory limiter.
+A per-client limit (default **60 requests/minute**) throttles abuse. When [`express-rate-limit`](https://www.npmjs.com/package/express-rate-limit) is installed it is used; otherwise the middleware falls back to an in-memory limiter.
+
+Clients are keyed by `req.ip`. **Behind a reverse proxy, load balancer or CDN you must set Express's `trust proxy`** in the host app (e.g. `app.set('trust proxy', 1)`). Otherwise `req.ip` is the proxy's address and all users share one bucket. Alternatively, pass a `keyGenerator(req)` that returns a key your app trusts (for example an authenticated user id). If a request carries `X-Forwarded-For` while `trust proxy` is off, the router logs a one-time warning. See [Rate limiting behind a reverse proxy](./backend-integration.md#rate-limiting-behind-a-reverse-proxy).
 
 ### Timeout and body-size enforcement
 
-Requests are capped at `maxTimeout` (default 30s), preventing slow-loris style hangs. A request body exceeding `maxBodySize` (default 1 MB) is rejected with a `413`; an oversized upstream **response** is rejected with a `502`.
+Requests are capped at `maxTimeout` (default 30s), preventing slow-loris style hangs. `maxBodySize` (default 1 MB) applies to the request body actually forwarded (after base64 decoding; over-limit gets `413`) and to the upstream response body after decompression (over-limit gets `502`, and the download stops at the limit, so compression bombs can't exhaust memory).
+
+The router parses its own JSON envelope, limited by `maxEnvelopeSize` (default `2 × maxBodySize + 64 KiB`). If your app installs a global `express.json()` *before* the proxy route, that parser's limit applies first. See [Request body size](./backend-integration.md#request-body-size-soap-envelopes-uploads).
 
 ### Domain allow-listing
 
-Set `allowedDomains` to a non-empty array to restrict the proxy to specific target hosts. Left empty, the proxy allows any external (non-private) domain — SSRF protection still applies. For a public docs site that only ever calls your own APIs, allow-listing narrows the blast radius.
+Set `allowedDomains` to a non-empty array to restrict the proxy to specific target hosts (an exact host or any of its subdomains). Left empty, the proxy allows any external (non-private) domain; SSRF protection still applies. For a public docs site that only ever calls your own APIs, allow-listing narrows the blast radius. Allow-listing a host doesn't exempt it from the SSRF checks: an allowed name that resolves to a private address is still blocked.
 
 ### Audit logging
 
 The optional `onRequest` callback receives an audit record (`targetUrl`, `method`, `statusCode`, `duration`, `timestamp`, `ip`) for every proxied request — wire it into your logging/SIEM pipeline.
 
 :::tip
-If you implement the proxy yourself in another language (PHP, Go, etc.), you own these protections. At minimum: validate the `url` against an allow-list, block private IP ranges, rate-limit the endpoint, enforce timeouts and body-size caps, and avoid forwarding sensitive internal headers. See [Backend Integration](./backend-integration.md#security-considerations).
+If you implement the proxy yourself in another language (PHP, Go, etc.), you own these protections. At minimum: validate the `url` against an allow-list, block private IP ranges *after* DNS resolution and connect to the address you checked, don't follow redirects, rate-limit the endpoint per real client, enforce timeouts and body-size caps, and avoid forwarding sensitive internal headers. See [Backend Integration](./backend-integration.md#security-considerations).
 :::
 
 ## External `$ref` resolution
@@ -128,7 +160,7 @@ See [External `$ref` Resolution](./external-refs.md) for the full configuration 
 |---|---|---|
 | Spec fetch | Single `GET` to the spec URL only | Pass a string/object to avoid any fetch |
 | Try-It (direct) | Request from user's browser to target | `allowTryIt={false}` to disable |
-| Try-It (proxy) | Request from your server; SSRF-guarded | `allowedDomains`, `rateLimitPerMinute`, `maxTimeout`, `maxBodySize` |
+| Try-It (proxy) | Request from your server; SSRF-guarded | `allowedDomains`, `rateLimitPerMinute`, `keyGenerator`, `maxTimeout`, `maxBodySize`, `maxEnvelopeSize`, `maxRedirects` |
 | External cross-origin `$ref` | Blocked | `externalRefOrigins` allow-list (with hard fetch limits) |
 | Telemetry | None | — |
 
