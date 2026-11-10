@@ -123,6 +123,22 @@ describe('isOriginAllowed', () => {
       isOriginAllowed('http://127.0.0.1:8080/pet.yaml', options(['http://127.0.0.1:8080'])),
     ).toBe(false)
   })
+
+  it('allows the base origin even when it is a loopback address', () => {
+    const local = { specOrigin: 'http://localhost:3000', allowedOrigins: [] }
+    expect(isOriginAllowed('http://localhost:3000/pet.yaml', local)).toBe(true)
+    expect(isOriginAllowed('http://localhost:4000/pet.yaml', local)).toBe(false)
+  })
+
+  it('allows only allow-listed origins when there is no base origin', () => {
+    const none = { specOrigin: null, allowedOrigins: ['https://schemas.example.com'] }
+    expect(isOriginAllowed('https://schemas.example.com/pet.yaml', none)).toBe(true)
+    expect(isOriginAllowed('https://docs.example.com/pet.yaml', none)).toBe(false)
+  })
+
+  it('blocks non-http(s) URLs', () => {
+    expect(isOriginAllowed('file:///etc/passwd', options([]))).toBe(false)
+  })
 })
 
 describe('normalizeOrigin', () => {

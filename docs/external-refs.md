@@ -15,7 +15,7 @@ There are two kinds of external refs:
 
 | Ref type | Example | Default behavior |
 |----------|---------|-----------------|
-| Same-origin | `./models/Pet.yaml`, `/shared/schemas.json#/Pet` | Always resolved automatically |
+| Same-origin | `./models/Pet.yaml`, `/shared/schemas.json#/Pet` | Resolved automatically against the base origin (see below) |
 | Cross-origin | `https://schemas.example.com/common.yaml#/Error` | Blocked by default — shows a structured indicator |
 
 When a ref cannot be resolved, the renderer displays a placeholder in place of the missing schema rather than crashing. Cross-origin refs that have not been explicitly allowed show a visual indicator explaining why the schema is unavailable.
@@ -34,7 +34,19 @@ components:
       $ref: '/shared/schemas/Error.yaml' # same origin, fetched automatically
 ```
 
-Same-origin is derived from the URL you pass in the `spec` prop. If you pass a raw string or object instead of a URL, there is no origin to derive — treat all file refs as cross-origin and configure them explicitly.
+The checks below apply however the spec is provided: a URL, a raw string or a pre-parsed object. Only the **base** that relative refs resolve against, and the **base origin** that is allowed without configuration, differ:
+
+| How the spec is provided | Base for relative refs | Base origin (allowed automatically) |
+|---|---|---|
+| URL in the `spec` prop | The spec URL | The spec URL's origin |
+| String or object, in a browser | The current page URL | `window.location.origin` |
+| String or object, without `window` (SSR / Node) | None | None: absolute refs must match `externalRefOrigins` |
+
+Without `window` there is nothing to resolve a relative path against, so only absolute refs whose origin is listed in `externalRefOrigins` are fetched. A protocol-relative ref (`//host/path`) counts as absolute and is blocked unless its origin is allowed.
+
+:::caution[Behavior change]
+Earlier versions skipped the origin checks entirely for string and object specs, so absolute cross-origin refs in those specs were fetched unchecked. They are now blocked unless their origin is listed. The blocked indicator names the origin to add, for example: `External $ref origin https://schemas.example.com is not allowed. Add "https://schemas.example.com" to externalRefOrigins to resolve it.` AsyncAPI specs now honor `externalRefOrigins` too.
+:::
 
 ## Cross-Origin Refs
 
@@ -111,13 +123,18 @@ Centralizing the allow-list in a config file makes it easy to audit which extern
 
 ### SSRF Protection
 
-The renderer never fetches private network addresses, regardless of the `externalRefOrigins` configuration. The following are always blocked:
+Absolute refs to private or reserved addresses are never fetched, regardless of the `externalRefOrigins` configuration. The resolver uses the same pre-DNS check as the [Try-It proxy](./security.md#ssrf-protection) (`isPrivateIp()`), so these are always blocked, in any spelling the URL parser accepts (`2130706433`, `0x7f.1`, `[::ffff:127.0.0.1]`, ...):
 
+- `localhost` and `*.localhost`
+- Loopback and unspecified: `127.x.x.x`, `0.x.x.x`, `::1`, `::`
 - RFC 1918 private ranges: `10.x.x.x`, `172.16–31.x.x`, `192.168.x.x`
-- Loopback: `127.x.x.x`, `::1`, `localhost`
-- Link-local: `169.254.x.x`, `fe80::/10`
+- Link-local and cloud metadata: `169.254.x.x`, `fe80::/10`
+- IPv6 unique-local, carrier-grade NAT, documentation, multicast and reserved ranges, and IPv6 prefixes that embed an IPv4 address
+- Non-http(s) URLs such as `file:`
 
-Attempts to use a permitted origin that resolves to a private IP (e.g., via DNS rebinding) are blocked at fetch time.
+The one exception is the base origin itself: when the spec, or the page for a string or object spec, is served from `localhost` or an intranet address, refs to that same origin still resolve, because that origin was already loaded.
+
+**Limit:** this is a check on the literal host in the URL only. Ref resolution runs in the browser, which cannot resolve DNS names, so a public hostname that resolves to a private address (including through DNS rebinding) is not caught. Only list origins you trust in `externalRefOrigins`. The Try-It proxy, which runs server-side, does check resolved addresses.
 
 ### Fetch Limits
 
@@ -143,7 +160,7 @@ When a ref cannot be resolved — because the origin is not allowed, a limit was
 ```
 ⚠ External schema unavailable
   https://schemas.external.com/Pet.yaml
-  Origin not in externalRefOrigins allow-list
+  External $ref origin https://schemas.external.com is not allowed. Add "https://schemas.external.com" to externalRefOrigins to resolve it.
 ```
 
 The rest of the spec renders normally. Try-It panels for operations that reference the blocked schema still function — the schema viewer for that field is simply omitted.

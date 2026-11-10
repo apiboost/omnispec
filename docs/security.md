@@ -12,7 +12,7 @@ This page consolidates the security posture of the free core, `@apiboost/omnispe
 The renderer is a client-side rendering engine. In the browser it makes **no network calls of its own** except:
 
 1. **Fetching the spec** — when you pass a URL to the `spec` prop, the renderer performs a single `GET` to load it. If you pass a raw string or a pre-parsed object, no fetch occurs.
-2. **Resolving external `$ref`** — only for cross-origin refs you have explicitly allow-listed (see below). Same-origin refs are fetched from the origin of the spec URL.
+2. **Resolving external `$ref`** — only for cross-origin refs you have explicitly allow-listed (see below). Same-origin refs are fetched from the base origin: the spec URL's origin, or the page origin for a string or object spec.
 3. **Try-It requests** — only when a user clicks "Try it", and only to the target described by the operation (directly, or through your proxy if configured).
 
 It sends no telemetry, analytics, or phone-home traffic. There is no background polling. Persistence for Try-It (entered values, tokens) uses the browser's own `localStorage`/`sessionStorage` on the docs origin and never leaves the browser.
@@ -125,7 +125,9 @@ If you implement the proxy yourself in another language (PHP, Go, etc.), you own
 
 Specs split across multiple files reference each other with `$ref`. The renderer resolves these with the same security-first posture as the proxy.
 
-- **Same-origin refs** (relative paths, or absolute paths on the spec's origin) resolve automatically.
+The checks apply however the spec is provided (URL, string or object).
+
+- **Same-origin refs** (relative paths, or absolute URLs on the base origin) resolve automatically. The base origin is the spec URL's origin; for a string or object spec it is `window.location.origin` in a browser. Without `window` (SSR / Node) there is no base origin: relative refs cannot be resolved and absolute refs must be allow-listed.
 - **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Entries and ref URLs are both normalized with the WHATWG URL parser to `scheme://host[:port]` (lowercased, IDN hosts in punycode, default port and trailing slash dropped), then matched **exactly** — the scheme and any non-default port must agree. Entries that are not bare http(s) origins (a path, query, fragment, credentials, or wildcard) are ignored with a single console warning; wildcard subdomains such as `https://*.example.com` are not supported and never match. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
 
 ```tsx
@@ -137,7 +139,13 @@ Specs split across multiple files reference each other with `$ref`. The renderer
 
 ### SSRF protection for refs
 
-Like the proxy, ref resolution never fetches private network addresses even if you allow-list an origin that later resolves to one (e.g., via DNS rebinding). The same loopback, RFC 1918, and link-local ranges are always blocked.
+Ref resolution blocks absolute refs whose host is `localhost`, `*.localhost` or a private or reserved IP literal, even when the origin is allow-listed. It uses the proxy's pre-DNS `isPrivateIp()` check, so the same ranges and alternative IP spellings are covered. The base origin itself is exempt, so a portal served from `localhost` or an intranet address can still use same-origin refs.
+
+Unlike the proxy, ref resolution runs in the browser and **cannot resolve DNS**. A public hostname that resolves to a private address (including through DNS rebinding) is not caught, so only allow-list origins you trust.
+
+:::caution[Behavior change]
+Earlier versions skipped these checks for specs passed as a string or object. Integrators who relied on unchecked cross-origin refs in such specs must now list those origins in `externalRefOrigins`; the blocked indicator names the origin to add.
+:::
 
 ### Fetch limits
 
@@ -161,7 +169,7 @@ See [External `$ref` Resolution](./external-refs.md) for the full configuration 
 | Spec fetch | Single `GET` to the spec URL only | Pass a string/object to avoid any fetch |
 | Try-It (direct) | Request from user's browser to target | `allowTryIt={false}` to disable |
 | Try-It (proxy) | Request from your server; SSRF-guarded | `allowedDomains`, `rateLimitPerMinute`, `keyGenerator`, `maxTimeout`, `maxBodySize`, `maxEnvelopeSize`, `maxRedirects` |
-| External cross-origin `$ref` | Blocked | `externalRefOrigins` allow-list (with hard fetch limits) |
+| External cross-origin `$ref` | Blocked, for URL, string and object specs | `externalRefOrigins` allow-list (with hard fetch limits) |
 | Telemetry | None | — |
 
 ## See also

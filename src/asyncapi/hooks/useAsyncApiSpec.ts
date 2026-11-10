@@ -12,11 +12,15 @@ import { useCallback } from 'react'
 import { useSpecFetcher } from '../../core/hooks/useSpecFetcher'
 import { parseAsyncApiSpec } from '../parser/asyncapi-parser'
 import type { ParsedAsyncApiSpec } from '../types/asyncapi.types'
+import type { ResolveRefsOptions } from '../../openapi/parser/ref-resolver'
 
-export function useAsyncApiSpec(spec: string | Record<string, unknown>) {
+export function useAsyncApiSpec(
+  spec: string | Record<string, unknown>,
+  refOptions?: ResolveRefsOptions,
+) {
   const parser = useCallback(async (raw: string) => {
-    return parseAsyncApiSpec(raw)
-  }, [])
+    return parseAsyncApiSpec(raw, refOptions)
+  }, [refOptions])
 
   return useSpecFetcher<ParsedAsyncApiSpec>(spec, parser)
 }

@@ -20,6 +20,7 @@ import { DocLayout } from '@core/components/Layout/DocLayout'
 import { NavTree } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
+import { isSpecUrl } from '@core/hooks/useSpecFetcher'
 import { useHashScroll, requestExpand } from '@core/hooks/useHashScroll'
 import { SearchBar } from '@core/components/Navigation/SearchBar'
 import { buildSidebar } from '@core/components/Navigation/buildSidebar'
@@ -53,6 +54,7 @@ export function AsyncApiSpec({
   slots = {},
   schemaStyle,
   pro,
+  externalRefOrigins,
   onSpecLoaded,
   className,
 }: BaseSpecProps) {
@@ -60,7 +62,11 @@ export function AsyncApiSpec({
   // Match OpenApiSpec: `reference` switches to the three-panel layout; anything
   // else (including unset) stays compact single-column.
   const resolvedDisplayMode = displayMode ?? 'compact'
-  const { data: parsedSpec, state } = useAsyncApiSpec(spec)
+  const refOptions = useMemo(() => ({
+    specUrl: isSpecUrl(spec) ? spec : undefined,
+    externalRefOrigins,
+  }), [spec, externalRefOrigins])
+  const { data: parsedSpec, state } = useAsyncApiSpec(spec, refOptions)
   const [searchQuery, setSearchQuery] = useState('')
   const [allExpanded, setAllExpanded] = useState(defaultExpandOperations)
   const [expandGeneration, setExpandGeneration] = useState(0)

@@ -35,10 +35,12 @@ export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024
  */
 export interface ExternalRefOptions {
   /**
-   * The origin of the specification being rendered.
-   * References to this origin are automatically allowed.
+   * The base origin: where the spec was loaded from or, for a string/object
+   * spec in a browser, the page origin. References to this origin are allowed
+   * without an allow-list entry. `null` when there is no base origin (a
+   * string/object spec rendered without `window`, e.g. SSR).
    */
-  specOrigin: string
+  specOrigin: string | null
 
   /**
    * List of additional origins that are allowed for external references.
@@ -119,33 +121,42 @@ export const normalizeAllowedOrigins = (
 /**
  * Checks if an origin is allowed for external reference resolution.
  *
- * Blocks:
- * - Private/reserved IP addresses (RFC 1918, loopback, link-local, IPv6 equivalents)
- * - Origins not matching specOrigin or allowedOrigins
- *
  * Allows:
- * - The spec's own origin (specOrigin)
+ * - The base origin (specOrigin), when there is one. It is checked first: the
+ *   spec (or page) was already loaded from there, so a portal served from
+ *   `localhost` or an intranet address can still use same-origin refs.
+ *
+ * Then blocks:
+ * - Non-http(s) URLs
+ * - Literal private/reserved addresses (RFC 1918, loopback, link-local, CGNAT,
+ *   IPv6 equivalents) and `localhost` / `*.localhost`, even when allow-listed.
+ *   Uses the proxy's `isPrivateIp()`; no DNS lookup is done, so a public
+ *   hostname that resolves to a private address is not caught here.
+ *
+ * Then allows:
  * - Any origin in allowedOrigins (entries are normalized; invalid ones never match)
  *
- * @param refUrl - The full URL of the external reference.
+ * @param refUrl - The full (absolute) URL of the external reference.
  * @param options - Configuration with specOrigin and allowedOrigins.
  * @returns True if the origin is allowed, false otherwise.
  */
 export const isOriginAllowed = (refUrl: string, options: ExternalRefOptions): boolean => {
   try {
     const url = new URL(refUrl)
-    const hostname = url.hostname
-
-    // Block private/reserved IP addresses to prevent SSRF attacks.
-    if (isPrivateIp(hostname)) {
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
       return false
     }
 
     const refOrigin = url.origin
 
-    // Allow references to the spec's own origin.
-    if (refOrigin === options.specOrigin) {
+    // Allow references to the base origin.
+    if (options.specOrigin !== null && refOrigin === options.specOrigin) {
       return true
+    }
+
+    // Block private/reserved IP addresses to prevent SSRF attacks.
+    if (isPrivateIp(url.hostname)) {
+      return false
     }
 
     // Allow references to any configured allowed origin.

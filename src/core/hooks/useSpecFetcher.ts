@@ -18,6 +18,14 @@ export interface UseSpecFetcherResult<T> {
   refetch: () => void
 }
 
+/**
+ * True when a string `spec` prop is a URL to fetch rather than inline spec
+ * content. Inline content must not be used as a `$ref` base URL.
+ */
+export function isSpecUrl(spec: unknown): spec is string {
+  return typeof spec === 'string' && (spec.startsWith('http://') || spec.startsWith('https://') || spec.startsWith('/'))
+}
+
 export function useSpecFetcher<T = string>(
   spec: string | Record<string, unknown>,
   parse?: (raw: string) => T | Promise<T>,
@@ -32,7 +40,7 @@ export function useSpecFetcher<T = string>(
       let raw: string
       if (typeof spec === 'object') {
         raw = JSON.stringify(spec)
-      } else if (spec.startsWith('http://') || spec.startsWith('https://') || spec.startsWith('/')) {
+      } else if (isSpecUrl(spec)) {
         raw = await fetchSpec(spec)
       } else {
         raw = spec
