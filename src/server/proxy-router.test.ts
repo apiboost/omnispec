@@ -90,7 +90,8 @@ beforeAll(async () => {
     req.on('end', () => {
       const body = Buffer.concat(chunks).toString('utf8')
       hits.push({ method: req.method ?? '', url: req.url ?? '', headers: req.headers, body })
-      const handler = routes[(req.url ?? '').split('?')[0]]
+      const path = (req.url ?? '').split('?')[0]
+      const handler = Object.hasOwn(routes, path) ? routes[path] : undefined
       if (handler) handler(req, res, body)
       else {
         res.writeHead(404)
