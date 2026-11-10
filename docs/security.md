@@ -126,7 +126,7 @@ If you implement the proxy yourself in another language (PHP, Go, etc.), you own
 Specs split across multiple files reference each other with `$ref`. The renderer resolves these with the same security-first posture as the proxy.
 
 - **Same-origin refs** (relative paths, or absolute paths on the spec's origin) resolve automatically.
-- **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Matching is **exact** — each allowed origin must be listed in full (`scheme://host[:port]`); wildcard subdomains are not supported. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
+- **Cross-origin refs** are **blocked by default**. To allow them, list the permitted origins in `externalRefOrigins`. Matching is **exact** — each allowed origin must be listed in full (`scheme://host[:port]`, no trailing slash or path, and no port when it is the scheme default); wildcard subdomains such as `https://*.example.com` are not supported and never match. Anything not on the list renders a structured "unavailable" indicator instead of the schema — nothing is thrown, and the rest of the document renders normally.
 
 ```tsx
 <OmniSpecRenderer
@@ -167,4 +167,4 @@ See [External `$ref` Resolution](./external-refs.md) for the full configuration 
 ## See also
 
 - [Backend Integration](./backend-integration.md) — proxy setup, endpoint contract, and non-Express implementations.
-- [External `$ref` Resolution](./external-refs.md) — allow-list configuration, wildcard subdomains, and limits.
+- [External `$ref` Resolution](./external-refs.md) — allow-list configuration (exact origins only, no wildcard subdomains) and limits.

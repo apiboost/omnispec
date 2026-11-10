@@ -50,7 +50,7 @@ Cross-origin refs are blocked by default. To allow them, pass an `externalRefOri
 />
 ```
 
-Origins must include the scheme and host. Trailing slashes are ignored. Port is included when non-standard:
+Origins must be written in URL origin form: scheme and host, lowercase, with no trailing slash or path. Include the port only when it is non-standard (a ref to `https://host:443/...` is treated as `https://host`). Entries are compared as plain strings, so `https://schemas.example.com/` or `https://schemas.example.com:443` never match:
 
 ```tsx
 externalRefOrigins={[
@@ -150,7 +150,7 @@ The rest of the spec renders normally. Try-It panels for operations that referen
 
 **Cross-origin refs are still blocked after adding the origin**
 
-Check that the origin in `externalRefOrigins` exactly matches the scheme, host, and port of the ref URL. `https://schemas.example.com` does not cover `http://schemas.example.com` or `https://schemas.example.com:443`.
+Check that the origin in `externalRefOrigins` exactly matches the scheme, host, and port of the ref URL. `https://schemas.example.com` does not cover `http://schemas.example.com` or `https://schemas.example.com:8443`. Remove any trailing slash or default port (`:443` for https, `:80` for http) from the entry, and write the host in lowercase.
 
 **The renderer shows the blocked indicator for a same-origin ref**
 
