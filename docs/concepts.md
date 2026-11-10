@@ -78,7 +78,7 @@ Theming has three layers, two free and one Pro:
   preference, with a toggle). This is the everyday setting.
 - **Raw `--omnispec-*` CSS variables** (free) — override individual design tokens
   scoped to `.omnispec-root` in your own stylesheet. The free white-label path.
-- **`theme.overrides`** (Pro) — structured white-labeling of all 70+ design tokens
+- **`theme.overrides`** (Pro) — structured white-labeling of all 80+ design tokens
   through the `theme` prop, requires
   **[OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
 
