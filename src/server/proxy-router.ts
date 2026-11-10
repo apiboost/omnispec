@@ -161,6 +161,11 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
         // BodyInit typing doesn't know that, hence the cast.
         body: outboundBody as BodyInit | undefined,
         signal: controller.signal,
+        // Never follow redirects: an allowed host could otherwise bounce the
+        // request (and its API-key headers) to an internal or metadata
+        // address that the checks above never saw. The 3xx and its Location
+        // header go back to the client as-is.
+        redirect: 'manual',
       })
 
       // Binary content types are read as bytes and base64-encoded so file
