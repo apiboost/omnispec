@@ -109,6 +109,16 @@ const pickHeaders = (headers: Record<string, string>, keep: (name: string) => bo
   Object.fromEntries(Object.entries(headers).filter(([name]) => keep(name.toLowerCase())))
 
 /**
+ * Clamps a client-requested timeout to `(0, maxTimeout]`. Anything that is not
+ * a positive finite number (missing, NaN, negative, a string) falls back to
+ * `maxTimeout`, so a caller can shorten the timeout but never extend it.
+ */
+export const resolveTimeout = (requested: unknown, maxTimeout: number): number =>
+  typeof requested === 'number' && Number.isFinite(requested) && requested > 0
+    ? Math.min(Math.floor(requested), maxTimeout)
+    : maxTimeout
+
+/**
  * Creates an Express router that proxies Try-It requests to external APIs.
  *
  * @param options - Configuration for rate limiting, timeouts, SSRF protection.
@@ -279,7 +289,7 @@ export const createProxyRouter = (options: ProxyRouterOptions = {}): Router => {
       return res.status(413).json({ error: `Request body exceeds ${maxBodySize} byte limit` })
     }
 
-    const timeout = Math.min(proxyReq.timeout ?? maxTimeout, maxTimeout)
+    const timeout = resolveTimeout(proxyReq.timeout, maxTimeout)
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
     const startTime = Date.now()
