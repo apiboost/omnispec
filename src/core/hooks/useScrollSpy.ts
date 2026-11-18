@@ -42,6 +42,11 @@ export function flattenNavItemIds(items: NavIdItem[]): string[] {
  * viewport (default `rootMargin` shrinks the bottom 80%, so only the top ~20%
  * counts). The active id is the **topmost** (earliest in `ids`) element in that
  * band; when the scroll position is between sections the last active id is kept.
+ *
+ * Section elements can be replaced after the first paint (e.g. a parent
+ * re-mounting the content), which would leave the observer watching detached
+ * nodes and the highlight frozen. A `MutationObserver` therefore re-resolves
+ * the ids whenever the DOM changes and swaps in the live elements.
  */
 export function useScrollSpy(ids: string[], rootMargin = '0px 0px -80% 0px'): string | undefined {
   const [activeId, setActiveId] = useState<string | undefined>(undefined)
@@ -52,6 +57,7 @@ export function useScrollSpy(ids: string[], rootMargin = '0px 0px -80% 0px'): st
     if (typeof IntersectionObserver === 'undefined' || typeof document === 'undefined') return
 
     const visible = new Set<string>()
+    const observed = new Map<string, Element>()
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -64,12 +70,43 @@ export function useScrollSpy(ids: string[], rootMargin = '0px 0px -80% 0px'): st
       { rootMargin, threshold: 0 },
     )
 
-    for (const id of ids) {
-      const el = document.getElementById(id)
-      if (el) observer.observe(el)
+    // Observe the current element for each id, replacing any stale one.
+    const sync = () => {
+      for (const id of ids) {
+        const el = document.getElementById(id)
+        const previous = observed.get(id)
+        if (el === previous) continue
+        if (previous) {
+          observer.unobserve(previous)
+          visible.delete(id)
+          observed.delete(id)
+        }
+        if (el) {
+          observer.observe(el)
+          observed.set(id, el)
+        }
+      }
     }
+    sync()
 
-    return () => observer.disconnect()
+    // Re-sync at most once per frame, however many mutations land in it.
+    let frame = 0
+    const mutations = typeof MutationObserver === 'undefined'
+      ? undefined
+      : new MutationObserver(() => {
+        if (frame) return
+        frame = requestAnimationFrame(() => {
+          frame = 0
+          sync()
+        })
+      })
+    mutations?.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      mutations?.disconnect()
+      if (frame) cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
     // `ids` is captured via `key`; re-running on every array identity change
     // would thrash the observer.
   }, [key, rootMargin])

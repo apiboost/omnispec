@@ -67,6 +67,7 @@ export function SpecStatusScreen({
             header={slots.header}
             contentHeader={slots.contentHeader}
             footer={slots.footer}
+            breadcrumbs={slots.breadcrumbs}
           >
             {children}
           </DocLayout>

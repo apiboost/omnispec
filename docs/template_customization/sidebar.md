@@ -192,7 +192,7 @@ When `activeId` is provided, the component becomes "controlled" — you manage a
 
 ## Collapsing the Sidebar
 
-On desktop, the sidebar can be collapsed to give the specification content the full width. A chevron control at the top of the sidebar collapses it to a thin rail; clicking the rail expands it again. This is built in and requires no configuration — it applies whether the sidebar shows spec-derived nav, custom `sidebarNav`, or host-injected slots. On mobile the sidebar is a drawer instead, opened and closed with the floating navigation button.
+On desktop, the sidebar can be collapsed to give the specification content the full width. A chevron control at the top of the sidebar collapses it to a thin rail; clicking the rail expands it again. This is built in and requires no configuration — it applies whether the sidebar shows spec-derived nav, custom `sidebarNav`, or host-injected slots. On mobile the sidebar is a full-width panel instead, opened and closed with the toggle in the sticky navigation bar (see [Configuration → Mobile Navigation](../configuration.md#mobile-navigation)).
 
 ## Click Handler
 

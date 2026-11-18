@@ -39,7 +39,7 @@ const spec = {
 describe('AsyncApiSpec sidebar empty-search state', () => {
   it('shows a "No results" affordance instead of a bare empty Channels node when a search matches nothing', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} />)
-    const nav = await screen.findByRole('navigation')
+    const nav = await screen.findByRole('navigation', { name: 'API navigation' })
 
     fireEvent.change(screen.getByPlaceholderText(/filter channels/i), {
       target: { value: 'zzz-nothing-matches' },
@@ -69,7 +69,7 @@ describe('AsyncApiSpec sidebar action-badge dedupe', () => {
       },
     }
     render(<AsyncApiSpec spec={dupeSpec} theme={{ base: 'light' }} />)
-    const nav = await screen.findByRole('navigation')
+    const nav = await screen.findByRole('navigation', { name: 'API navigation' })
 
     // The badge should be a single "RECEIVE", not "RECEIVE/RECEIVE".
     expect(within(nav).queryByText(/RECEIVE\/RECEIVE/i)).toBeNull()
@@ -100,7 +100,7 @@ describe('AsyncApiSpec tag chip click filters', () => {
       },
     }
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} defaultExpandOperations />)
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
 
     // The operation tag chip (in the main content, not the sidebar nav) renders as
     // a button because onTagClick is wired. Await it: the ExpandableCard body
@@ -112,7 +112,7 @@ describe('AsyncApiSpec tag chip click filters', () => {
 
     // The search is now filtered to "orders" — the heartbeat channel drops from
     // the sidebar nav.
-    const nav = screen.getByRole('navigation')
+    const nav = screen.getByRole('navigation', { name: 'API navigation' })
     expect(within(nav).queryByText('system/heartbeat')).toBeNull()
     expect(within(nav).getByText('orders/placed')).toBeInTheDocument()
   })
@@ -148,7 +148,7 @@ function clickOrdersChip() {
 describe('AsyncApiSpec active tag-filter indicator (finding 2)', () => {
   it('shows an active-filter indicator naming the tag once a tag filter is applied', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} defaultExpandOperations />)
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     await screen.findAllByRole('button', { name: 'orders' })
 
     // No active-filter indicator before a tag is clicked.
@@ -164,7 +164,7 @@ describe('AsyncApiSpec active tag-filter indicator (finding 2)', () => {
 
   it('reflects the active tag in the filter input', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} defaultExpandOperations />)
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     await screen.findAllByRole('button', { name: 'orders' })
 
     clickOrdersChip()
@@ -177,17 +177,17 @@ describe('AsyncApiSpec active tag-filter indicator (finding 2)', () => {
 describe('AsyncApiSpec tag-filter clearing (finding 1)', () => {
   it('restores all channels when the Clear control is used', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} defaultExpandOperations />)
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     await screen.findAllByRole('button', { name: 'orders' })
 
     clickOrdersChip()
-    let nav = screen.getByRole('navigation')
+    let nav = screen.getByRole('navigation', { name: 'API navigation' })
     expect(within(nav).queryByText('system/heartbeat')).toBeNull()
 
     // A Clear control removes the filter and brings every channel back.
     fireEvent.click(screen.getByRole('button', { name: /clear/i }))
 
-    nav = screen.getByRole('navigation')
+    nav = screen.getByRole('navigation', { name: 'API navigation' })
     expect(within(nav).getByText('system/heartbeat')).toBeInTheDocument()
     expect(within(nav).getByText('orders/placed')).toBeInTheDocument()
     expect(screen.queryByText(/filtered by tag/i)).toBeNull()
@@ -195,16 +195,16 @@ describe('AsyncApiSpec tag-filter clearing (finding 1)', () => {
 
   it('toggles the filter off when the already-active tag chip is clicked again', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} defaultExpandOperations />)
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     await screen.findAllByRole('button', { name: 'orders' })
 
     clickOrdersChip()
-    let nav = screen.getByRole('navigation')
+    let nav = screen.getByRole('navigation', { name: 'API navigation' })
     expect(within(nav).queryByText('system/heartbeat')).toBeNull()
 
     // Clicking the active chip again clears the filter.
     clickOrdersChip()
-    nav = screen.getByRole('navigation')
+    nav = screen.getByRole('navigation', { name: 'API navigation' })
     expect(within(nav).getByText('system/heartbeat')).toBeInTheDocument()
     expect(within(nav).getByText('orders/placed')).toBeInTheDocument()
   })

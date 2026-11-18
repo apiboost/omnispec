@@ -17,7 +17,7 @@ import { ConfigProvider } from '@core/context/ConfigContext'
 import { ExpandProvider } from '@core/context/ExpandContext'
 import { resolveSchemaStyle } from '@core/components/SchemaViewer/schema-style'
 import { DocLayout } from '@core/components/Layout/DocLayout'
-import { NavTree } from '@core/components/Navigation/NavTree'
+import { NavTree, findNavLabel } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
 import { useHashScroll, requestExpand } from '@core/hooks/useHashScroll'
@@ -435,6 +435,11 @@ export function AsyncApiSpec({
   )
 
   const sidebar = buildSidebar(sidebarNav, specNav)
+  const breadcrumbs = [
+    ...(slots.breadcrumbs ?? []),
+    parsedSpec.title,
+    findNavLabel(navItems, activeSection),
+  ]
   const resolvedDownloadLink = resolveDownloadLink(downloadLink, spec)
 
   return (
@@ -451,6 +456,7 @@ export function AsyncApiSpec({
                 sidebarFooter={slots.sidebarFooter}
                 header={slots.header}
                 footer={slots.footer}
+                breadcrumbs={breadcrumbs}
               >
                 <SpecToolbar
                   overview={<AsyncOverview spec={parsedSpec} />}

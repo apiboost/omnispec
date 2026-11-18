@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react'
-import type { MouseEvent, ReactNode } from 'react'
+import type { FocusEvent, MouseEvent, ReactNode } from 'react'
 import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
 import { AnimatePresence, motion } from 'motion/react'
@@ -27,6 +27,12 @@ interface DocLayoutProps {
   header?: ReactNode
   contentHeader?: ReactNode
   footer?: ReactNode
+  /**
+   * Trail shown in the mobile nav bar, root first — typically any host
+   * entries, the spec title, then the active nav item. Empty entries and
+   * repeated text entries are dropped.
+   */
+  breadcrumbs?: ReactNode[]
 }
 
 export function DocLayout({
@@ -39,18 +45,19 @@ export function DocLayout({
   header,
   contentHeader,
   footer,
+  breadcrumbs,
 }: DocLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  // Drawer focus management: capture the element focused before opening so we can
-  // restore it on close, and a ref to the drawer so we can move focus into it.
-  const drawerRef = useRef<HTMLElement | null>(null)
-  const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
-  const drawerTriggerRef = useRef<HTMLElement | null>(null)
+  // Viewport offset of the bottom of the mobile bar, measured when the panel
+  // opens so the fixed panel starts directly beneath it.
+  const [mobilePanelTop, setMobilePanelTop] = useState(0)
+  const mobileBarRef = useRef<HTMLDivElement | null>(null)
+  const mobilePanelRef = useRef<HTMLDivElement | null>(null)
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null)
-  // Stable id tying the "Open navigation" trigger to the drawer it controls
+  // Stable id tying the mobile nav toggle to the panel it controls
   // (`aria-controls`), so assistive tech announces the relationship.
-  const drawerId = useId()
+  const mobilePanelId = useId()
   const isRight = sidebarPosition === 'right'
   // Show the sidebar column when there's anything to put in it — spec-derived
   // nav OR host-provided slots (sidebarHeader/Footer). This keeps the host's
@@ -66,55 +73,60 @@ export function DocLayout({
    * Slot content (sidebarHeader/sidebarFooter) is consumer-provided and can't
    * call our dismiss context, so catch same-tab link navigations by
    * delegation: any click that lands on a non-_blank anchor inside the
-   * drawer closes it. NavTree items are buttons and close themselves through
+   * panel closes it. NavTree items are buttons and close themselves through
    * MobileDrawerDismissContext instead.
    */
-  const handleDrawerClick = useCallback((event: MouseEvent) => {
+  const handlePanelClick = useCallback((event: MouseEvent) => {
     const anchor = (event.target as Element).closest?.('a[href]')
     if (anchor && anchor.getAttribute('target') !== '_blank') {
       setMobileSidebarOpen(false)
     }
   }, [])
 
-  // Close on Escape + lock body scroll
+  const toggleMobileNav = useCallback(() => {
+    setMobilePanelTop(mobileBarRef.current?.getBoundingClientRect().bottom ?? 0)
+    setMobileSidebarOpen((open) => !open)
+  }, [])
+
+  /*
+   * The panel covers the page below the bar, so close it when keyboard focus
+   * moves anywhere outside the bar and panel — otherwise Tab would carry on
+   * into content hidden underneath it.
+   */
+  const handleMobileNavBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget as Node | null
+    if (next && !event.currentTarget.contains(next)) {
+      setMobileSidebarOpen(false)
+    }
+  }, [])
+
+  // While open: Escape closes (focus back on the toggle), the page behind is
+  // scroll-locked, and the active nav item is brought into view.
   useEffect(() => {
     if (!mobileSidebarOpen) return undefined
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileSidebarOpen(false)
+      if (e.key === 'Escape') {
+        setMobileSidebarOpen(false)
+        mobileToggleRef.current?.focus()
+      }
     }
     document.addEventListener('keydown', handleKey)
     document.body.style.overflow = 'hidden'
+    mobilePanelRef.current
+      ?.querySelector('[aria-current]')
+      ?.scrollIntoView?.({ block: 'center' })
     return () => {
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
     }
   }, [mobileSidebarOpen])
 
-  // Move focus into the drawer when it opens (so keyboard/screen-reader users
-  // land inside the dialog, not on the page behind it), and restore focus to the
-  // trigger when it closes.
-  useEffect(() => {
-    if (mobileSidebarOpen) {
-      // Remember what had focus so we can restore it on close.
-      drawerTriggerRef.current = document.activeElement as HTMLElement | null
-      // Prefer the close button; fall back to the drawer container itself.
-      const target = drawerCloseRef.current ?? drawerRef.current
-      target?.focus()
-      return undefined
-    }
-    // Closed: return focus to whatever opened the drawer. The mobile toggle
-    // unmounts while the drawer is open, so prefer the live re-mounted toggle;
-    // fall back to the originally-focused element when it still exists (e.g. the
-    // drawer was opened from somewhere other than the toggle).
-    const live = mobileToggleRef.current
-    const original = drawerTriggerRef.current
-    if (live && document.contains(live)) {
-      live.focus()
-    } else if (original && typeof original.focus === 'function' && document.contains(original)) {
-      original.focus()
-    }
-    return undefined
-  }, [mobileSidebarOpen])
+  const crumbs = useMemo(
+    () => (breadcrumbs ?? []).filter((crumb, index, all) =>
+      crumb !== null && crumb !== undefined && crumb !== false && crumb !== ''
+      && (typeof crumb !== 'string' || all.indexOf(crumb) === index)),
+    [breadcrumbs],
+  )
 
   const sidebarContent = useMemo(() => (
     <>
@@ -201,6 +213,57 @@ export function DocLayout({
   return (
     <div className={`omnispec-layout omnispec-layout--sidebar ${rootStyle}`}>
       {header && <div className={headerStyle}>{header}</div>}
+
+      {/*
+        Mobile navigation (below the desktop breakpoint, where the sidebar
+        column is hidden): a sticky bar with a sidebar toggle and breadcrumbs.
+        The toggle expands the sidebar content as a full-width panel filling
+        the viewport below the bar, and the same toggle collapses it. A
+        disclosure rather than a modal drawer — there is no backdrop.
+      */}
+      {hasSidebar && (
+        <div
+          ref={mobileBarRef}
+          className={`omnispec-mobile-nav ${mobileNavStyle}`}
+          onBlur={handleMobileNavBlur}
+        >
+          <div className={mobileBarStyle}>
+            <div className={mobileToggleZoneStyle}>
+              <button
+                ref={mobileToggleRef}
+                type="button"
+                onClick={toggleMobileNav}
+                className={mobileToggleStyle}
+                aria-label={mobileSidebarOpen ? 'Close navigation' : 'Open navigation'}
+                aria-expanded={mobileSidebarOpen}
+                aria-controls={mobilePanelId}
+              >
+                <Icon
+                  name={mobileSidebarOpen ? 'panel-left-close' : 'panel-left-open'}
+                  size="1.15rem"
+                />
+              </button>
+            </div>
+            {crumbs.length > 0 && <MobileBreadcrumbs crumbs={crumbs} />}
+          </div>
+          {mobileSidebarOpen && (
+            <div
+              id={mobilePanelId}
+              ref={mobilePanelRef}
+              role="region"
+              aria-label="Navigation"
+              className={mobilePanelStyle}
+              style={{ top: `${mobilePanelTop}px` }}
+              onClick={handlePanelClick}
+            >
+              <MobileDrawerDismissContext.Provider value={dismissMobileDrawer}>
+                {sidebarContent}
+              </MobileDrawerDismissContext.Provider>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className={bodyStyle}>
         {sidebarEl}
         {expandEl}
@@ -211,85 +274,53 @@ export function DocLayout({
       </div>
       {footer && <div className={footerStyle}>{footer}</div>}
 
-      {/* Mobile sidebar toggle + drawer */}
-      {hasSidebar && (
-        <AnimatePresence>
-          {!mobileSidebarOpen && (
-            <motion.button
-              key="mobile-toggle"
-              ref={mobileToggleRef}
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className={mobileToggleStyle}
-              aria-label="Open navigation"
-              aria-expanded={mobileSidebarOpen}
-              aria-haspopup="dialog"
-              aria-controls={drawerId}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Icon name="ellipsis" size="1.2em" />
-            </motion.button>
-          )}
-          {mobileSidebarOpen && (
-            <motion.div
-              key="mobile-backdrop"
-              className={backdropStyle}
-              onClick={() => setMobileSidebarOpen(false)}
-              aria-hidden="true"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
-          {mobileSidebarOpen && (
-            <motion.aside
-              key="mobile-drawer"
-              id={drawerId}
-              ref={drawerRef}
-              className={mobileDrawerStyle}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Navigation"
-              tabIndex={-1}
-              onClick={handleDrawerClick}
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            >
-              <button
-                ref={drawerCloseRef}
-                type="button"
-                onClick={() => setMobileSidebarOpen(false)}
-                className={mobileCloseStyle}
-                aria-label="Close navigation"
-              >
-                <Icon name="xmark" size="1.25rem" />
-              </button>
-              <MobileDrawerDismissContext.Provider value={dismissMobileDrawer}>
-                {sidebarContent}
-              </MobileDrawerDismissContext.Provider>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-      )}
-
-      <BackToTopButton hasSidebar={hasSidebar} />
+      <BackToTopButton />
     </div>
+  )
+}
+
+/**
+ * Breadcrumb trail for the mobile nav bar. Scrolls horizontally when it
+ * overflows, keeping its end (the current location) in view.
+ */
+function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
+  const listRef = useRef<HTMLOListElement | null>(null)
+  // Text-only signature of the trail, so the effect re-runs when it changes
+  // rather than on every render's new array.
+  const trail = crumbs.map((crumb) => (typeof crumb === 'string' ? crumb : '·')).join('/')
+
+  useEffect(() => {
+    const list = listRef.current
+    if (list) list.scrollLeft = list.scrollWidth
+  }, [trail])
+
+  return (
+    <nav aria-label="Breadcrumb" className={breadcrumbNavStyle}>
+      <ol ref={listRef} className={breadcrumbListStyle}>
+        {crumbs.map((crumb, index) => {
+          const isCurrent = index === crumbs.length - 1
+          return (
+            <li
+              key={index}
+              aria-current={isCurrent ? 'location' : undefined}
+              className={cx(breadcrumbItemStyle, isCurrent && breadcrumbCurrentStyle)}
+            >
+              {index > 0 && <span aria-hidden="true">/</span>}
+              {crumb}
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
   )
 }
 
 /**
  * A fixed bottom-right "back to top" affordance that appears once the page has
  * scrolled down, and smoothly returns to the top on click. Tracks window scroll
- * (the sidebar layout scrolls the page). On mobile it stacks above the nav
- * toggle so the two don't overlap.
+ * (the sidebar layout scrolls the page).
  */
-function BackToTopButton({ hasSidebar }: { hasSidebar: boolean }) {
+function BackToTopButton() {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
@@ -312,7 +343,7 @@ function BackToTopButton({ hasSidebar }: { hasSidebar: boolean }) {
           key="omnispec-back-to-top"
           type="button"
           onClick={handleClick}
-          className={cx(backToTopStyle, hasSidebar && backToTopAboveNavStyle)}
+          className={backToTopStyle}
           aria-label="Back to top"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -508,22 +539,92 @@ const footerStyle = css({
   backgroundColor: 'var(--omnispec-bg-secondary)',
 })
 
-const mobileToggleStyle = css({
-  position: 'fixed',
-  bottom: '1.5rem',
-  right: '1.5rem',
-  width: '3.5rem',
-  height: '3.5rem',
-  borderRadius: '50%',
-  backgroundColor: 'var(--omnispec-color-primary, #1a1a2e)',
-  color: 'var(--omnispec-color-primary-text, #FFFFFF)',
-  border: 'none',
-  cursor: 'pointer',
+// Mobile-first: the bar shows by default and is hidden on desktop, where the
+// sidebar column takes over. Sticks under any host chrome offset.
+const mobileNavStyle = css({
+  position: 'sticky',
+  top: 'var(--omnispec-offset-top, 0px)',
+  zIndex: 999,
+  backgroundColor: 'var(--omnispec-bg-primary)',
+  boxShadow: '0 1px 0 var(--omnispec-border-color)',
+  [mq.desktop]: {
+    display: 'none',
+  },
+})
+
+const mobileBarStyle = css({
   display: 'flex',
   alignItems: 'center',
+  minHeight: '3rem',
+})
+
+const mobileToggleZoneStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  alignSelf: 'stretch',
+  padding: '0 0.25rem',
+  boxShadow: '1px 0 0 var(--omnispec-border-color)',
+})
+
+const mobileToggleStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.15)',
-  zIndex: 999,
+  width: '2.25rem',
+  height: '2.25rem',
+  padding: 0,
+  // Same background as the bar in every state; open/closed is conveyed by the
+  // icon (and aria-expanded), not a filled button.
+  background: 'none',
+  border: 'none',
+  borderRadius: '0.375rem',
+  cursor: 'pointer',
+  color: 'var(--omnispec-fg-primary)',
+})
+
+const breadcrumbNavStyle = css({
+  flex: 1,
+  minWidth: 0,
+})
+
+const breadcrumbListStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  margin: 0,
+  padding: '0 0.75rem',
+  listStyle: 'none',
+  overflowX: 'auto',
+  whiteSpace: 'nowrap',
+  scrollbarWidth: 'none',
+  '&::-webkit-scrollbar': {
+    display: 'none',
+  },
+})
+
+const breadcrumbItemStyle = css({
+  display: 'flex',
+  gap: '0.5rem',
+  fontSize: 'var(--omnispec-font-size-sm)',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const breadcrumbCurrentStyle = css({
+  color: 'var(--omnispec-fg-primary)',
+  fontWeight: 600,
+})
+
+const mobilePanelStyle = css({
+  position: 'fixed',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  backgroundColor: 'var(--omnispec-nav-bg, var(--omnispec-bg-primary, #fff))',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  padding: '1rem 1.25rem 0',
   [mq.desktop]: {
     display: 'none',
   },
@@ -544,62 +645,8 @@ const backToTopStyle = css({
   alignItems: 'center',
   justifyContent: 'center',
   boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.15)',
-  // Below the mobile nav toggle (999) and drawer (1001) so it never covers them.
+  // Below the mobile nav bar and panel (999) so it never covers them.
   zIndex: 998,
-})
-
-const backToTopAboveNavStyle = css({
-  // On mobile the sidebar nav toggle occupies the bottom-right corner; stack the
-  // back-to-top above it. On desktop there is no toggle, so it stays in the corner.
-  [mq.mobile]: {
-    bottom: '5.75rem',
-  },
-})
-
-const backdropStyle = css({
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.4)',
-  zIndex: 1000,
-})
-
-const mobileDrawerStyle = css({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  height: '100dvh',
-  width: '100%',
-  backgroundColor: 'var(--omnispec-nav-bg, var(--omnispec-bg-primary, #fff))',
-  zIndex: 1001,
-  overflowY: 'auto',
-  overscrollBehavior: 'contain',
-  padding: '1.5rem 1.25rem',
-  boxShadow: '0.5rem 0 2rem rgba(0, 0, 0, 0.15)',
-  scrollbarWidth: 'none',
-  '&::-webkit-scrollbar': {
-    display: 'none',
-  },
-})
-
-const mobileCloseStyle = css({
-  position: 'absolute',
-  top: '1rem',
-  right: '1rem',
-  zIndex: 1100,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '2.5rem',
-  height: '2.5rem',
-  borderRadius: '50%',
-  background: 'var(--omnispec-nav-bg, var(--omnispec-bg-primary, #fff))',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'var(--omnispec-fg-muted)',
-  '&:hover': {
-    color: 'var(--omnispec-fg-primary)',
-    backgroundColor: 'var(--omnispec-bg-secondary)',
-  },
 })
 
 const POWERED_BY_URL = 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=badge&utm_campaign=powered_by'

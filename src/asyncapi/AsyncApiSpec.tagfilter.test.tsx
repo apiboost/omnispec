@@ -86,7 +86,7 @@ describe('AsyncApiSpec filter UI', () => {
     render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} />)
 
     // The spec renders and no filter indicator appears (the undeclared tag is ignored).
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     expect(screen.queryByText('Filtered by tag:')).toBeNull()
   })
 

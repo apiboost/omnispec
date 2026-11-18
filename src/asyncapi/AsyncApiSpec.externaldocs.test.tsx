@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, afterEach, beforeAll } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { AsyncApiSpec } from './AsyncApiSpec'
 
 beforeAll(() => {
@@ -104,9 +104,13 @@ describe('AsyncApiSpec 3.x info-level metadata (AsyncAPI 3.0 location)', () => {
 
     // Tag description renders through the async MarkdownRenderer; allow a
     // generous wait so a cold-compile render doesn't race the default timeout.
-    expect(
-      await screen.findByText('Device command operations', undefined, { timeout: 3000 }),
-    ).toBeInTheDocument()
+    // Assert inside waitFor: the section re-renders after first paint and
+    // replaces the node, so an element returned by findByText can already be
+    // detached by the time a separate expect() runs.
+    await waitFor(
+      () => expect(screen.getByText('Device command operations')).toBeInTheDocument(),
+      { timeout: 3000 },
+    )
   })
 
   it('renders tag externalDocs for tags declared under info', async () => {
