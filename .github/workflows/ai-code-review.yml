@@ -35,7 +35,7 @@ jobs:
   review:
     name: AI review
     if: github.event.label.name == 'ai-review'
-    uses: apiboost/ai-code-review/.github/workflows/review.yml@f65cf51599c8679719f62ad270167896b39c0d45 # v1.0.0
+    uses: apiboost/ai-code-review/.github/workflows/review.yml@427dec2b4c706380f71f674a3741a9aa39e69692 # v1.0.1
     permissions:
       contents: read # base checkout + PR head fetch (as data)
       issues: write # remove the request label, sticky summary comment
