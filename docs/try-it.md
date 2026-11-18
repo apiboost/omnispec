@@ -117,6 +117,10 @@ content type (`response.pdf`, `response.png`, ...).
 
 ### Example Proxy Implementation (Node.js / Express)
 
+A minimal sketch of the contract. It has **no SSRF protection** — prefer the
+built-in [`createProxyRouter`](./backend-integration.md#recommended-built-in-express-middleware),
+or add the checks listed under [Security Considerations](./backend-integration.md#security-considerations).
+
 ```js
 app.post('/api/proxy', async (req, res) => {
   const { url, method, headers, body, timeout } = req.body;
@@ -130,6 +134,7 @@ app.post('/api/proxy', async (req, res) => {
       headers,
       body: body || undefined,
       signal: controller.signal,
+      redirect: 'manual', // never follow redirects: return the 3xx to the browser
     });
 
     const responseBody = await response.text();
@@ -202,10 +207,13 @@ send, the fields are serialized as URL-encoded pairs. If the schema defines no
 properties, the editor falls back to the JSON textarea and converts the JSON
 object to URL-encoded pairs on send.
 
-> Note: when using proxy mode with your own Express app, ensure your JSON body
-> parser limit (`express.json({ limit })`) is large enough for base64-encoded
-> uploads (~4/3 of the file size), and set the router's `maxBodySize`
-> accordingly.
+> Note: in proxy mode, uploads travel base64-encoded (~4/3 of the file size).
+> The built-in `createProxyRouter` parses its own envelope with a limit sized
+> for `maxBodySize` (applied to the decoded bytes), so raise `maxBodySize` for
+> larger files. If your app mounts a global `express.json()` **before** the
+> proxy route, its `limit` (100 KB by default) applies first — mount the proxy
+> before it or raise that limit. See
+> [Request body size](./backend-integration.md#request-body-size-soap-envelopes-uploads).
 
 ## Prefilling from Examples
 

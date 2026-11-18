@@ -10,6 +10,7 @@
 
 import { parse as parseYaml } from 'yaml'
 import { resolveRefs, decodeJsonPointerSegment } from '../../openapi/parser/ref-resolver'
+import type { ResolveRefsOptions } from '../../openapi/parser/ref-resolver'
 import type {
   ParsedAsyncApiSpec,
   AsyncApiServer,
@@ -266,9 +267,12 @@ function applyOperationTraits<T extends { traits?: Array<Partial<T>> }>(op: T, i
   return acc
 }
 
-export async function parseAsyncApiSpec(specInput: string | Record<string, unknown>): Promise<ParsedAsyncApiSpec> {
+export async function parseAsyncApiSpec(
+  specInput: string | Record<string, unknown>,
+  refOptions?: ResolveRefsOptions,
+): Promise<ParsedAsyncApiSpec> {
   const raw = typeof specInput === 'string' ? parseSpecString(specInput) : specInput
-  const api = await resolveRefs(raw as Record<string, unknown>) as unknown as AsyncApiDocument
+  const api = await resolveRefs(raw as Record<string, unknown>, refOptions) as unknown as AsyncApiDocument
 
   const majorVersion = parseInt(api.asyncapi.split('.')[0], 10)
   const isV3 = majorVersion >= 3

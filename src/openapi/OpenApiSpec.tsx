@@ -28,6 +28,7 @@ import { LoadingScreen } from '@core/components/common/LoadingScreen'
 import { ErrorMessage } from '@core/components/common/ErrorMessage'
 import { SpecToolbar } from '@core/components/common/SpecToolbar'
 import { useOpenApiSpec } from './hooks/useOpenApiSpec'
+import { isSpecUrl } from '../core/hooks/useSpecFetcher'
 import { ApiOverview, ApiVersionBadge } from './components/ApiOverview'
 import { ServerSelector } from './components/ServerSelector'
 import { TagGroup } from './components/TagGroup'
@@ -81,7 +82,7 @@ export function OpenApiSpec({
   className,
 }: BaseSpecProps) {
   const refOptions = useMemo(() => ({
-    specUrl: typeof spec === 'string' ? spec : undefined,
+    specUrl: isSpecUrl(spec) ? spec : undefined,
     externalRefOrigins,
   }), [spec, externalRefOrigins])
 

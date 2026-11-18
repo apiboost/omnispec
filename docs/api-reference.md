@@ -356,3 +356,51 @@ const content = await fetchSpec('https://api.example.com/openapi.json')
 ```tsx
 import { lightTheme, darkTheme, ThemeProvider, useTheme } from '@apiboost/omnispec'
 ```
+
+---
+
+## Server Exports (`@apiboost/omnispec/server`)
+
+Node-only entry point for the built-in Try-It proxy. Requires `express` (and optionally `express-rate-limit`) as peer dependencies. For setup, body-size and reverse-proxy guidance see the [Backend Integration Guide](./backend-integration.md#try-it-proxy); for how each protection works see the [Security Model](./security.md#the-built-in-proxy).
+
+| Export | Kind | Description |
+|--------|------|-------------|
+| `createProxyRouter(options?)` | function | Returns an Express `Router` to mount at your `proxyUrl` path |
+| `isPrivateIp(hostname)` | function | `true` if a hostname or IP literal must be blocked before DNS: blocked IP ranges in any URL-parser spelling, `localhost` / `*.localhost`, or unparseable input |
+| `isBlockedAddress(ip)` | function | `true` if a resolved IPv4/IPv6 literal is in a blocked range. Non-IP input returns `true` (fails closed) |
+| `ProxyRouterOptions` | type | Options for `createProxyRouter` (below) |
+| `ProxyAuditEntry` | type | `{ targetUrl, method, statusCode, duration, timestamp, ip }` passed to `onRequest` |
+| `ProxyDnsLookup` | type | `(hostname: string) => Promise<ResolvedAddress[]>` |
+| `ResolvedAddress` | type | `{ address: string; family: number }` |
+
+### createProxyRouter options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `allowedDomains` | `string[]` | `[]` | Allowed target hosts (exact match or any subdomain). Empty allows any public host |
+| `maxTimeout` | `number` | `30000` | Upper bound in ms per proxied request. The request's own `timeout` can only lower it |
+| `maxBodySize` | `number` | `1048576` | Max bytes of the forwarded request body (after base64 decoding) and of the upstream response body (after decompression). Over-limit requests get `413`, responses `502` |
+| `maxEnvelopeSize` | `number` | `2 * maxBodySize + 65536` | Max bytes of the JSON envelope the router parses. A host-level `express.json()` mounted first wins instead |
+| `maxRedirects` | `number` | `0` | Upstream redirects to follow. `0` returns the `3xx` as-is; each followed hop is re-validated and cross-origin hops drop credential headers |
+| `dnsLookup` | `ProxyDnsLookup` | OS resolver (`dns.lookup`) | Custom resolver. Every returned address is still validated, and the connection is pinned to a validated address |
+| `rateLimitPerMinute` | `number` | `60` | Requests per minute per client key (`express-rate-limit` if installed, else an in-memory limiter) |
+| `keyGenerator` | `(req: Request) => string` | `req.ip` | Derives the rate-limit key, e.g. a user/session id |
+| `logger` | `{ warn: (message: string) => void }` | `console` | Receives one-time configuration warnings (e.g. `X-Forwarded-For` seen while `trust proxy` is off) |
+| `onRequest` | `(audit: ProxyAuditEntry) => void` | — | Audit callback after each completed proxy request. Errors it throws are swallowed |
+
+```ts
+import express from 'express'
+import { createProxyRouter } from '@apiboost/omnispec/server'
+
+const app = express()
+app.set('trust proxy', 1)
+
+// Mount before any global express.json() so maxEnvelopeSize applies.
+app.use('/api/proxy', createProxyRouter({
+  allowedDomains: ['api.example.com'],
+  maxBodySize: 5 * 1024 * 1024,
+  onRequest: (audit) => console.log(audit.method, audit.targetUrl, audit.statusCode),
+}))
+```
+
+Then pass `proxyUrl="/api/proxy"` to the renderer.
