@@ -315,6 +315,7 @@ This single variable adjusts:
 - **Sidebar** — sticks below the nav, height subtracts the offset
 - **Try-It panel** — sticky position accounts for the offset
 - **Expand/collapse button** — clears the nav
+- **Mobile navigation bar** — sticks directly below the offset
 
 ### Buttons
 

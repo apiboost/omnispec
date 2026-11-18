@@ -18,7 +18,7 @@ import { ExpandProvider } from '@core/context/ExpandContext'
 import { resolveSchemaStyle } from '@core/components/SchemaViewer/schema-style'
 import { AuthProvider } from '@core/context/AuthContext'
 import { DocLayout } from '@core/components/Layout/DocLayout'
-import { NavTree } from '@core/components/Navigation/NavTree'
+import { NavTree, findNavLabel } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { Icon } from '@core/components/common/Icon'
 import { SearchBar } from '@core/components/Navigation/SearchBar'
@@ -334,6 +334,8 @@ export function OpenApiSpec({
 
   if (!parsedSpec) return null
 
+  const activeNavId = isSegmented ? (route.operationId ?? OVERVIEW_NAV_ID) : activeSection
+
   const specNav = (
     <>
       <div className={headingStyle}>Operations</div>
@@ -343,7 +345,7 @@ export function OpenApiSpec({
       />
       <NavTree
         items={segmentedNavItems}
-        activeId={isSegmented ? (route.operationId ?? OVERVIEW_NAV_ID) : activeSection}
+        activeId={activeNavId}
         onSelect={isSegmented ? handleSegmentedSelect : handleNavSelect}
         parentToggleOnly={isSegmented}
       />
@@ -351,6 +353,11 @@ export function OpenApiSpec({
   )
 
   const sidebar = buildSidebar(sidebarNav, specNav)
+  const breadcrumbs = [
+    ...(slots.breadcrumbs ?? []),
+    parsedSpec.title,
+    findNavLabel(segmentedNavItems, activeNavId),
+  ]
 
   const resolvedDownloadLink = resolveDownloadLink(downloadLink, spec)
 
@@ -380,6 +387,7 @@ export function OpenApiSpec({
                   header={slots.header}
                   contentHeader={slots.contentHeader}
                   footer={slots.footer}
+                  breadcrumbs={breadcrumbs}
                 >
                   {isSegmented ? (
                     <SegmentedContent

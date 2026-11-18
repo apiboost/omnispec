@@ -142,4 +142,11 @@ export interface SlotOverrides {
   sidebarFooter?: ReactNode
   /** Logo or brand element */
   logo?: ReactNode
+  /**
+   * Leading entries for the mobile navigation bar's breadcrumb trail, placed
+   * before the spec title and the active section (e.g. links back to the host
+   * page that embeds the reference). Pass your router's link elements to keep
+   * client-side navigation.
+   */
+  breadcrumbs?: ReactNode[]
 }

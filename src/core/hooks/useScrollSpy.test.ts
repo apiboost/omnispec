@@ -11,18 +11,23 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
 
 // A controllable IntersectionObserver mock — captures the callback so the test
 // can drive intersection changes.
 let ioCallback: IntersectionObserverCallback
+const observedNodes = new Set<Element>()
 class MockIntersectionObserver {
   constructor(cb: IntersectionObserverCallback) {
     ioCallback = cb
   }
-  observe() {}
-  unobserve() {}
+  observe(el: Element) {
+    observedNodes.add(el)
+  }
+  unobserve(el: Element) {
+    observedNodes.delete(el)
+  }
   disconnect() {}
   takeRecords() {
     return []
@@ -35,6 +40,7 @@ function entry(id: string, isIntersecting: boolean) {
 
 afterEach(() => {
   document.body.innerHTML = ''
+  observedNodes.clear()
 })
 
 describe('flattenNavItemIds', () => {
@@ -71,5 +77,25 @@ describe('useScrollSpy', () => {
     // op-a leaves → falls back to op-b.
     act(() => ioCallback([entry('op-a', false)], {} as IntersectionObserver))
     expect(result.current).toBe('op-b')
+  })
+})
+
+describe('useScrollSpy element replacement', () => {
+  it('re-observes a section whose element is replaced after mount', async () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    const original = document.createElement('div')
+    original.id = 'op-a'
+    document.body.appendChild(original)
+
+    renderHook(() => useScrollSpy(['op-a']))
+    expect(observedNodes.has(original)).toBe(true)
+
+    // A parent re-mounts the content: same id, new node.
+    const replacement = document.createElement('div')
+    replacement.id = 'op-a'
+    original.replaceWith(replacement)
+
+    await waitFor(() => expect(observedNodes.has(replacement)).toBe(true))
+    expect(observedNodes.has(original)).toBe(false)
   })
 })
