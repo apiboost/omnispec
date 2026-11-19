@@ -17,10 +17,12 @@ import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
 // A controllable IntersectionObserver mock — captures the callback so the test
 // can drive intersection changes.
 let ioCallback: IntersectionObserverCallback
+let ioOptions: IntersectionObserverInit | undefined
 const observedNodes = new Set<Element>()
 class MockIntersectionObserver {
-  constructor(cb: IntersectionObserverCallback) {
+  constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
     ioCallback = cb
+    ioOptions = options
   }
   observe(el: Element) {
     observedNodes.add(el)
@@ -97,5 +99,29 @@ describe('useScrollSpy element replacement', () => {
 
     await waitFor(() => expect(observedNodes.has(replacement)).toBe(true))
     expect(observedNodes.has(original)).toBe(false)
+  })
+
+  it('starts the default band below the sticky mobile nav bar', async () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    const bar = document.createElement('div')
+    bar.className = 'omnispec-mobile-nav'
+    bar.style.top = '69px'
+    Object.defineProperty(bar, 'offsetHeight', { value: 48 })
+    document.body.appendChild(bar)
+    const section = document.createElement('div')
+    section.id = 'op-a'
+    document.body.appendChild(section)
+    window.innerHeight = 700
+
+    renderHook(() => useScrollSpy(['op-a']))
+
+    // Inset 69 + 48 = 117px; the band is the top 20% of the remaining 583px.
+    await waitFor(() => expect(ioOptions?.rootMargin).toBe('-117px 0px -466px 0px'))
+  })
+
+  it('uses an explicit rootMargin as given', () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    renderHook(() => useScrollSpy(['op-a'], '0px 0px -50% 0px'))
+    expect(ioOptions?.rootMargin).toBe('0px 0px -50% 0px')
   })
 })

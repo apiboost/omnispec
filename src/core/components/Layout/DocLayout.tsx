@@ -280,23 +280,14 @@ export function DocLayout({
 }
 
 /**
- * Breadcrumb trail for the mobile nav bar. Scrolls horizontally when it
- * overflows, keeping its end (the current location) in view.
+ * Breadcrumb trail for the mobile nav bar. Always fits on one line: when it
+ * overflows, the leading crumbs truncate with an ellipsis before the current
+ * location does, so the reader sees both where they are and the path to it.
  */
 function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
-  const listRef = useRef<HTMLOListElement | null>(null)
-  // Text-only signature of the trail, so the effect re-runs when it changes
-  // rather than on every render's new array.
-  const trail = crumbs.map((crumb) => (typeof crumb === 'string' ? crumb : '·')).join('/')
-
-  useEffect(() => {
-    const list = listRef.current
-    if (list) list.scrollLeft = list.scrollWidth
-  }, [trail])
-
   return (
     <nav aria-label="Breadcrumb" className={breadcrumbNavStyle}>
-      <ol ref={listRef} className={breadcrumbListStyle}>
+      <ol className={breadcrumbListStyle}>
         {crumbs.map((crumb, index) => {
           const isCurrent = index === crumbs.length - 1
           return (
@@ -306,7 +297,12 @@ function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
               className={cx(breadcrumbItemStyle, isCurrent && breadcrumbCurrentStyle)}
             >
               {index > 0 && <span aria-hidden="true">/</span>}
-              {crumb}
+              <span
+                className={breadcrumbLabelStyle}
+                title={typeof crumb === 'string' ? crumb : undefined}
+              >
+                {crumb}
+              </span>
             </li>
           )
         })}
@@ -594,24 +590,31 @@ const breadcrumbListStyle = css({
   margin: 0,
   padding: '0 0.75rem',
   listStyle: 'none',
-  overflowX: 'auto',
+  overflow: 'hidden',
   whiteSpace: 'nowrap',
-  scrollbarWidth: 'none',
-  '&::-webkit-scrollbar': {
-    display: 'none',
-  },
 })
 
 const breadcrumbItemStyle = css({
   display: 'flex',
+  flex: '0 1 auto',
   gap: '0.5rem',
+  minWidth: 0,
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
 })
 
+// The current location shrinks last and keeps up to 60% of the bar.
 const breadcrumbCurrentStyle = css({
+  flexShrink: 0,
+  maxWidth: '60%',
   color: 'var(--omnispec-fg-primary)',
   fontWeight: 600,
+})
+
+const breadcrumbLabelStyle = css({
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 })
 
 const mobilePanelStyle = css({
