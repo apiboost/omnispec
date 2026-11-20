@@ -32,6 +32,9 @@ const forbidden = files.filter(
   (f) => !allowedPrefixes.some((p) => f === p || f.startsWith(p)),
 )
 
+// Source maps embed the full source of everything bundled; keep them out.
+forbidden.push(...files.filter((f) => f.endsWith('.map')))
+
 if (forbidden.length) {
   console.error('Forbidden files in npm tarball:\n' + forbidden.map((f) => `  ${f}`).join('\n'))
   process.exit(1)

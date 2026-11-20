@@ -28,7 +28,9 @@ const __dirname = dirname(__filename)
 
 const config: Configuration = {
   mode: 'production',
-  devtool: 'source-map',
+  // No source maps: they embed the full source of everything bundled and
+  // would triple the published package size.
+  devtool: false,
   entry: './src/wc/index.ts',
   output: {
     path: path.resolve(__dirname, 'dist', 'wc'),

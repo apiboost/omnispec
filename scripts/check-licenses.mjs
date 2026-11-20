@@ -34,13 +34,37 @@ const ALLOW = new Set([
   // 'some-pkg', // (MIT OR GPL-2.0) — used under MIT
 ])
 
-function getProdLicenses() {
-  const raw = execSync('pnpm licenses list --prod --json', {
+// devDependencies whose code we bundle into dist, so they ship too: motion
+// (and its runtime deps) in every build, React in the standalone web component.
+const BUNDLED_DEV = new Set([
+  'motion',
+  'framer-motion',
+  'motion-dom',
+  'motion-utils',
+  'tslib',
+  'react',
+  'react-dom',
+  'scheduler',
+])
+
+function listLicenses(args) {
+  const raw = execSync(`pnpm licenses list ${args} --json`, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
     maxBuffer: 64 * 1024 * 1024,
   })
   return JSON.parse(raw || '{}')
+}
+
+// The production closure plus the bundled devDependencies, keyed by license.
+function getProdLicenses() {
+  const data = listLicenses('--prod')
+  for (const [license, pkgs] of Object.entries(listLicenses(''))) {
+    const known = new Set((data[license] ?? []).map((p) => p.name))
+    const bundled = pkgs.filter((p) => BUNDLED_DEV.has(p.name) && !known.has(p.name))
+    if (bundled.length) data[license] = [...(data[license] ?? []), ...bundled]
+  }
+  return data
 }
 
 function main() {
@@ -86,7 +110,7 @@ function main() {
   }
 
   const total = counts.reduce((sum, [, c]) => sum + c, 0)
-  console.log(`\n✓ All ${total} production dependencies use permissive licenses.`)
+  console.log(`\n✓ All ${total} shipped dependencies use permissive licenses.`)
 }
 
 main()
