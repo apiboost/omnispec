@@ -46,14 +46,22 @@ const input = {
 	'wc/index': 'src/wc/index.ts',
 }
 
-// Peer deps + their subpath imports stay external (consumer provides them).
-// Dependencies (yaml, prismjs, marked, etc.) are bundled in.
+// Peer deps and runtime dependencies (plus their subpath imports) stay
+// external: npm installs them alongside this package, and the consumer's
+// bundler resolves them once for the whole app instead of shipping a second
+// copy inside ours. `motion` is the exception — it is bundled (and so is a
+// devDependency) because stripMotionDynamicRequire below has to rewrite its
+// source, which it can only do while we bundle it.
 const externalPatterns = [
 	/^react($|\/)/,
 	/^react-dom($|\/)/,
 	/^@emotion\//,
 	/^express($|\/)/,
 	/^express-rate-limit$/,
+	/^lucide-react$/,
+	/^marked$/,
+	/^prismjs($|\/)/,
+	/^yaml$/,
 	// Node built-ins used by the server-only proxy (src/server/).
 	/^node:/,
 ]
@@ -127,7 +135,7 @@ const plugins = () => [
 		target: 'es2020',
 		tsconfig: path.resolve(__dirname, 'tsconfig.json'),
 		jsx: 'automatic',
-		sourceMap: true,
+		sourceMap: false,
 		minify: false,
 	}),
 ]
@@ -140,7 +148,7 @@ const config: RollupOptions[] = [
 			format: 'esm',
 			entryFileNames: '[name].js',
 			chunkFileNames: 'chunks/[name]-[hash].js',
-			sourcemap: true,
+			sourcemap: false,
 			preserveModulesRoot: 'src',
 		},
 		external: isExternal,
@@ -154,7 +162,7 @@ const config: RollupOptions[] = [
 			format: 'cjs',
 			entryFileNames: '[name].js',
 			chunkFileNames: 'chunks/[name]-[hash].js',
-			sourcemap: true,
+			sourcemap: false,
 			exports: 'named',
 			interop: 'auto',
 		},

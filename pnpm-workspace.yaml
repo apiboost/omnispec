@@ -4,7 +4,6 @@
 # Allow these dependencies to run install/build scripts (native binaries).
 allowBuilds:
   esbuild: true
-  protobufjs: true
 
 # Security pins for transitive dependencies.
 overrides:
