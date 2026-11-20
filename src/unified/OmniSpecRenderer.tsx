@@ -20,6 +20,7 @@ import { ErrorMessage } from '../core/components/common/ErrorMessage'
 import { ErrorBoundary } from '../core/components/common/ErrorBoundary'
 import { UpgradePrompt } from '../core/components/common/UpgradePrompt'
 import { SpecStatusScreen } from '../core/components/Layout/SpecStatusScreen'
+import { loadingSlots } from '../core/components/Layout/loadingSlots'
 
 const OpenApiSpec = lazy(() =>
   import('../openapi/OpenApiSpec').then((m) => ({ default: m.OpenApiSpec })),
@@ -48,7 +49,7 @@ export function OmniSpecRenderer({ specType, spec, theme, docsUrl, upgradeUrl, p
       theme={theme}
       layout={props.layout}
       sidebarPosition={props.sidebarPosition}
-      slots={props.slots}
+      slots={loadingSlots(props.slots)}
       sidebarNav={props.sidebarNav}
       premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
     >

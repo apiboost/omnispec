@@ -28,6 +28,7 @@ import { LoadingScreen } from '@core/components/common/LoadingScreen'
 import { ErrorMessage } from '@core/components/common/ErrorMessage'
 import { ErrorBoundary } from '@core/components/common/ErrorBoundary'
 import { SpecStatusScreen } from '@core/components/Layout/SpecStatusScreen'
+import { loadingSlots } from '@core/components/Layout/loadingSlots'
 import { SpecToolbar } from '@core/components/common/SpecToolbar'
 import { Icon } from '@core/components/common/Icon'
 import { resolveDownloadLink } from '@core/utils/resolve-download-link'
@@ -366,7 +367,7 @@ export function AsyncApiSpec({
         theme={theme}
         layout={layout}
         sidebarPosition={sidebarPosition}
-        slots={slots}
+        slots={loadingSlots(slots)}
         sidebarNav={sidebarNav}
         premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
         className={`omnispec-asyncapi ${className ?? ''}`}

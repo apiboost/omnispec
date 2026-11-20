@@ -93,9 +93,12 @@ export function DocLayout({
    * moves anywhere outside the bar and panel — otherwise Tab would carry on
    * into content hidden underneath it.
    */
+  // The bar and the panel are siblings (see below), so focus moving between
+  // them is not "leaving" the navigation.
   const handleMobileNavBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
     const next = event.relatedTarget as Node | null
-    if (next && !event.currentTarget.contains(next)) {
+    const inside = !!next && (mobileBarRef.current?.contains(next) || mobilePanelRef.current?.contains(next))
+    if (next && !inside) {
       setMobileSidebarOpen(false)
     }
   }, [])
@@ -221,30 +224,38 @@ export function DocLayout({
         the viewport below the bar, and the same toggle collapses it. A
         disclosure rather than a modal drawer — there is no backdrop.
       */}
+      {/*
+        The panel is a sibling of the bar, not a child: a host may move the
+        bar with a transform (a header hiding on scroll), and a transformed
+        ancestor would become the containing block of the position: fixed
+        panel, misplacing it.
+      */}
       {hasSidebar && (
-        <div
-          ref={mobileBarRef}
-          className={`omnispec-mobile-nav ${mobileNavStyle}`}
-          onBlur={handleMobileNavBlur}
-        >
-          <div className={mobileBarStyle}>
-            <div className={mobileToggleZoneStyle}>
-              <button
-                ref={mobileToggleRef}
-                type="button"
-                onClick={toggleMobileNav}
-                className={mobileToggleStyle}
-                aria-label={mobileSidebarOpen ? 'Close navigation' : 'Open navigation'}
-                aria-expanded={mobileSidebarOpen}
-                aria-controls={mobilePanelId}
-              >
-                <Icon
-                  name={mobileSidebarOpen ? 'panel-left-close' : 'panel-left-open'}
-                  size="1.15rem"
-                />
-              </button>
+        <>
+          <div
+            ref={mobileBarRef}
+            className={`omnispec-mobile-nav ${mobileNavStyle}`}
+            onBlur={handleMobileNavBlur}
+          >
+            <div className={mobileBarStyle}>
+              <div className={mobileToggleZoneStyle}>
+                <button
+                  ref={mobileToggleRef}
+                  type="button"
+                  onClick={toggleMobileNav}
+                  className={mobileToggleStyle}
+                  aria-label={mobileSidebarOpen ? 'Close navigation' : 'Open navigation'}
+                  aria-expanded={mobileSidebarOpen}
+                  aria-controls={mobilePanelId}
+                >
+                  <Icon
+                    name={mobileSidebarOpen ? 'panel-left-close' : 'panel-left-open'}
+                    size="1.15rem"
+                  />
+                </button>
+              </div>
+              {crumbs.length > 0 && <MobileBreadcrumbs crumbs={crumbs} />}
             </div>
-            {crumbs.length > 0 && <MobileBreadcrumbs crumbs={crumbs} />}
           </div>
           {mobileSidebarOpen && (
             <div
@@ -252,16 +263,17 @@ export function DocLayout({
               ref={mobilePanelRef}
               role="region"
               aria-label="Navigation"
-              className={mobilePanelStyle}
+              className={`omnispec-mobile-nav-panel ${mobilePanelStyle}`}
               style={{ top: `${mobilePanelTop}px` }}
               onClick={handlePanelClick}
+              onBlur={handleMobileNavBlur}
             >
               <MobileDrawerDismissContext.Provider value={dismissMobileDrawer}>
                 {sidebarContent}
               </MobileDrawerDismissContext.Provider>
             </div>
           )}
-        </div>
+        </>
       )}
 
       <div className={bodyStyle}>
@@ -283,6 +295,36 @@ export function DocLayout({
 // there anyway.
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
+// Starts part-way visible, so a trail whose visible crumbs all changed never
+// reads as blank for its first frames.
+const CRUMB_ENTER: Keyframe[] = [{ opacity: 0.35 }, { opacity: 1 }]
+
+/**
+ * Animates a change to a bar's trail before it is painted (called from a
+ * layout effect): crumbs whose text differs from what this bar showed fade
+ * in; unchanged ones are left alone. A bar's first trail never animates — on
+ * navigation the trail swaps once, instantly, whichever bar takes over. Positions never animate — the trail updates as the reader
+ * scrolls (the section in view), and moving it each time reads as jitter.
+ * Web Animations only (no markup differences between server and client);
+ * skipped for reduced motion.
+ */
+function animateTrailChange(list: HTMLOListElement, previous: string[] | null): string[] {
+  const items = Array.from(list.children) as HTMLElement[]
+  const texts = items.map((item) => item.textContent?.replace(/^\s*\/\s*/, '').trim() ?? '')
+  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!reduce && typeof list.animate === 'function') {
+    items.forEach((item, index) => {
+      const changed = !!previous && previous[index] !== texts[index]
+      if (changed) {
+        // Restart rather than stack when changes arrive quickly.
+        item.getAnimations?.().forEach((running) => running.cancel())
+        item.animate(CRUMB_ENTER, { duration: 180, easing: 'ease-out' })
+      }
+    })
+  }
+  return texts
+}
+
 /**
  * Breadcrumb trail for the mobile nav bar, after docs.github.com: full-text
  * crumbs on one line that scroll horizontally when they overflow. It opens
@@ -293,6 +335,8 @@ const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : us
  */
 function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
   const listRef = useRef<HTMLOListElement | null>(null)
+  // What this bar last showed, to fade only crumbs that change in place.
+  const shownRef = useRef<string[] | null>(null)
   const [more, setMore] = useState({ left: false, right: false })
   // Text-only signature of the trail, so the effect re-runs when it changes
   // rather than on every render's new array.
@@ -319,6 +363,7 @@ function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
       update()
     }
     resize()
+    shownRef.current = animateTrailChange(list, shownRef.current)
     list.addEventListener('scroll', update, { passive: true })
     // Watch the crumbs as well as the list: content growing inside a
     // fixed-width list doesn't resize the list itself.
@@ -611,8 +656,15 @@ const footerStyle = css({
 // --omnispec-offset-top-transition to the header's own duration and easing.
 const mobileNavStyle = css({
   position: 'sticky',
-  top: 'var(--omnispec-offset-top, 0px)',
-  transition: 'top var(--omnispec-offset-top-transition, 0s)',
+  // A host whose header hides on scroll can keep the bar stuck under the
+  // header (--omnispec-mobile-nav-top) and move it with a transform
+  // (--omnispec-mobile-nav-transform) on the header's timing, so both animate
+  // on the compositor and stay joined; otherwise it follows
+  // --omnispec-offset-top. The transform must be `none` at rest: any transform
+  // makes the bar the containing block of its position: fixed panel.
+  top: 'var(--omnispec-mobile-nav-top, var(--omnispec-offset-top, 0px))',
+  transform: 'var(--omnispec-mobile-nav-transform, none)',
+  transition: 'top var(--omnispec-offset-top-transition, 0s), transform var(--omnispec-offset-top-transition, 0s)',
   zIndex: 999,
   backgroundColor: 'var(--omnispec-bg-primary)',
   boxShadow: '0 1px 0 var(--omnispec-border-color)',
@@ -710,6 +762,7 @@ const breadcrumbScrollRightStyle = css({ right: 0 })
 
 const mobilePanelStyle = css({
   position: 'fixed',
+  zIndex: 999,
   left: 0,
   right: 0,
   bottom: 0,

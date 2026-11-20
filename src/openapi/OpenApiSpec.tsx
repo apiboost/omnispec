@@ -42,6 +42,7 @@ import { operationMatchesSearch } from './search'
 import type { OpenApiServer, OpenApiTag } from './types/openapi.types'
 import { ErrorBoundary } from '@core/components/common/ErrorBoundary'
 import { SpecStatusScreen } from '@core/components/Layout/SpecStatusScreen'
+import { loadingSlots } from '@core/components/Layout/loadingSlots'
 
 // Sentinel id for the synthetic "Overview" sidebar entry shown in segmented
 // mode, giving users a way back to the top-level route (title/servers/schemas).
@@ -315,7 +316,7 @@ export function OpenApiSpec({
         theme={theme}
         layout={layout}
         sidebarPosition={sidebarPosition}
-        slots={slots}
+        slots={loadingSlots(slots)}
         sidebarNav={sidebarNav}
         premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
         className={cx('omnispec-openapi', className)}
