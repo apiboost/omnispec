@@ -18,7 +18,7 @@ import { ExpandProvider } from '@core/context/ExpandContext'
 import { resolveSchemaStyle } from '@core/components/SchemaViewer/schema-style'
 import { AuthProvider } from '@core/context/AuthContext'
 import { DocLayout } from '@core/components/Layout/DocLayout'
-import { NavTree } from '@core/components/Navigation/NavTree'
+import { NavTree, findNavLabel } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { Icon } from '@core/components/common/Icon'
 import { SearchBar } from '@core/components/Navigation/SearchBar'
@@ -28,6 +28,7 @@ import { LoadingScreen } from '@core/components/common/LoadingScreen'
 import { ErrorMessage } from '@core/components/common/ErrorMessage'
 import { SpecToolbar } from '@core/components/common/SpecToolbar'
 import { useOpenApiSpec } from './hooks/useOpenApiSpec'
+import { isSpecUrl } from '../core/hooks/useSpecFetcher'
 import { ApiOverview, ApiVersionBadge } from './components/ApiOverview'
 import { ServerSelector } from './components/ServerSelector'
 import { TagGroup } from './components/TagGroup'
@@ -41,6 +42,7 @@ import { operationMatchesSearch } from './search'
 import type { OpenApiServer, OpenApiTag } from './types/openapi.types'
 import { ErrorBoundary } from '@core/components/common/ErrorBoundary'
 import { SpecStatusScreen } from '@core/components/Layout/SpecStatusScreen'
+import { loadingSlots } from '@core/components/Layout/loadingSlots'
 
 // Sentinel id for the synthetic "Overview" sidebar entry shown in segmented
 // mode, giving users a way back to the top-level route (title/servers/schemas).
@@ -76,12 +78,12 @@ export function OpenApiSpec({
   sidebarNav,
   slots = {},
   onSpecLoaded,
-  onTryItRequest: _onTryItRequest,
-  onTryItResponse: _onTryItResponse,
+  onTryItRequest,
+  onTryItResponse,
   className,
 }: BaseSpecProps) {
   const refOptions = useMemo(() => ({
-    specUrl: typeof spec === 'string' ? spec : undefined,
+    specUrl: isSpecUrl(spec) ? spec : undefined,
     externalRefOrigins,
   }), [spec, externalRefOrigins])
 
@@ -305,13 +307,22 @@ export function OpenApiSpec({
   const navSectionIds = useMemo(() => flattenNavItemIds(navItems), [navItems])
   const activeSection = useScrollSpy(navSectionIds)
 
+  // Loading renders in the same themed layout shell as the error state, so
+  // host theme overrides apply (no default light flash) and the sidebar, its
+  // host slots and the mobile nav bar are in place before the spec arrives.
   if (state.status === 'loading') {
     return (
-      <ThemeProvider theme={theme}>
-        <div className={cx('omnispec-openapi', className)}>
-          <LoadingScreen />
-        </div>
-      </ThemeProvider>
+      <SpecStatusScreen
+        theme={theme}
+        layout={layout}
+        sidebarPosition={sidebarPosition}
+        slots={loadingSlots(slots)}
+        sidebarNav={sidebarNav}
+        premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
+        className={cx('omnispec-openapi', className)}
+      >
+        <LoadingScreen />
+      </SpecStatusScreen>
     )
   }
 
@@ -333,6 +344,8 @@ export function OpenApiSpec({
 
   if (!parsedSpec) return null
 
+  const activeNavId = isSegmented ? (route.operationId ?? OVERVIEW_NAV_ID) : activeSection
+
   const specNav = (
     <>
       <div className={headingStyle}>Operations</div>
@@ -342,7 +355,7 @@ export function OpenApiSpec({
       />
       <NavTree
         items={segmentedNavItems}
-        activeId={isSegmented ? (route.operationId ?? OVERVIEW_NAV_ID) : activeSection}
+        activeId={activeNavId}
         onSelect={isSegmented ? handleSegmentedSelect : handleNavSelect}
         parentToggleOnly={isSegmented}
       />
@@ -350,11 +363,16 @@ export function OpenApiSpec({
   )
 
   const sidebar = buildSidebar(sidebarNav, specNav)
+  const breadcrumbs = [
+    ...(slots.breadcrumbs ?? []),
+    parsedSpec.title,
+    findNavLabel(segmentedNavItems, activeNavId),
+  ]
 
   const resolvedDownloadLink = resolveDownloadLink(downloadLink, spec)
 
   return (
-    <ConfigProvider config={{ proxyUrl, proxyHeaders, oauth, allowTryIt, layout, sidebarPosition, tryItLayout, defaultExpandOperations, displayMode: resolvedDisplayMode, schemaStyle: resolvedSchemaStyle, slots, proRenderers: pro?.renderers ?? new Map(), premiumThemingEnabled: pro?.premiumThemingEnabled ?? false, interactiveAuth: pro?.interactiveAuth, interactiveOAuth, specKey: `${parsedSpec.title}@${parsedSpec.version}`, tryItPersistTtl }}>
+    <ConfigProvider config={{ proxyUrl, proxyHeaders, oauth, allowTryIt, layout, sidebarPosition, tryItLayout, defaultExpandOperations, displayMode: resolvedDisplayMode, schemaStyle: resolvedSchemaStyle, slots, proRenderers: pro?.renderers ?? new Map(), premiumThemingEnabled: pro?.premiumThemingEnabled ?? false, interactiveAuth: pro?.interactiveAuth, interactiveOAuth, specKey: `${parsedSpec.title}@${parsedSpec.version}`, tryItPersistTtl, onTryItRequest, onTryItResponse }}>
       <ExpandProvider expandAll={allExpanded} expandGeneration={expandGeneration}>
         <ThemeProvider theme={theme}>
           <AuthProvider schemes={parsedSpec.securitySchemes}>
@@ -379,6 +397,7 @@ export function OpenApiSpec({
                   header={slots.header}
                   contentHeader={slots.contentHeader}
                   footer={slots.footer}
+                  breadcrumbs={breadcrumbs}
                 >
                   {isSegmented ? (
                     <SegmentedContent

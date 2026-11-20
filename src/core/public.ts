@@ -51,6 +51,7 @@ export {
 } from './components/SchemaViewer/schema-style'
 export type { SchemaStyle } from './components/SchemaViewer/schema-style'
 export { SpecStatusScreen } from './components/Layout/SpecStatusScreen'
+export { loadingSlots } from './components/Layout/loadingSlots'
 export {
   PresentationContainer,
   // Legacy shells (Pro renderers) — migrating onto the slot kit below.
@@ -133,7 +134,8 @@ export type { BaseSpecProps, SpecResponse, SpecMetadata, SpecLoadedInfo, Loading
 export { SpecType } from './types/spec-detection.types'
 export type { SpecDetectionResult, ContentFormat } from './types/spec-detection.types'
 export type { ThemeConfig, ThemeTokens, SlotOverrides } from './types/theme.types'
-export type { AuthScheme, AuthSchemeType, OAuth2Flows, OAuth2Flow, OAuthConfig, AppliedAuthValue } from './types/auth.types'
+export type { AuthScheme, AuthSchemeType, OAuth2Flows, OAuth2Flow, OAuthConfig, AppliedAuthValue, AppliedAuthLocation } from './types/auth.types'
+export type { AuthPlacement } from './utils/auth-placement'
 export type { InteractiveAuthProps, InteractiveAuthComponent, InteractiveAuthRegistry } from './types/interactive-auth.types'
 export { OAuth2AuthManual } from './components/Auth/OAuth2AuthManual'
 export { OpenIdConnectManual } from './components/Auth/OpenIdConnectManual'

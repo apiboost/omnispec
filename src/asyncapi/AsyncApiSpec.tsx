@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { css, cx } from '@core/styles/css'
 import type { BaseSpecProps } from '@core/types/common.types'
 import { SpecType } from '@core/types/spec-detection.types'
@@ -17,9 +17,10 @@ import { ConfigProvider } from '@core/context/ConfigContext'
 import { ExpandProvider } from '@core/context/ExpandContext'
 import { resolveSchemaStyle } from '@core/components/SchemaViewer/schema-style'
 import { DocLayout } from '@core/components/Layout/DocLayout'
-import { NavTree } from '@core/components/Navigation/NavTree'
+import { NavTree, findNavLabel } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
+import { isSpecUrl } from '@core/hooks/useSpecFetcher'
 import { useHashScroll, requestExpand } from '@core/hooks/useHashScroll'
 import { SearchBar } from '@core/components/Navigation/SearchBar'
 import { buildSidebar } from '@core/components/Navigation/buildSidebar'
@@ -27,7 +28,9 @@ import { LoadingScreen } from '@core/components/common/LoadingScreen'
 import { ErrorMessage } from '@core/components/common/ErrorMessage'
 import { ErrorBoundary } from '@core/components/common/ErrorBoundary'
 import { SpecStatusScreen } from '@core/components/Layout/SpecStatusScreen'
+import { loadingSlots } from '@core/components/Layout/loadingSlots'
 import { SpecToolbar } from '@core/components/common/SpecToolbar'
+import { Icon } from '@core/components/common/Icon'
 import { resolveDownloadLink } from '@core/utils/resolve-download-link'
 import { useAsyncApiSpec } from './hooks/useAsyncApiSpec'
 import { AsyncOverview } from './components/AsyncOverview'
@@ -52,6 +55,7 @@ export function AsyncApiSpec({
   slots = {},
   schemaStyle,
   pro,
+  externalRefOrigins,
   onSpecLoaded,
   className,
 }: BaseSpecProps) {
@@ -59,7 +63,11 @@ export function AsyncApiSpec({
   // Match OpenApiSpec: `reference` switches to the three-panel layout; anything
   // else (including unset) stays compact single-column.
   const resolvedDisplayMode = displayMode ?? 'compact'
-  const { data: parsedSpec, state } = useAsyncApiSpec(spec)
+  const refOptions = useMemo(() => ({
+    specUrl: isSpecUrl(spec) ? spec : undefined,
+    externalRefOrigins,
+  }), [spec, externalRefOrigins])
+  const { data: parsedSpec, state } = useAsyncApiSpec(spec, refOptions)
   const [searchQuery, setSearchQuery] = useState('')
   const [allExpanded, setAllExpanded] = useState(defaultExpandOperations)
   const [expandGeneration, setExpandGeneration] = useState(0)
@@ -67,10 +75,68 @@ export function AsyncApiSpec({
   // operations as first-class, so an operation-first index is offered as a toggle.
   const [navGrouping, setNavGrouping] = useState<'channel' | 'operation'>('channel')
 
+  // When a tag chip is clicked it drives the same search filter, but we also
+  // track which tag is active so the filter can be shown as a dismissible
+  // indicator and toggled off by re-clicking the active chip.
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
+
   const handleToggleExpand = useCallback(() => {
     setAllExpanded((prev) => !prev)
     setExpandGeneration((prev) => prev + 1)
   }, [])
+
+  // Clicking a tag chip filters to that tag; clicking the already-active tag
+  // toggles the filter back off (so there's always a way to clear it).
+  const handleTagFilter = useCallback((tagName: string) => {
+    setActiveTagFilter((prev) => {
+      const next = prev === tagName ? null : tagName
+      setSearchQuery(next ?? '')
+      writeTagParam(next)
+      return next
+    })
+  }, [])
+
+  // Typing in the filter box is an independent search — it supersedes (and
+  // clears) any active tag filter so the indicator never lies about why the
+  // list is filtered.
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query)
+    setActiveTagFilter(null)
+    writeTagParam(null)
+  }, [])
+
+  const clearTagFilter = useCallback(() => {
+    setActiveTagFilter(null)
+    setSearchQuery('')
+    writeTagParam(null)
+  }, [])
+
+  // The tag names the spec actually declares (document tags + channel/operation
+  // tags). A tag supplied in the URL is only honored if it's one of these, so an
+  // unrelated host-page `?omnispec-tag` value can't trigger a blind search.
+  const availableTags = useMemo(() => {
+    const names = new Set<string>()
+    for (const tag of parsedSpec?.tags ?? []) names.add(tag.name)
+    for (const ch of parsedSpec?.channels ?? []) {
+      for (const tag of ch.tags ?? []) names.add(tag.name)
+      for (const op of ch.operations) for (const t of op.tags ?? []) names.add(t.name)
+    }
+    return names
+  }, [parsedSpec])
+
+  // Apply a tag filter supplied in the URL once the spec has loaded. Done in an
+  // effect (not a useState initializer) so the server and first client render
+  // match — reading the URL during render would hydrate-mismatch on SSR hosts.
+  const didInitFromUrl = useRef(false)
+  useEffect(() => {
+    if (didInitFromUrl.current || !parsedSpec) return
+    didInitFromUrl.current = true
+    const urlTag = readTagParam()
+    if (urlTag && availableTags.has(urlTag)) {
+      setActiveTagFilter(urlTag)
+      setSearchQuery(urlTag)
+    }
+  }, [parsedSpec, availableTags])
 
   useMemo(() => {
     if (parsedSpec && onSpecLoaded) {
@@ -101,7 +167,7 @@ export function AsyncApiSpec({
   // Group channels by tag when any channel is tagged; otherwise keep a flat list.
   const grouped = useMemo(() => hasAnyTags(filteredChannels), [filteredChannels])
   const tagGroups = useMemo(
-    () => (grouped ? groupChannelsByTag(filteredChannels, parsedSpec?.tags) : []),
+    () => (grouped ? groupChannelsByTag(filteredChannels, parsedSpec?.tags, parsedSpec?.tagGroups) : []),
     [grouped, filteredChannels, parsedSpec],
   )
 
@@ -138,9 +204,31 @@ export function AsyncApiSpec({
     return map
   }, [filteredChannels, channelDomId])
 
+  // Resolve a channel name to its card's in-page anchor so a reply can link to
+  // the channel it replies on (the target card expands + scrolls via useHashScroll).
+  const channelHref = useCallback(
+    (channelName: string) => {
+      const domId = channelDomId.get(channelName)
+      return domId ? `#${domId}` : undefined
+    },
+    [channelDomId],
+  )
+
   const hasOperations = useMemo(
     () => filteredChannels.some((ch) => ch.operations.length > 0),
     [filteredChannels],
+  )
+
+  // Operations referencing a channel that isn't defined (including documents
+  // with zero channels) are collected by the parser under a synthetic
+  // "__unassigned__" group. Surface an always-visible notice so they never
+  // disappear silently behind a collapsed card.
+  const unassignedOpCount = useMemo(
+    () =>
+      parsedSpec?.channels
+        .filter((ch) => ch.name === '__unassigned__')
+        .reduce((sum, ch) => sum + ch.operations.length, 0) ?? 0,
+    [parsedSpec],
   )
 
   const navItems: NavItem[] = useMemo(() => {
@@ -257,17 +345,35 @@ export function AsyncApiSpec({
     navigateTo(id)
   }, [navigateTo, opToCard])
 
+  // Navigate to a channel's card by name (reply → channel links). Routes through
+  // navigateTo so it also works when the URL hash already matches the target — a
+  // plain anchor wouldn't fire `hashchange` in that case, leaving a collapsed
+  // card unexpanded.
+  const onChannelNavigate = useCallback((channelName: string) => {
+    const domId = channelDomId.get(channelName)
+    if (domId) navigateTo(domId)
+  }, [channelDomId, navigateTo])
+
   // Highlight the sidebar entry for the channel/section currently in view.
   const navSectionIds = useMemo(() => flattenNavItemIds(navItems), [navItems])
   const activeSection = useScrollSpy(navSectionIds)
 
+  // Loading renders in the same themed layout shell as the error state, so
+  // host theme overrides apply (no default light flash) and the sidebar, its
+  // host slots and the mobile nav bar are in place before the spec arrives.
   if (state.status === 'loading') {
     return (
-      <ThemeProvider theme={theme}>
-        <div className={`omnispec-asyncapi ${className ?? ''}`}>
-          <LoadingScreen />
-        </div>
-      </ThemeProvider>
+      <SpecStatusScreen
+        theme={theme}
+        layout={layout}
+        sidebarPosition={sidebarPosition}
+        slots={loadingSlots(slots)}
+        sidebarNav={sidebarNav}
+        premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
+        className={`omnispec-asyncapi ${className ?? ''}`}
+      >
+        <LoadingScreen />
+      </SpecStatusScreen>
     )
   }
 
@@ -292,9 +398,25 @@ export function AsyncApiSpec({
   const specNav = (
     <>
       <SearchBar
-        placeholder="Filter channels..."
-        onSearch={setSearchQuery}
+        placeholder={navGrouping === 'operation' ? 'Filter operations...' : 'Filter channels...'}
+        onSearch={handleSearch}
+        value={searchQuery}
       />
+      {activeTagFilter && (
+        <div className={activeFilterStyle}>
+          <span className={activeFilterLabelStyle}>Filtered by tag:</span>
+          <span className={activeFilterTagStyle}>{activeTagFilter}</span>
+          <button
+            type="button"
+            className={activeFilterClearStyle}
+            onClick={clearTagFilter}
+            aria-label={`Clear tag filter: ${activeTagFilter}`}
+          >
+            Clear
+            <Icon name="xmark" size="0.75rem" strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
       {hasOperations && (
         <div className={groupToggleStyle} role="group" aria-label="Sidebar grouping">
           <span className={groupToggleLabelStyle}>Group by</span>
@@ -329,6 +451,11 @@ export function AsyncApiSpec({
   )
 
   const sidebar = buildSidebar(sidebarNav, specNav)
+  const breadcrumbs = [
+    ...(slots.breadcrumbs ?? []),
+    parsedSpec.title,
+    findNavLabel(navItems, activeSection),
+  ]
   const resolvedDownloadLink = resolveDownloadLink(downloadLink, spec)
 
   return (
@@ -344,7 +471,9 @@ export function AsyncApiSpec({
                 sidebarHeader={slots.sidebarHeader}
                 sidebarFooter={slots.sidebarFooter}
                 header={slots.header}
+                contentHeader={slots.contentHeader}
                 footer={slots.footer}
+                breadcrumbs={breadcrumbs}
               >
                 <SpecToolbar
                   overview={<AsyncOverview spec={parsedSpec} />}
@@ -362,6 +491,11 @@ export function AsyncApiSpec({
                   <h2 className={css({ margin: '0 0 1rem', fontSize: 'var(--omnispec-h2-font-size)', fontWeight: 'var(--omnispec-h2-font-weight)', color: 'var(--omnispec-h2-color)' })}>
                     Channels
                   </h2>
+                  {unassignedOpCount > 0 && (
+                    <p className={unassignedNoticeStyle} role="alert">
+                      {`Unresolved reference: ${unassignedOpCount} ${unassignedOpCount === 1 ? 'operation references' : 'operations reference'} an undefined channel. ${unassignedOpCount === 1 ? 'It is' : 'They are'} listed under "Unassigned operations" below rather than dropped.`}
+                    </p>
+                  )}
                   {filteredChannels.length === 0 ? (
                     <p className={emptyStateStyle}>
                       {parsedSpec.channels.length === 0
@@ -380,7 +514,10 @@ export function AsyncApiSpec({
                             displayMode={resolvedDisplayMode}
                             expandAll={allExpanded}
                             expandGeneration={expandGeneration}
-                            onTagClick={setSearchQuery}
+                            onTagClick={handleTagFilter}
+                            activeTag={activeTagFilter}
+                            channelHref={channelHref}
+                            onChannelNavigate={onChannelNavigate}
                           />
                         ))}
                       </section>
@@ -394,7 +531,10 @@ export function AsyncApiSpec({
                         displayMode={resolvedDisplayMode}
                         expandAll={allExpanded}
                         expandGeneration={expandGeneration}
-                        onTagClick={setSearchQuery}
+                        onTagClick={handleTagFilter}
+                        activeTag={activeTagFilter}
+                        channelHref={channelHref}
+                        onChannelNavigate={onChannelNavigate}
                       />
                     ))
                   )}
@@ -426,6 +566,9 @@ function ChannelCard({
   expandAll,
   expandGeneration,
   onTagClick,
+  activeTag,
+  channelHref,
+  onChannelNavigate,
 }: {
   channel: ParsedAsyncApiSpec['channels'][number]
   id: string
@@ -433,6 +576,9 @@ function ChannelCard({
   expandAll: boolean
   expandGeneration: number
   onTagClick: (tagName: string) => void
+  activeTag: string | null
+  channelHref: (channelName: string) => string | undefined
+  onChannelNavigate: (channelName: string) => void
 }) {
   const Renderer = displayMode === 'reference' ? ChannelReferenceDetail : ChannelDetail
   return (
@@ -442,7 +588,36 @@ function ChannelCard({
       expandAll={expandAll}
       expandGeneration={expandGeneration}
       onTagClick={onTagClick}
+      activeTag={activeTag}
+      channelHref={channelHref}
+      onChannelNavigate={onChannelNavigate}
     />
+  )
+}
+
+// The tag filter is mirrored to a namespaced query param so it can be shared or
+// bookmarked without colliding with a host page's own `?tag=` (common in Drupal
+// and other CMS hosts).
+const TAG_PARAM = 'omnispec-tag'
+
+/** Read the active-tag filter from the URL query string, SSR-safe. */
+function readTagParam(): string | null {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get(TAG_PARAM)
+}
+
+/** Write (or, when `tag` is null, remove) the tag filter in the URL, SSR-safe. */
+function writeTagParam(tag: string | null): void {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  if (params.get(TAG_PARAM) === (tag ?? null)) return
+  if (tag) params.set(TAG_PARAM, tag)
+  else params.delete(TAG_PARAM)
+  const query = params.toString()
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
   )
 }
 
@@ -485,6 +660,18 @@ const emptyStateStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
   fontStyle: 'italic',
+})
+
+const unassignedNoticeStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  padding: '0.625rem 0.875rem',
+  marginBottom: '1rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+  backgroundColor: 'color-mix(in srgb, var(--omnispec-color-warning) 12%, transparent)',
+  color: 'var(--omnispec-color-warning)',
+  fontSize: 'var(--omnispec-font-size-sm)',
 })
 
 const noResultsNavStyle = css({
@@ -535,4 +722,52 @@ const groupToggleActiveStyle = css({
 
 const tagSectionStyle = css({
   marginBottom: '2rem',
+})
+
+// Active tag-filter indicator, shown under the filter box so there's always a
+// visible sign that (and why) the list is filtered, plus a way to clear it.
+const activeFilterStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '0.375rem',
+  padding: '0 0.75rem 0.5rem',
+})
+
+const activeFilterLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const activeFilterTagStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 500,
+  color: 'var(--omnispec-fg-primary)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '0.125rem 0.5rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+})
+
+const activeFilterClearStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.1875rem',
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  marginLeft: 'auto',
+  padding: '0.125rem 0.25rem',
+  borderRadius: 'var(--omnispec-border-radius)',
+  fontSize: 'var(--omnispec-font-size-xxs)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--omnispec-color-primary)',
+  '&:hover': {
+    backgroundColor: 'var(--omnispec-bg-tertiary)',
+  },
 })

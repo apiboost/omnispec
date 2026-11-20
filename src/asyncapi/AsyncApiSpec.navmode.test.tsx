@@ -30,7 +30,7 @@ const spec = {
 describe('AsyncApiSpec sidebar grouping mode', () => {
   it('defaults to grouping by channel and can switch to grouping by operation', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} />)
-    const nav = await screen.findByRole('navigation')
+    const nav = await screen.findByRole('navigation', { name: 'API navigation' })
 
     // Default: channel addresses in the sidebar, operationIds not.
     expect(within(nav).getByText('user/signup')).toBeInTheDocument()
@@ -45,12 +45,26 @@ describe('AsyncApiSpec sidebar grouping mode', () => {
 
   it('operation-mode nav items point at real DOM anchors, not dead ids (finding 2)', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} defaultExpandOperations />)
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     fireEvent.click(screen.getByRole('button', { name: /group by operation/i }))
 
     // The operation block carries the same id the operation nav item targets, so
     // scroll-spy can resolve it (the old synthetic `op::` ids matched nothing).
     expect(document.getElementById('channel-user/signup-op-0')).not.toBeNull()
     expect(document.getElementById('channel-order/placed-op-0')).not.toBeNull()
+  })
+})
+
+describe('AsyncApiSpec host chrome', () => {
+  it('renders the host contentHeader slot (e.g. the portal breadcrumbs)', async () => {
+    render(
+      <AsyncApiSpec
+        spec={spec}
+        theme={{ base: 'light' }}
+        slots={{ contentHeader: <div>host content header</div> }}
+      />,
+    )
+    await screen.findByRole('navigation', { name: 'API navigation' })
+    expect(screen.getByText('host content header')).toBeInTheDocument()
   })
 })

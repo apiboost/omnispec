@@ -42,7 +42,7 @@ In a world clawing for data, the tooling that helps a developer community succee
 |---|---|
 | OpenAPI 2.0 / 3.0 / 3.1, AsyncAPI 2.x / 3.x | + GraphQL (SDL + introspection), SOAP/WSDL, gRPC / Protobuf |
 | Try-It (direct + proxied), 6-language code samples | Inherited from Free |
-| `theme.base` + raw `--omnispec-*` CSS white-labeling | + structured `theme.overrides` across 70+ tokens |
+| `theme.base` + raw `--omnispec-*` CSS white-labeling | + structured `theme.overrides` across 80+ tokens |
 | OAuth2 with manual token paste | + interactive OAuth "Get Token" (Authorization Code + PKCE), OpenID Connect |
 
 The upgrade is a package swap — nothing you build on Free is thrown away. See [Free vs Pro](./free-vs-pro.md) for the full comparison.

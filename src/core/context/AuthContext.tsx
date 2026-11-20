@@ -12,6 +12,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react'
 import type { AppliedAuthValue, AuthScheme } from '../types/auth.types'
 import { useConfig } from './ConfigContext'
+import { resolveAuthPlacement } from '../utils/auth-placement'
+import type { AuthPlacement } from '../utils/auth-placement'
 
 /**
  * Applied credentials persist to localStorage — but only when the integrator
@@ -97,7 +99,19 @@ interface AuthContextValue {
   applyAuth: (value: AppliedAuthValue) => void
   removeAuth: (schemeId: string) => void
   clearAuth: () => void
+  /**
+   * Every applied credential flattened into `{ name: value }` headers,
+   * regardless of the scheme's `in`.
+   *
+   * @deprecated Ignores apiKey `in: query` / `in: cookie` placement. Use
+   * {@link AuthContextValue.getAuthPlacement} to build requests.
+   */
   getAuthHeaders: () => Record<string, string>
+  /**
+   * Applied credentials split by wire placement (headers, query parameters,
+   * cookies), honoring each apiKey scheme's `in`.
+   */
+  getAuthPlacement: () => AuthPlacement
   /** Security schemes available to the Authorize panel. */
   schemes: AuthScheme[]
   /** Whether any security schemes exist (drives the Authorize button). */
@@ -114,6 +128,7 @@ const AuthContext = createContext<AuthContextValue>({
   removeAuth: () => {},
   clearAuth: () => {},
   getAuthHeaders: () => ({}),
+  getAuthPlacement: () => ({ headers: {}, queryParams: {}, cookies: {} }),
   schemes: [],
   hasAuth: false,
   authPanelOpen: false,
@@ -170,6 +185,11 @@ export function AuthProvider({ children, schemes = [] }: AuthProviderProps) {
     return headers
   }, [appliedAuth])
 
+  const getAuthPlacement = useCallback(
+    (): AuthPlacement => resolveAuthPlacement(appliedAuth.values(), schemes),
+    [appliedAuth, schemes],
+  )
+
   const openAuthPanel = useCallback(() => setAuthPanelOpen(true), [])
   const closeAuthPanel = useCallback(() => setAuthPanelOpen(false), [])
 
@@ -179,12 +199,13 @@ export function AuthProvider({ children, schemes = [] }: AuthProviderProps) {
     removeAuth,
     clearAuth,
     getAuthHeaders,
+    getAuthPlacement,
     schemes,
     hasAuth: schemes.length > 0,
     authPanelOpen,
     openAuthPanel,
     closeAuthPanel,
-  }), [appliedAuth, applyAuth, removeAuth, clearAuth, getAuthHeaders, schemes, authPanelOpen, openAuthPanel, closeAuthPanel])
+  }), [appliedAuth, applyAuth, removeAuth, clearAuth, getAuthHeaders, getAuthPlacement, schemes, authPanelOpen, openAuthPanel, closeAuthPanel])
 
   return (
     <AuthContext.Provider value={value}>

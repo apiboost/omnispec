@@ -15,25 +15,26 @@ import { BindingsSection } from './BindingsSection'
 afterEach(cleanup)
 
 describe('BindingsSection', () => {
-  it('renders known protocol binding fields with humanized labels and values', () => {
+  it('renders known protocol binding fields with verbatim labels and values', () => {
     render(
       <BindingsSection
         bindings={{ kafka: { topic: 'orders', partitions: 3, bindingVersion: '0.4.0' } }}
       />,
     )
     expect(screen.getByText('KAFKA')).toBeInTheDocument()
-    expect(screen.getByText('Topic')).toBeInTheDocument()
+    // Binding keys are shown verbatim (as written in the spec).
+    expect(screen.getByText('topic')).toBeInTheDocument()
     expect(screen.getByText('orders')).toBeInTheDocument()
-    expect(screen.getByText('Partitions')).toBeInTheDocument()
+    expect(screen.getByText('partitions')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
     // Housekeeping keys are not shown as data rows.
-    expect(screen.queryByText('Binding Version')).toBeNull()
+    expect(screen.queryByText('bindingVersion')).toBeNull()
   })
 
   it('renders an unknown protocol gracefully instead of crashing', () => {
     render(<BindingsSection bindings={{ myproto: { customField: 'value-x' } }} />)
     expect(screen.getByText('MYPROTO')).toBeInTheDocument()
-    expect(screen.getByText('Custom Field')).toBeInTheDocument()
+    expect(screen.getByText('customField')).toBeInTheDocument()
     expect(screen.getByText('value-x')).toBeInTheDocument()
   })
 
@@ -68,8 +69,8 @@ describe('BindingsSection', () => {
         }}
       />,
     )
-    expect(screen.getByText('Topic Configuration')).toBeInTheDocument()
-    expect(screen.getByText('Cleanup Policy')).toBeInTheDocument()
+    expect(screen.getByText('topicConfiguration')).toBeInTheDocument()
+    expect(screen.getByText('cleanupPolicy')).toBeInTheDocument()
     expect(screen.getByText('delete')).toBeInTheDocument()
     expect(screen.queryByText(/\{"cleanupPolicy"/)).toBeNull()
   })
@@ -90,7 +91,7 @@ describe('BindingsSection', () => {
         }}
       />,
     )
-    expect(screen.getByText('Query')).toBeInTheDocument()
+    expect(screen.getByText('query')).toBeInTheDocument()
     expect(screen.getByText('token')).toBeInTheDocument()
     expect(screen.getByText('Auth token')).toBeInTheDocument()
   })
@@ -111,5 +112,60 @@ describe('BindingsSection', () => {
     )
     expect(screen.getByText('x-subprotocol')).toBeInTheDocument()
     expect(screen.queryByText('X subprotocol')).toBeNull()
+  })
+
+  it('shows binding field keys verbatim — acronyms and casing are not mangled', () => {
+    render(
+      <BindingsSection
+        bindings={{
+          kafka: {
+            clientId: 'orders-service',
+            schemaRegistryUrl: 'https://registry.example.com',
+          },
+        }}
+      />,
+    )
+    // Verbatim keys — not "Client Id" / "Schema Registry Url".
+    expect(screen.getByText('clientId')).toBeInTheDocument()
+    expect(screen.getByText('schemaRegistryUrl')).toBeInTheDocument()
+    expect(screen.queryByText('Client Id')).toBeNull()
+    expect(screen.queryByText('Schema Registry Url')).toBeNull()
+  })
+
+  it('shows nested topicConfiguration keys verbatim (dotted keys unchanged)', () => {
+    render(
+      <BindingsSection
+        bindings={{
+          kafka: {
+            topicConfiguration: {
+              'cleanup.policy': 'delete',
+              'retention.ms': 604800000,
+            },
+          },
+        }}
+      />,
+    )
+    // Parent and nested keys verbatim — not "Cleanup.policy" / "Retention.ms".
+    expect(screen.getByText('topicConfiguration')).toBeInTheDocument()
+    expect(screen.getByText('cleanup.policy')).toBeInTheDocument()
+    expect(screen.getByText('retention.ms')).toBeInTheDocument()
+    expect(screen.queryByText('Cleanup.policy')).toBeNull()
+    expect(screen.queryByText('Retention.ms')).toBeNull()
+  })
+
+  it('shows a single fixed/allowed value as just that value, not "type + Allowed: [value]"', () => {
+    render(
+      <BindingsSection
+        bindings={{
+          kafka: {
+            groupId: { type: 'string', enum: ['orders-consumer'] },
+          },
+        }}
+      />,
+    )
+    // The single allowed value is shown directly.
+    expect(screen.getByText('orders-consumer')).toBeInTheDocument()
+    // No "Allowed:" affordance for a single fixed value.
+    expect(screen.queryByText(/allowed/i)).toBeNull()
   })
 })

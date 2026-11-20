@@ -40,14 +40,18 @@ export function ComponentsSection({ components }: ComponentsSectionProps) {
                   {message.title && <p className={messageSummaryStyle}>{message.title}</p>}
                   {message.summary && <p className={messageSummaryStyle}>{message.summary}</p>}
                   {message.contentType && (
-                    <code className={contentTypeStyle}>
-                      {message.contentType}
-                      {message.contentTypeInherited && (
-                        <span className={contentTypeHintStyle}> (default)</span>
-                      )}
-                    </code>
+                    <code className={contentTypeStyle}>{message.contentType}</code>
                   )}
                   <MessagePayload message={message} idx={`message-${name}`} />
+                  {message.correlationId && (
+                    <div className={correlationIdStyle}>
+                      <span className={correlationIdLabelStyle}>correlationId</span>
+                      <code className={correlationIdLocationStyle}>{message.correlationId.location}</code>
+                      {message.correlationId.description && (
+                        <span className={correlationIdDescStyle}>{message.correlationId.description}</span>
+                      )}
+                    </div>
+                  )}
                   {message.headers && (
                     <div className={headersWrapStyle}>
                       <h4 className={headersTitleStyle}>Headers</h4>
@@ -136,9 +140,33 @@ const contentTypeStyle = css({
   marginBottom: '0.5rem',
 })
 
-const contentTypeHintStyle = css({
-  fontStyle: 'italic',
-  color: 'var(--omnispec-fg-muted)',
+const correlationIdStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  flexWrap: 'wrap',
+  marginTop: '0.75rem',
+})
+
+const correlationIdLabelStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  fontWeight: 700,
+  color: 'var(--omnispec-fg-primary)',
+  fontFamily: 'var(--omnispec-font-mono)',
+})
+
+const correlationIdLocationStyle = css({
+  fontFamily: 'var(--omnispec-font-mono)',
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-code)',
+  backgroundColor: 'var(--omnispec-bg-tertiary)',
+  padding: '1px 0.375rem',
+  borderRadius: '0.1875rem',
+})
+
+const correlationIdDescStyle = css({
+  fontSize: 'var(--omnispec-font-size-xs)',
+  color: 'var(--omnispec-fg-secondary)',
 })
 
 const headersWrapStyle = css({

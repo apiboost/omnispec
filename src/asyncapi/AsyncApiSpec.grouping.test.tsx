@@ -46,7 +46,7 @@ describe('AsyncApiSpec tag grouping', () => {
   it('groups channels by tag in the sidebar with an Untagged bucket', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} />)
 
-    const nav = await screen.findByRole('navigation')
+    const nav = await screen.findByRole('navigation', { name: 'API navigation' })
     // Tag group nodes exist in the sidebar...
     expect(within(nav).getByText('orders')).toBeInTheDocument()
     expect(within(nav).getByText('alerts')).toBeInTheDocument()
@@ -71,7 +71,7 @@ describe('AsyncApiSpec tag grouping', () => {
       'x-tagGroups': [{ name: 'Commerce', tags: ['orders'] }],
     }
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} />)
-    const nav = await screen.findByRole('navigation')
+    const nav = await screen.findByRole('navigation', { name: 'API navigation' })
     // The x-tagGroup parent node appears, wrapping the tag group.
     expect(within(nav).getByText('Commerce')).toBeInTheDocument()
     expect(within(nav).getByText('orders')).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('AsyncApiSpec tag grouping', () => {
   it('filters the sidebar, not just the main content', async () => {
     render(<AsyncApiSpec spec={taggedSpec} theme={{ base: 'light' }} />)
 
-    const nav = await screen.findByRole('navigation')
+    const nav = await screen.findByRole('navigation', { name: 'API navigation' })
     const filter = screen.getByPlaceholderText(/filter channels/i)
     fireEvent.change(filter, { target: { value: 'heartbeat' } })
 

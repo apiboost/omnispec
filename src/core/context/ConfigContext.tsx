@@ -14,6 +14,7 @@ import type { SlotOverrides } from '../types/theme.types'
 import type { BaseSpecProps } from '../types/common.types'
 import type { OAuthConfig } from '../types/auth.types'
 import type { InteractiveAuthRegistry } from '../types/interactive-auth.types'
+import type { TryItRequest, TryItResponse } from '../types/try-it.types'
 import type { SchemaStyle } from '../components/SchemaViewer/schema-style'
 import { DEFAULT_SCHEMA_STYLE } from '../components/SchemaViewer/schema-style'
 
@@ -48,6 +49,10 @@ export interface ConfigContextValue {
   specKey?: string
   /** Max age in seconds for persisted Try-It inputs; 0 disables persistence; undefined = no expiry. */
   tryItPersistTtl?: number
+  /** Renderer-level `onTryItRequest` — fired by every Try-It panel just before a request is sent. */
+  onTryItRequest?: (request: TryItRequest) => void
+  /** Renderer-level `onTryItResponse` — fired by every Try-It panel when a response is received. */
+  onTryItResponse?: (response: TryItResponse) => void
 }
 
 const defaultConfig: ConfigContextValue = {

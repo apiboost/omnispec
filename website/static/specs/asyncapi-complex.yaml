@@ -1,0 +1,514 @@
+asyncapi: 3.0.0
+info:
+  title: IoT Sensor Network
+  version: 3.0.0
+  description: |
+    Real-time sensor telemetry, alerting, and device command channels
+    for a distributed fleet of environmental sensors.
+
+    ## Supported Sensor Types
+    - **Temperature** — ambient and surface (Celsius)
+    - **Humidity** — relative humidity percentage
+    - **Pressure** — barometric pressure (hPa)
+    - **Air Quality** — PM2.5, CO2, VOC index
+  contact:
+    name: IoT Platform Team
+    email: iot-support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://iot.example.com/terms
+
+externalDocs:
+  description: Platform documentation and onboarding guide.
+  url: https://iot.example.com/docs/getting-started
+
+tags:
+  - name: sensors
+    description: Sensor data ingestion channels.
+    x-displayName: Sensor Readings
+  - name: alerts
+    description: Threshold-based alert notifications.
+    x-displayName: Alert System
+  - name: commands
+    description: Remote commands sent to devices.
+    x-displayName: Device Commands
+  - name: telemetry
+    description: Device health metrics.
+    x-displayName: Telemetry
+
+servers:
+  mqttPrimary:
+    host: mqtt.iot.example.com
+    pathname: /v3
+    protocol: mqtt
+    protocolVersion: '5.0'
+    description: Primary MQTT broker.
+    variables:
+      region:
+        default: us-east-1
+        description: Deployment region.
+        enum:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+  websocketDashboard:
+    host: ws.iot.example.com
+    pathname: /stream
+    protocol: ws
+    description: WebSocket endpoint for dashboards.
+
+channels:
+  sensorReadings:
+    address: sensors/{sensorId}/readings
+    description: Raw sensor readings published by devices.
+    parameters:
+      sensorId:
+        description: Unique sensor device identifier.
+    bindings:
+      mqtt:
+        qos: 1
+        retain: false
+    messages:
+      sensorReading:
+        $ref: '#/components/messages/SensorReading'
+
+  alerts:
+    address: alerts/{severity}
+    description: Alert notifications when readings exceed thresholds.
+    parameters:
+      severity:
+        description: Alert severity level.
+    messages:
+      alert:
+        $ref: '#/components/messages/AlertNotification'
+
+  deviceCommands:
+    address: devices/{deviceId}/commands
+    description: Remote commands dispatched to devices.
+    parameters:
+      deviceId:
+        description: Target device identifier.
+    bindings:
+      mqtt:
+        qos: 2
+        retain: true
+    messages:
+      command:
+        $ref: '#/components/messages/DeviceCommand'
+
+  telemetryAggregated:
+    address: telemetry/aggregated
+    description: Aggregated telemetry for dashboard consumption.
+    messages:
+      telemetry:
+        $ref: '#/components/messages/AggregatedTelemetry'
+
+  deviceHealth:
+    address: devices/{deviceId}/health
+    description: Periodic device health reports.
+    parameters:
+      deviceId:
+        description: The reporting device identifier.
+    messages:
+      health:
+        $ref: '#/components/messages/DeviceHealthReport'
+
+  deviceProvisioning:
+    address: admin/devices/provisioning
+    description: Internal channel for device provisioning events.
+    x-internal: true
+    messages:
+      provisioning:
+        $ref: '#/components/messages/ProvisioningEvent'
+
+operations:
+  publishSensorReading:
+    action: send
+    channel:
+      $ref: '#/channels/sensorReadings'
+    summary: Publish a sensor reading.
+    tags:
+      - name: sensors
+
+  receiveAlert:
+    action: receive
+    channel:
+      $ref: '#/channels/alerts'
+    summary: Receive alert notifications.
+    tags:
+      - name: alerts
+    x-badges:
+      - name: High Volume
+        color: orange
+
+  sendDeviceCommand:
+    action: send
+    channel:
+      $ref: '#/channels/deviceCommands'
+    summary: Send a command to a device.
+    tags:
+      - name: commands
+    x-badges:
+      - name: Requires Admin
+        color: red
+
+  receiveTelemetry:
+    action: receive
+    channel:
+      $ref: '#/channels/telemetryAggregated'
+    summary: Receive aggregated telemetry.
+    tags:
+      - name: telemetry
+
+  receiveDeviceHealth:
+    action: receive
+    channel:
+      $ref: '#/channels/deviceHealth'
+    summary: Receive device health reports.
+    tags:
+      - name: telemetry
+    x-badges:
+      - name: New
+        color: green
+
+  publishProvisioningEvent:
+    action: send
+    channel:
+      $ref: '#/channels/deviceProvisioning'
+    summary: Publish a device provisioning event.
+    tags:
+      - name: commands
+
+components:
+  messages:
+    SensorReading:
+      name: sensorReading
+      title: Sensor Reading
+      summary: A single reading from a sensor device.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SensorReadingPayload'
+      headers:
+        type: object
+        properties:
+          x-device-firmware:
+            type: string
+          x-reading-quality:
+            type: string
+            enum:
+              - verified
+              - estimated
+              - degraded
+      correlationId:
+        description: Reading batch correlation for deduplication.
+        location: $message.header#/x-correlation-id
+      examples:
+        - name: Temperature reading
+          headers:
+            x-device-firmware: 2.4.1
+            x-reading-quality: verified
+          payload:
+            sensorId: sensor-0042
+            type: temperature
+            reading:
+              value: 23.5
+              unit: celsius
+            timestamp: '2026-06-10T14:30:00Z'
+
+    AlertNotification:
+      name: alertNotification
+      title: Alert Notification
+      summary: A threshold alert triggered by a sensor reading.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AlertPayload'
+
+    DeviceCommand:
+      name: deviceCommand
+      title: Device Command
+      summary: A remote command dispatched to a device.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceCommandPayload'
+
+    AggregatedTelemetry:
+      name: aggregatedTelemetry
+      title: Aggregated Telemetry
+      summary: Pre-aggregated telemetry for dashboards.
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - windowStart
+          - windowEnd
+          - metrics
+        properties:
+          windowStart:
+            type: string
+            format: date-time
+          windowEnd:
+            type: string
+            format: date-time
+          metrics:
+            type: array
+            items:
+              type: object
+              required:
+                - sensorId
+                - type
+                - avg
+              properties:
+                sensorId:
+                  type: string
+                type:
+                  type: string
+                min:
+                  type: number
+                max:
+                  type: number
+                avg:
+                  type: number
+          totalDevicesReporting:
+            type: integer
+            minimum: 0
+
+    DeviceHealthReport:
+      name: deviceHealthReport
+      title: Device Health Report
+      summary: Periodic health and status from a device.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceHealthPayload'
+
+    ProvisioningEvent:
+      name: provisioningEvent
+      title: Provisioning Event
+      summary: Device provisioning or decommissioning event.
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - deviceId
+          - action
+          - timestamp
+        properties:
+          deviceId:
+            type: string
+          action:
+            type: string
+            enum:
+              - provisioned
+              - decommissioned
+              - suspended
+          timestamp:
+            type: string
+            format: date-time
+
+  schemas:
+    SensorReadingPayload:
+      type: object
+      required:
+        - sensorId
+        - type
+        - reading
+        - timestamp
+      properties:
+        sensorId:
+          type: string
+        type:
+          type: string
+        reading:
+          oneOf:
+            - title: TemperatureReading
+              type: object
+              required:
+                - value
+                - unit
+              properties:
+                value:
+                  type: number
+                  format: double
+                unit:
+                  type: string
+                  enum:
+                    - celsius
+                    - fahrenheit
+            - title: HumidityReading
+              type: object
+              required:
+                - value
+              properties:
+                value:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+            - title: PressureReading
+              type: object
+              required:
+                - value
+                - unit
+              properties:
+                value:
+                  type: number
+                  format: double
+                unit:
+                  type: string
+                  enum:
+                    - hPa
+                    - mbar
+            - title: AirQualityReading
+              type: object
+              required:
+                - aqi
+              properties:
+                aqi:
+                  type: integer
+                  minimum: 0
+                  maximum: 500
+                pm25:
+                  type: number
+                  minimum: 0
+                co2:
+                  type: integer
+                  minimum: 0
+                vocIndex:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+        timestamp:
+          type: string
+          format: date-time
+        location:
+          type: object
+          required:
+            - latitude
+            - longitude
+          properties:
+            latitude:
+              type: number
+              minimum: -90
+              maximum: 90
+            longitude:
+              type: number
+              minimum: -180
+              maximum: 180
+            altitude:
+              type: number
+
+    AlertPayload:
+      type: object
+      required:
+        - alertId
+        - severity
+        - sensorId
+        - rule
+        - message
+        - triggeredAt
+      properties:
+        alertId:
+          type: string
+        severity:
+          type: string
+          enum:
+            - info
+            - warning
+            - critical
+        sensorId:
+          type: string
+        rule:
+          type: object
+          required:
+            - metric
+            - operator
+            - threshold
+          properties:
+            metric:
+              type: string
+            operator:
+              type: string
+              enum:
+                - gt
+                - lt
+                - eq
+            threshold:
+              type: number
+        message:
+          type: string
+        triggeredAt:
+          type: string
+          format: date-time
+        acknowledged:
+          type: boolean
+          default: false
+
+    DeviceCommandPayload:
+      type: object
+      required:
+        - commandId
+        - action
+        - issuedAt
+      properties:
+        commandId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+            - reboot
+            - recalibrate
+            - update_config
+            - factory_reset
+            - enter_maintenance
+        parameters:
+          type: object
+          properties:
+            configKey:
+              type: string
+            configValue:
+              type: string
+        issuedBy:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+
+    DeviceHealthPayload:
+      type: object
+      required:
+        - deviceId
+        - status
+        - reportedAt
+      properties:
+        deviceId:
+          type: string
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - offline
+            - maintenance
+        battery:
+          type: object
+          properties:
+            level:
+              type: integer
+              minimum: 0
+              maximum: 100
+            charging:
+              type: boolean
+        connectivity:
+          type: object
+          properties:
+            protocol:
+              type: string
+              enum:
+                - mqtt
+                - ws
+                - lora
+            signalStrength:
+              type: integer
+        reportedAt:
+          type: string
+          format: date-time

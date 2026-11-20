@@ -141,6 +141,10 @@ in the **free** core.
 Using the open-source core never requires Pro. See [LICENSING.md](./LICENSING.md)
 and [apiboost.com/omnispec](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=readme&utm_campaign=pro).
 
+## Building a full developer portal?
+
+OmniSpec is the API reference renderer inside the [Apiboost developer portal](https://www.apiboost.com/?utm_source=omnispec&utm_medium=readme&utm_campaign=portal), which adds the rest of a portal around it: API catalog, developer apps and credentials, SSO and analytics, on Apigee and Azure API Management. Moving off an Apigee Drupal portal? Apiboost imports your existing developers, apps and keys.
+
 ## Development
 
 Requires Node.js (see [`.nvmrc`](./.nvmrc)) and pnpm.

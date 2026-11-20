@@ -11,18 +11,25 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useScrollSpy, flattenNavItemIds } from '@core/hooks/useScrollSpy'
 
 // A controllable IntersectionObserver mock — captures the callback so the test
 // can drive intersection changes.
 let ioCallback: IntersectionObserverCallback
+let ioOptions: IntersectionObserverInit | undefined
+const observedNodes = new Set<Element>()
 class MockIntersectionObserver {
-  constructor(cb: IntersectionObserverCallback) {
+  constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
     ioCallback = cb
+    ioOptions = options
   }
-  observe() {}
-  unobserve() {}
+  observe(el: Element) {
+    observedNodes.add(el)
+  }
+  unobserve(el: Element) {
+    observedNodes.delete(el)
+  }
   disconnect() {}
   takeRecords() {
     return []
@@ -35,6 +42,7 @@ function entry(id: string, isIntersecting: boolean) {
 
 afterEach(() => {
   document.body.innerHTML = ''
+  observedNodes.clear()
 })
 
 describe('flattenNavItemIds', () => {
@@ -71,5 +79,49 @@ describe('useScrollSpy', () => {
     // op-a leaves → falls back to op-b.
     act(() => ioCallback([entry('op-a', false)], {} as IntersectionObserver))
     expect(result.current).toBe('op-b')
+  })
+})
+
+describe('useScrollSpy element replacement', () => {
+  it('re-observes a section whose element is replaced after mount', async () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    const original = document.createElement('div')
+    original.id = 'op-a'
+    document.body.appendChild(original)
+
+    renderHook(() => useScrollSpy(['op-a']))
+    expect(observedNodes.has(original)).toBe(true)
+
+    // A parent re-mounts the content: same id, new node.
+    const replacement = document.createElement('div')
+    replacement.id = 'op-a'
+    original.replaceWith(replacement)
+
+    await waitFor(() => expect(observedNodes.has(replacement)).toBe(true))
+    expect(observedNodes.has(original)).toBe(false)
+  })
+
+  it('starts the default band below the sticky mobile nav bar', async () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    const bar = document.createElement('div')
+    bar.className = 'omnispec-mobile-nav'
+    bar.style.top = '69px'
+    Object.defineProperty(bar, 'offsetHeight', { value: 48 })
+    document.body.appendChild(bar)
+    const section = document.createElement('div')
+    section.id = 'op-a'
+    document.body.appendChild(section)
+    window.innerHeight = 700
+
+    renderHook(() => useScrollSpy(['op-a']))
+
+    // Inset 69 + 48 = 117px; the band is the top 20% of the remaining 583px.
+    await waitFor(() => expect(ioOptions?.rootMargin).toBe('-117px 0px -466px 0px'))
+  })
+
+  it('uses an explicit rootMargin as given', () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    renderHook(() => useScrollSpy(['op-a'], '0px 0px -50% 0px'))
+    expect(ioOptions?.rootMargin).toBe('0px 0px -50% 0px')
   })
 })

@@ -58,6 +58,7 @@ const sidebars: SidebarsConfig = {
       label: 'Reference',
       items: [
         'api-reference',
+        'asyncapi',
         'vendor-extensions',
         'external-refs',
         'migration',

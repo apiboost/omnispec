@@ -302,6 +302,9 @@ Override the referenced tokens (`--omnispec-color-primary`, `--omnispec-input-*`
 | Token | Default | Description |
 |-------|---------|-------------|
 | `--omnispec-offset-top` | `0px` | Global offset for sticky elements (sidebar, Try-It panel). Set this to the height of your external sticky header so the renderer clears it. |
+| `--omnispec-offset-top-transition` | `0s` | Duration and easing (e.g. `200ms ease`) for changes to the mobile nav bar's offset. Set it to match a hide-on-scroll header so the bar moves with it; a negative offset slides the bar out of view. |
+| `--omnispec-mobile-nav-top` | `--omnispec-offset-top` | Where the mobile nav bar sticks. A host whose header hides on scroll can keep this at the header's height and move the bar with `--omnispec-mobile-nav-transform` instead, so both animate as transforms and stay joined. |
+| `--omnispec-mobile-nav-transform` | `none` | Transform for the mobile nav bar, e.g. `translateY(-60px)` to move it up with a header that hides on scroll, animated with `--omnispec-offset-top-transition`. Keep it `none` at rest: any transform (even an identity one) makes the bar the containing block of its navigation panel. |
 
 This is a **CSS-only variable** — it is not part of the `theme.overrides` system. Set it via a CSS rule targeting `.omnispec-root`:
 
@@ -315,6 +318,7 @@ This single variable adjusts:
 - **Sidebar** — sticks below the nav, height subtracts the offset
 - **Try-It panel** — sticky position accounts for the offset
 - **Expand/collapse button** — clears the nav
+- **Mobile navigation bar** — sticks directly below the offset
 
 ### Buttons
 

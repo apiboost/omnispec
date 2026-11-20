@@ -131,7 +131,7 @@ result.
 
 :::
 
-See [Theming Guide](./theming.md) for all 70+ available design tokens.
+See [Theming Guide](./theming.md) for all 80+ available design tokens.
 
 ---
 

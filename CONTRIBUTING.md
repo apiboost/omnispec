@@ -97,6 +97,13 @@ git commit -s -m "fix(openapi): handle missing servers array"
 Pull requests whose commits are not signed off cannot be merged. If you forget,
 you can amend or rebase to add the sign-off before your PR is merged.
 
+This repo also ships a `pre-push` git hook (installed by `pnpm install` via
+husky) that blocks a push when any branch commit is missing a sign-off, so you
+catch it locally instead of in CI. A common cause is GitHub's **"Update branch"**
+button, which creates an unsigned merge commit — bring the base into your branch
+with `git rebase origin/<base>` instead. If you ever need to bypass the hook, push
+with `git push --no-verify` (the DCO check still runs in CI).
+
 ## AI-assisted contributions
 
 We welcome contributions created with the help of AI coding tools (e.g., code
@@ -144,6 +151,25 @@ template has a field for it) so it is visible in review.
 Disclosure is about transparency, not disapproval — it will not, by itself,
 cause a contribution to be rejected. Failing to review AI-generated code, or
 submitting code you do not have the right to contribute, will.
+
+## Automated AI review
+
+Maintainers may request an **advisory AI review** of a pull request by applying the `ai-review` label.
+It is advisory only: it posts comments and never approves or blocks a pull request. It doesn't replace
+human review or the required DCO check.
+
+The review covers two things:
+
+- **The code change.** Security, licensing, coding standards, architecture and documentation, posted as
+  inline comments.
+- **Contribution compliance.** It checks the pull request against this guide and the pull request
+  template, and posts a checklist in a summary comment:
+  - DCO sign-off and Conventional Commits. The workflow verifies these directly, not the AI.
+  - Whether the template is filled in, and whether tests and docs were updated.
+  - Whether your `Assisted-by` disclosure is consistent between the commits and the pull request.
+
+The label is removed when the review starts. After you push new commits, a maintainer can re-apply it to
+review the latest changes.
 
 ## Licensing of your contributions
 

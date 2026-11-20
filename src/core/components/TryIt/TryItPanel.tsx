@@ -51,7 +51,9 @@ interface TryItPanelProps {
    * `docked={false}` to disable the sticky/maxHeight/overflow behavior.
    */
   docked?: boolean
+  /** Fired just before a request is sent. Defaults to the renderer-level `onTryItRequest`. */
   onRequest?: (request: TryItRequest) => void
+  /** Fired when a response is received. Defaults to the renderer-level `onTryItResponse`. */
   onResponse?: (response: TryItResponse) => void
 }
 
@@ -70,8 +72,13 @@ export function TryItPanel({
   onRequest,
   onResponse,
 }: TryItPanelProps) {
-  const { allowTryIt, proxyUrl, proxyHeaders, specKey, tryItPersistTtl } = useConfig()
-  const { getAuthHeaders, appliedAuth, openAuthPanel, hasAuth, clearAuth } = useAuth()
+  const { allowTryIt, proxyUrl, proxyHeaders, specKey, tryItPersistTtl, onTryItRequest, onTryItResponse } = useConfig()
+  // An explicit prop wins; otherwise report to the renderer-level callbacks
+  // (`onTryItRequest` / `onTryItResponse`, which also drive the web
+  // component's `try-it-request` / `try-it-response` events).
+  const emitRequest = onRequest ?? onTryItRequest
+  const emitResponse = onResponse ?? onTryItResponse
+  const { getAuthPlacement, appliedAuth, openAuthPanel, hasAuth, clearAuth } = useAuth()
 
   // Reflect whether any credential has been applied so the header button
   // toggles between its "Authorize" (open lock) and "Authorized" (closed lock) states.
@@ -154,7 +161,7 @@ export function TryItPanel({
     return security.some((group) => group.length === 0 || group.every((name) => appliedAuth.has(name)))
   }, [security, appliedAuth])
 
-  // getAuthHeaders attaches every applied credential regardless of scheme, so
+  // Every applied credential is attached regardless of scheme, so
   // credentials applied under a different scheme name must not hard-block Send
   // — the request will carry them. Only block when nothing is applied at all.
   const authMismatch = !authSatisfied && appliedAuth.size > 0
@@ -209,8 +216,12 @@ export function TryItPanel({
   }, [exampleSignature])
 
   const buildRequest = useCallback((): TryItRequest => {
-    const authHeaders = getAuthHeaders()
-    const headers: Record<string, string> = { ...authHeaders }
+    // Honor each apiKey scheme's `in`: headers stay headers, `in: query` keys
+    // join the query string, `in: cookie` keys travel as a Cookie header (which
+    // only the proxy can deliver — browsers forbid setting Cookie on fetch).
+    const authPlacement = getAuthPlacement()
+    const headers: Record<string, string> = { ...authPlacement.headers }
+    if (authPlacement.cookieHeader) headers['Cookie'] = authPlacement.cookieHeader
 
     // Add header parameters
     for (const param of parameters) {
@@ -231,7 +242,9 @@ export function TryItPanel({
     const hasFormFieldValues = Object.values(multipartFields).some((v) => v !== null && v !== '')
 
     const pathParams: Record<string, string> = {}
-    const queryParams: Record<string, string | string[]> = {}
+    // Auth query params first; explicitly-filled spec query params of the same
+    // name take precedence (mirrors header handling above).
+    const queryParams: Record<string, string | string[]> = { ...authPlacement.queryParams }
 
     for (const param of parameters) {
       const val = paramValues[param.name]
@@ -301,7 +314,7 @@ export function TryItPanel({
       body: encodedBody,
       bodyType: contentType,
     }
-  }, [parameters, paramValues, body, contentType, multipartFields, customHeaders, method, path, getAuthHeaders])
+  }, [parameters, paramValues, body, contentType, multipartFields, customHeaders, method, path, getAuthPlacement])
 
   const handleSend = useCallback(async () => {
     setLoading(true)
@@ -309,12 +322,13 @@ export function TryItPanel({
     setResponse(null)
 
     const request = buildRequest()
-    onRequest?.(request)
-
     const fullRequest: TryItRequest = {
       ...request,
       url: serverUrl + request.url,
     }
+    // Report the request with its absolute URL (server + path template); path
+    // and query values stay in pathParams / queryParams.
+    emitRequest?.(fullRequest)
 
     try {
       // Use proxy if configured, otherwise send directly from the browser
@@ -323,7 +337,7 @@ export function TryItPanel({
         : await sendDirectRequest(fullRequest)
 
       setResponse(res)
-      onResponse?.(res)
+      emitResponse?.(res)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Request failed'
       if (!proxyUrl && message.includes('Failed to fetch')) {
@@ -343,7 +357,7 @@ export function TryItPanel({
     } finally {
       setLoading(false)
     }
-  }, [proxyUrl, proxyHeaders, buildRequest, serverUrl, onRequest, onResponse])
+  }, [proxyUrl, proxyHeaders, buildRequest, serverUrl, emitRequest, emitResponse])
 
   // Generate a fallback body from schema required fields for curl display
   const schemaBody = useMemo(() => {
@@ -354,6 +368,10 @@ export function TryItPanel({
   if (!allowTryIt) return null
 
   const request = buildRequest()
+  // Cookie credentials ride a `Cookie` header, which fetch silently drops (it is
+  // a forbidden request header). Only a proxy can deliver them.
+  const cookieAuthNames = Object.keys(getAuthPlacement().cookies)
+  const cookieAuthDirect = !proxyUrl && cookieAuthNames.length > 0
   const hasBodyMethods = ['post', 'put', 'patch'].includes(method.toLowerCase())
   const codeSampleRequest = useMemo(() => {
     const r = { ...request }
@@ -435,6 +453,16 @@ export function TryItPanel({
           {loading ? 'Sending...' : 'Send'}
         </Button>
       </div>
+
+      {cookieAuthDirect && (
+        <div className={validationMsgStyle} role="status">
+          <span>
+            Browsers cannot set cookies on cross-origin requests, so your cookie credential
+            ({cookieAuthNames.join(', ')}) will not be sent in direct mode. Configure a proxyUrl to
+            send it, or use the code sample.
+          </span>
+        </div>
+      )}
 
       {(sendBlocked || authMismatch) && (
         <div className={validationMsgStyle} role="status">

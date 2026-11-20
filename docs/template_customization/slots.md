@@ -11,8 +11,29 @@ Slots let you inject your own React components into predefined regions of the do
 | `contentHeader` | Above the main content, below header | Breadcrumbs, back navigation |
 | `sidebarHeader` | Top of sidebar, above search/nav | Logo, parent navigation, API name |
 | `sidebarFooter` | Bottom of sidebar, below nav tree | Version badge, quick links |
+| `breadcrumbs` | Start of the mobile navigation bar's breadcrumb trail | Links back to the host page that embeds the reference |
 
-All slots accept `ReactNode` — any valid JSX. To place a logo, use `sidebarHeader`.
+All slots accept `ReactNode` — any valid JSX — except `breadcrumbs`, which takes
+an array of `ReactNode`, one per crumb. To place a logo, use `sidebarHeader`.
+
+The renderer appends the spec title and the section currently in view to any
+`breadcrumbs` you pass, so only supply the entries *above* the spec. Use your
+router's link component to keep client-side navigation:
+
+```tsx
+<OpenApiSpec
+  spec={specUrl}
+  slots={{
+    breadcrumbs: [
+      <Link key="product" to="/products/payments">Payments</Link>,
+      'API reference',
+    ],
+  }}
+/>
+```
+
+The trail is shown below the desktop breakpoint only (see
+[Configuration → Mobile Navigation](../configuration.md#mobile-navigation)).
 
 ## Usage
 
@@ -159,6 +180,7 @@ const slots: SlotOverrides = {
   contentHeader: <Breadcrumbs />,
   sidebarHeader: <Logo />,
   sidebarFooter: <VersionBadge />,
+  breadcrumbs: [<Link key="home" to="/">Home</Link>],
 }
 
 <OmniSpecRenderer spec={specUrl} slots={slots} />
