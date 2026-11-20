@@ -470,6 +470,7 @@ export function AsyncApiSpec({
                 sidebarHeader={slots.sidebarHeader}
                 sidebarFooter={slots.sidebarFooter}
                 header={slots.header}
+                contentHeader={slots.contentHeader}
                 footer={slots.footer}
                 breadcrumbs={breadcrumbs}
               >
