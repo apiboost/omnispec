@@ -9,7 +9,9 @@
  */
 
 /* Positioning context for the renderer stage plus the floating toggle and
- * slide-up config sheet, so both overlay the renderer without stealing width. */
+ * slide-up config sheet, so both overlay the renderer without stealing width.
+ * The spec picker now lives inside the renderer's own sidebar (via the
+ * sidebarHeader slot), so the renderer fills the whole stage again. */
 .stageWrap {
   position: relative;
   height: calc(100vh - var(--ifm-navbar-height));

@@ -30,6 +30,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     environment: release
+    # Don't install the local git hooks in CI. semantic-release pushes tags and
+    # notes (no `--no-verify`); the pre-push DCO hook is a local-only guard.
+    env:
+      HUSKY: 0
     steps:
       - uses: actions/checkout@v4
         with:

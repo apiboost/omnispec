@@ -21,6 +21,8 @@ import { BindingsSection } from './BindingsSection'
 import { SecurityRequirementBadges } from './SecurityRequirementBadges'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
 import { MessagePayload } from './MessagePayload'
+import { actionLabels, actionColors, channelActionBadge } from '@asyncapi/components/channel-actions'
+import { ReplyMeta } from '@asyncapi/components/ReplyMeta'
 
 interface ChannelReferenceDetailProps {
   channel: AsyncApiChannel
@@ -32,20 +34,12 @@ interface ChannelReferenceDetailProps {
    * tag name (e.g. to filter the spec by tag). When absent, chips render static.
    */
   onTagClick?: (tagName: string) => void
-}
-
-const actionLabels: Record<string, string> = {
-  publish: 'PUB',
-  subscribe: 'SUB',
-  send: 'SEND',
-  receive: 'RECV',
-}
-
-const actionColors: Record<string, string> = {
-  publish: 'var(--omnispec-color-publish)',
-  subscribe: 'var(--omnispec-color-subscribe)',
-  send: 'var(--omnispec-color-publish)',
-  receive: 'var(--omnispec-color-subscribe)',
+  /** The active tag filter, forwarded to tag chips for their `aria-pressed` state. */
+  activeTag?: string | null
+  /** Resolves a channel name to an in-page href so a reply can link to its channel. */
+  channelHref?: (channelName: string) => string | undefined
+  /** Navigates to a channel's card by name (expands + scrolls, even on a same-hash click). */
+  onChannelNavigate?: (channelName: string) => void
 }
 
 /**
@@ -59,10 +53,8 @@ const actionColors: Record<string, string> = {
  * Compact mode keeps using `ChannelDetail`; this wrapper is only mounted when
  * `displayMode === 'reference'`.
  */
-export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick }: ChannelReferenceDetailProps) {
-  const primaryAction = channel.operations[0]?.action
-  const primaryLabel = actionLabels[primaryAction] ?? primaryAction?.toUpperCase() ?? ''
-  const primaryColor = actionColors[primaryAction] ?? 'var(--omnispec-fg-muted)'
+export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag, channelHref, onChannelNavigate }: ChannelReferenceDetailProps) {
+  const headerBadge = channelActionBadge(channel)
 
   return (
     <ExpandableCard
@@ -72,7 +64,7 @@ export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneratio
       expandAll={expandAll}
       expandGeneration={expandGeneration}
     >
-      <MethodBar label={primaryLabel} path={channel.address} color={primaryColor} />
+      <MethodBar label={headerBadge.label} path={channel.address} color={headerBadge.color} />
 
       {channel.description && (
         <div className={channelMetaStyle}>
@@ -90,14 +82,26 @@ export function ChannelReferenceDetail({ channel, id, expandAll, expandGeneratio
           <ReferenceLayout
             operationId={op.operationId ?? `${channel.name}-op-${idx}`}
             schema={
-              <OperationSchemaColumn
-                channel={channel}
-                operation={op}
-                onTagClick={onTagClick}
-              />
+              <div className={refMobilePadStyle}>
+                <OperationSchemaColumn
+                  channel={channel}
+                  operation={op}
+                  onTagClick={onTagClick}
+                  activeTag={activeTag}
+                />
+              </div>
             }
-            samples={<OperationSamplesColumn operation={op} idx={idx} />}
-            tryIt={<div className={tryItNaStyle}>Interactive testing is not available for AsyncAPI protocols.</div>}
+            samples={
+              <div className={refMobilePadStyle}>
+                <OperationSamplesColumn
+                  operation={op}
+                  idx={idx}
+                  channelHref={channelHref}
+                  onChannelNavigate={onChannelNavigate}
+                />
+              </div>
+            }
+            tryIt={<div className={cx(refMobilePadStyle, tryItNaStyle)}>Interactive testing is not available for AsyncAPI protocols.</div>}
           />
         </div>
       ))}
@@ -114,10 +118,12 @@ function OperationSchemaColumn({
   channel,
   operation,
   onTagClick,
+  activeTag,
 }: {
   channel: AsyncApiChannel
   operation: AsyncApiOperation
   onTagClick?: (tagName: string) => void
+  activeTag?: string | null
 }) {
   return (
     <div>
@@ -143,6 +149,7 @@ function OperationSchemaColumn({
                 type="button"
                 className={tagChipButtonStyle}
                 title={tag.description}
+                aria-pressed={tag.name === activeTag}
                 onClick={() => onTagClick(tag.name)}
               >
                 {tag.name}
@@ -217,11 +224,15 @@ function OperationSchemaColumn({
  * the operation carries (plus any reply messages). Composes the read-only
  * `MessagePayload`, the same renderer compact mode uses inline.
  */
-function OperationSamplesColumn({ operation, idx }: { operation: AsyncApiOperation; idx: number }) {
+function OperationSamplesColumn({ operation, idx, channelHref, onChannelNavigate }: { operation: AsyncApiOperation; idx: number; channelHref?: (channelName: string) => string | undefined; onChannelNavigate?: (channelName: string) => void }) {
   const messages = operation.messages ?? []
-  const replyMessages = operation.reply?.messages ?? []
+  const reply = operation.reply
+  // Reply metadata (channel/address) is shown even when the reply carries no
+  // messages — reference mode previously dropped the reply channel and address
+  // that compact mode shows.
+  const hasReply = !!(reply && (reply.messages.length > 0 || reply.address || reply.channelName))
 
-  if (messages.length === 0 && replyMessages.length === 0) {
+  if (messages.length === 0 && !hasReply) {
     return <div className={emptySamplesStyle}>No message payload is defined for this operation.</div>
   }
 
@@ -240,10 +251,11 @@ function OperationSamplesColumn({ operation, idx }: { operation: AsyncApiOperati
         </div>
       ))}
 
-      {replyMessages.length > 0 && (
+      {hasReply && reply && (
         <div className={replyStyle}>
           <h4 className={sectionTitleStyle}>Reply</h4>
-          {replyMessages.map((message, i) => (
+          <ReplyMeta reply={reply} channelHref={channelHref} onChannelNavigate={onChannelNavigate} />
+          {reply.messages.map((message, i) => (
             <MessagePayload key={i} message={message} idx={`${idx}-reply-${i}`} />
           ))}
         </div>
@@ -259,6 +271,14 @@ const channelMetaStyle = css({
   [mq.desktop]: {
     padding: '1rem 1.25rem 0',
   },
+})
+
+// Reference columns sit inside ReferenceLayout's mobile tab panel, which has no
+// horizontal padding (so desktop columns control their own). Add inline padding
+// on mobile only so AsyncAPI content doesn't touch the card edge — scoped here
+// rather than in the shared ReferenceLayout, which OpenAPI also uses.
+const refMobilePadStyle = css({
+  [mq.mobile]: { paddingInline: '1rem' },
 })
 
 const operationWrapStyle = css({
@@ -341,7 +361,9 @@ const paramConstraintsStyle = css({
 const opHeaderStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '0.5rem',
+  flexWrap: 'wrap',
+  gap: '0.25rem 0.5rem',
+  minWidth: 0,
   marginBottom: '0.5rem',
 })
 
@@ -361,17 +383,25 @@ const opIdStyle = css({
   fontWeight: 700,
   backgroundColor: 'transparent',
   padding: 0,
+  overflowWrap: 'anywhere',
 })
 
 const opTitleStyle = css({
   fontSize: 'var(--omnispec-font-size-sm)',
   fontWeight: 600,
   color: 'var(--omnispec-fg-primary)',
+  overflowWrap: 'anywhere',
 })
 
+// The summary stacks onto its own full-width line (and its text can break) so a
+// narrow reference column — e.g. at 1024px with the sidebar open — wraps instead
+// of spilling the operation detail into the Samples column.
 const opSummaryStyle = css({
+  flexBasis: '100%',
+  minWidth: 0,
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
+  overflowWrap: 'anywhere',
 })
 
 const messageTitleStyle = css({

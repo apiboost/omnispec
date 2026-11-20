@@ -12,11 +12,12 @@ import { createContext, useContext } from 'react'
 
 /**
  * Dismiss callback provided by DocLayout around the content of its mobile
- * drawer (and only there — the desktop sidebar renders the same content with
- * no provider). Navigation components call it after performing a selection so
- * the full-screen drawer closes instead of covering the content the user just
- * navigated to. The package is router-agnostic, so this is the only channel
- * through which nav content can tell the drawer that navigation happened.
+ * nav panel (and only there — the desktop sidebar renders the same content
+ * with no provider). Navigation components call it after performing a
+ * selection so the full-screen panel closes instead of covering the content
+ * the user just navigated to. The package is router-agnostic, so this is the
+ * only channel through which nav content can tell the panel that navigation
+ * happened.
  */
 export const MobileDrawerDismissContext = createContext<(() => void) | null>(
   null,

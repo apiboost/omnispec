@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, cleanup, fireEvent } from '@testing-library/react'
-import { NavTree } from '@core/components/Navigation/NavTree'
+import { NavTree, findNavLabel } from '@core/components/Navigation/NavTree'
 import type { NavItem } from '@core/components/Navigation/NavTree'
 import { MobileDrawerDismissContext } from '@core/components/Layout/MobileDrawerDismissContext'
 
@@ -82,5 +82,24 @@ describe('NavTree collapsible-group a11y', () => {
   it('does not put aria-expanded on leaf items (they do not expand)', () => {
     const { getByRole } = render(<NavTree items={items} onSelect={vi.fn()} />)
     expect(getByRole('button', { name: 'About' })).not.toHaveAttribute('aria-expanded')
+  })
+})
+
+describe('NavTree active item', () => {
+  it('marks only the active item with aria-current', () => {
+    const { getByRole } = render(
+      <NavTree items={items} activeId="get-pets" onSelect={vi.fn()} />,
+    )
+    expect(getByRole('button', { name: 'List pets' })).toHaveAttribute('aria-current', 'location')
+    expect(getByRole('button', { name: 'About' })).not.toHaveAttribute('aria-current')
+  })
+})
+
+describe('findNavLabel', () => {
+  it('finds labels at any depth and returns undefined otherwise', () => {
+    expect(findNavLabel(items, 'about')).toBe('About')
+    expect(findNavLabel(items, 'get-pets')).toBe('List pets')
+    expect(findNavLabel(items, 'missing')).toBeUndefined()
+    expect(findNavLabel(items, undefined)).toBeUndefined()
   })
 })

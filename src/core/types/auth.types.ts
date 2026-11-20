@@ -91,10 +91,26 @@ export interface OAuthConfig {
   usePkce?: boolean
 }
 
+/** Where an applied credential travels on the wire (the OpenAPI apiKey `in`). */
+export type AppliedAuthLocation = 'header' | 'query' | 'cookie'
+
 export interface AppliedAuthValue {
   schemeId: string
+  /**
+   * Credential name. For `in: header` (and every non-apiKey scheme) this is
+   * the header name; for `in: query` it is the query parameter name; for
+   * `in: cookie` it is the cookie name. The field keeps its historical name
+   * for backwards compatibility.
+   */
   headerName: string
+  /** Credential value (header value, query parameter value, or cookie value). */
   headerValue: string
+  /**
+   * Where the credential is sent. Omitted means `header`, except that the
+   * Try-It request builder falls back to the owning apiKey scheme's `in` for
+   * values persisted before this field existed.
+   */
+  in?: AppliedAuthLocation
   /**
    * The raw values the user typed (e.g. `{ token }`, `{ username, password }`),
    * kept so the Authorize form can be prefilled when credentials are restored

@@ -39,7 +39,7 @@ describe('AsyncApiSpec display mode', () => {
   it('renders the three-panel reference layout (samples column) when displayMode is "reference"', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} displayMode="reference" defaultExpandOperations />)
 
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
 
     // ReferenceLayout exposes a "Samples" tab in its right/mobile column — this is
     // the distinctive three-panel structure OpenAPI produces in reference mode.
@@ -50,7 +50,7 @@ describe('AsyncApiSpec display mode', () => {
   it('keeps the compact single-column layout (no Samples column) when displayMode is "compact"', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} displayMode="compact" defaultExpandOperations />)
 
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
 
     // Compact mode renders the message as "Payload Schema"/"Example" tabs — never
     // the reference "Samples" column.
@@ -60,7 +60,7 @@ describe('AsyncApiSpec display mode', () => {
   it('defaults to compact (no Samples column) when displayMode is unset', async () => {
     render(<AsyncApiSpec spec={spec} theme={{ base: 'light' }} defaultExpandOperations />)
 
-    await screen.findByRole('navigation')
+    await screen.findByRole('navigation', { name: 'API navigation' })
     expect(screen.queryByRole('tab', { name: /^samples$/i })).toBeNull()
   })
 })

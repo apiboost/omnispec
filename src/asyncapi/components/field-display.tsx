@@ -64,7 +64,7 @@ function isScalarArray(value: unknown[]): boolean {
   )
 }
 
-function renderValue(value: unknown): ReactNode {
+function renderValue(value: unknown, verbatim: boolean): ReactNode {
   if (value === null) return <span className={mutedStyle}>null</span>
   if (typeof value === 'boolean') return <code className={codeStyle}>{value ? 'true' : 'false'}</code>
   if (typeof value === 'number') return <code className={codeStyle}>{String(value)}</code>
@@ -90,7 +90,7 @@ function renderValue(value: unknown): ReactNode {
     if (nested.length === 0) return <span className={mutedStyle}>none</span>
     return (
       <div className={nestedStyle}>
-        <FieldRows fields={nested} />
+        <FieldRows fields={nested} verbatim={verbatim} />
       </div>
     )
   }
@@ -145,6 +145,17 @@ function SchemaLeaf({ schema }: { schema: Record<string, unknown> }) {
   const type = typeof schema.type === 'string' ? schema.type : undefined
   const description = typeof schema.description === 'string' ? schema.description : undefined
   const enumValues = Array.isArray(schema.enum) ? schema.enum : undefined
+
+  // A single allowed/fixed value is just that value — showing "type + Allowed:
+  // [value]" for one option is noise. Render the lone value on its own.
+  if (enumValues && enumValues.length === 1 && !description) {
+    return (
+      <div className={schemaLeafStyle}>
+        <code className={enumItemStyle}>{String(enumValues[0])}</code>
+      </div>
+    )
+  }
+
   return (
     <div className={schemaLeafStyle}>
       {type && <span className={schemaTypeStyle}>{type}</span>}
@@ -165,21 +176,34 @@ function SchemaLeaf({ schema }: { schema: Record<string, unknown> }) {
 
 /**
  * A key/value grid used to render binding fields and security-scheme fields.
- * Keys are humanized; values are formatted by type. Shared so binding and
- * security displays stay visually identical and a change lands in one place.
+ * Values are formatted by type. Shared so binding and security displays stay
+ * visually identical and a change lands in one place.
+ *
+ * `verbatim` shows field keys exactly as written in the spec (like `x-` keys) —
+ * used for protocol-binding/config fields, whose keys carry acronyms (`URL`,
+ * `ID`) and dotted names (`cleanup.policy`) that generic title-casing mangles.
+ * When unset, keys are humanized (`clean_session` → "Clean session") for the
+ * security-scheme fields that read better that way. The flag threads into nested
+ * config objects so a binding's child keys stay verbatim too.
  *
  * Object values recurse: plain config objects render as nested labelled rows,
  * JSON-Schema values render as a compact schema table, and scalar arrays render
  * as comma-separated values rather than raw JSON.
  */
-export function FieldRows({ fields }: { fields: Array<[string, unknown]> }) {
+export function FieldRows({
+  fields,
+  verbatim = false,
+}: {
+  fields: Array<[string, unknown]>
+  verbatim?: boolean
+}) {
   if (fields.length === 0) return null
   return (
     <dl className={listStyle}>
       {fields.map(([field, value]) => (
         <div key={field} className={rowStyle}>
-          <dt className={nameStyle}>{humanizeField(field)}</dt>
-          <dd className={valueStyle}>{renderValue(value)}</dd>
+          <dt className={nameStyle}>{verbatim ? field : humanizeField(field)}</dt>
+          <dd className={valueStyle}>{renderValue(value, verbatim)}</dd>
         </div>
       ))}
     </dl>

@@ -8,13 +8,13 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import type { MouseEvent, ReactNode } from 'react'
-import { css, cx } from '../../styles/css'
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, useId } from 'react'
+import type { FocusEvent, MouseEvent, ReactNode } from 'react'
+import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
 import { AnimatePresence, motion } from 'motion/react'
-import { Icon } from '../common/Icon'
-import { useConfig } from '../../context/ConfigContext'
+import { Icon } from '@core/components/common/Icon'
+import { useConfig } from '@core/context/ConfigContext'
 import { MobileDrawerDismissContext } from './MobileDrawerDismissContext'
 
 interface DocLayoutProps {
@@ -27,6 +27,12 @@ interface DocLayoutProps {
   header?: ReactNode
   contentHeader?: ReactNode
   footer?: ReactNode
+  /**
+   * Trail shown in the mobile nav bar, root first — typically any host
+   * entries, the spec title, then the active nav item. Empty entries and
+   * repeated text entries are dropped.
+   */
+  breadcrumbs?: ReactNode[]
 }
 
 export function DocLayout({
@@ -39,15 +45,19 @@ export function DocLayout({
   header,
   contentHeader,
   footer,
+  breadcrumbs,
 }: DocLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  // Drawer focus management: capture the element focused before opening so we can
-  // restore it on close, and a ref to the drawer so we can move focus into it.
-  const drawerRef = useRef<HTMLElement | null>(null)
-  const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
-  const drawerTriggerRef = useRef<HTMLElement | null>(null)
+  // Viewport offset of the bottom of the mobile bar, measured when the panel
+  // opens so the fixed panel starts directly beneath it.
+  const [mobilePanelTop, setMobilePanelTop] = useState(0)
+  const mobileBarRef = useRef<HTMLDivElement | null>(null)
+  const mobilePanelRef = useRef<HTMLDivElement | null>(null)
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null)
+  // Stable id tying the mobile nav toggle to the panel it controls
+  // (`aria-controls`), so assistive tech announces the relationship.
+  const mobilePanelId = useId()
   const isRight = sidebarPosition === 'right'
   // Show the sidebar column when there's anything to put in it — spec-derived
   // nav OR host-provided slots (sidebarHeader/Footer). This keeps the host's
@@ -63,55 +73,63 @@ export function DocLayout({
    * Slot content (sidebarHeader/sidebarFooter) is consumer-provided and can't
    * call our dismiss context, so catch same-tab link navigations by
    * delegation: any click that lands on a non-_blank anchor inside the
-   * drawer closes it. NavTree items are buttons and close themselves through
+   * panel closes it. NavTree items are buttons and close themselves through
    * MobileDrawerDismissContext instead.
    */
-  const handleDrawerClick = useCallback((event: MouseEvent) => {
+  const handlePanelClick = useCallback((event: MouseEvent) => {
     const anchor = (event.target as Element).closest?.('a[href]')
     if (anchor && anchor.getAttribute('target') !== '_blank') {
       setMobileSidebarOpen(false)
     }
   }, [])
 
-  // Close on Escape + lock body scroll
+  const toggleMobileNav = useCallback(() => {
+    setMobilePanelTop(mobileBarRef.current?.getBoundingClientRect().bottom ?? 0)
+    setMobileSidebarOpen((open) => !open)
+  }, [])
+
+  /*
+   * The panel covers the page below the bar, so close it when keyboard focus
+   * moves anywhere outside the bar and panel — otherwise Tab would carry on
+   * into content hidden underneath it.
+   */
+  // The bar and the panel are siblings (see below), so focus moving between
+  // them is not "leaving" the navigation.
+  const handleMobileNavBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget as Node | null
+    const inside = !!next && (mobileBarRef.current?.contains(next) || mobilePanelRef.current?.contains(next))
+    if (next && !inside) {
+      setMobileSidebarOpen(false)
+    }
+  }, [])
+
+  // While open: Escape closes (focus back on the toggle), the page behind is
+  // scroll-locked, and the active nav item is brought into view.
   useEffect(() => {
     if (!mobileSidebarOpen) return undefined
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileSidebarOpen(false)
+      if (e.key === 'Escape') {
+        setMobileSidebarOpen(false)
+        mobileToggleRef.current?.focus()
+      }
     }
     document.addEventListener('keydown', handleKey)
     document.body.style.overflow = 'hidden'
+    mobilePanelRef.current
+      ?.querySelector('[aria-current]')
+      ?.scrollIntoView?.({ block: 'center' })
     return () => {
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
     }
   }, [mobileSidebarOpen])
 
-  // Move focus into the drawer when it opens (so keyboard/screen-reader users
-  // land inside the dialog, not on the page behind it), and restore focus to the
-  // trigger when it closes.
-  useEffect(() => {
-    if (mobileSidebarOpen) {
-      // Remember what had focus so we can restore it on close.
-      drawerTriggerRef.current = document.activeElement as HTMLElement | null
-      // Prefer the close button; fall back to the drawer container itself.
-      const target = drawerCloseRef.current ?? drawerRef.current
-      target?.focus()
-      return undefined
-    }
-    // Closed: return focus to whatever opened the drawer. The mobile toggle
-    // unmounts while the drawer is open, so prefer the live re-mounted toggle;
-    // fall back to the originally-focused element when it still exists (e.g. the
-    // drawer was opened from somewhere other than the toggle).
-    const live = mobileToggleRef.current
-    const original = drawerTriggerRef.current
-    if (live && document.contains(live)) {
-      live.focus()
-    } else if (original && typeof original.focus === 'function' && document.contains(original)) {
-      original.focus()
-    }
-    return undefined
-  }, [mobileSidebarOpen])
+  const crumbs = useMemo(
+    () => (breadcrumbs ?? []).filter((crumb, index, all) =>
+      crumb !== null && crumb !== undefined && crumb !== false && crumb !== ''
+      && (typeof crumb !== 'string' || all.indexOf(crumb) === index)),
+    [breadcrumbs],
+  )
 
   const sidebarContent = useMemo(() => (
     <>
@@ -198,6 +216,66 @@ export function DocLayout({
   return (
     <div className={`omnispec-layout omnispec-layout--sidebar ${rootStyle}`}>
       {header && <div className={headerStyle}>{header}</div>}
+
+      {/*
+        Mobile navigation (below the desktop breakpoint, where the sidebar
+        column is hidden): a sticky bar with a sidebar toggle and breadcrumbs.
+        The toggle expands the sidebar content as a full-width panel filling
+        the viewport below the bar, and the same toggle collapses it. A
+        disclosure rather than a modal drawer — there is no backdrop.
+      */}
+      {/*
+        The panel is a sibling of the bar, not a child: a host may move the
+        bar with a transform (a header hiding on scroll), and a transformed
+        ancestor would become the containing block of the position: fixed
+        panel, misplacing it.
+      */}
+      {hasSidebar && (
+        <>
+          <div
+            ref={mobileBarRef}
+            className={`omnispec-mobile-nav ${mobileNavStyle}`}
+            onBlur={handleMobileNavBlur}
+          >
+            <div className={mobileBarStyle}>
+              <div className={mobileToggleZoneStyle}>
+                <button
+                  ref={mobileToggleRef}
+                  type="button"
+                  onClick={toggleMobileNav}
+                  className={mobileToggleStyle}
+                  aria-label={mobileSidebarOpen ? 'Close navigation' : 'Open navigation'}
+                  aria-expanded={mobileSidebarOpen}
+                  aria-controls={mobilePanelId}
+                >
+                  <Icon
+                    name={mobileSidebarOpen ? 'panel-left-close' : 'panel-left-open'}
+                    size="1.15rem"
+                  />
+                </button>
+              </div>
+              {crumbs.length > 0 && <MobileBreadcrumbs crumbs={crumbs} />}
+            </div>
+          </div>
+          {mobileSidebarOpen && (
+            <div
+              id={mobilePanelId}
+              ref={mobilePanelRef}
+              role="region"
+              aria-label="Navigation"
+              className={`omnispec-mobile-nav-panel ${mobilePanelStyle}`}
+              style={{ top: `${mobilePanelTop}px` }}
+              onClick={handlePanelClick}
+              onBlur={handleMobileNavBlur}
+            >
+              <MobileDrawerDismissContext.Provider value={dismissMobileDrawer}>
+                {sidebarContent}
+              </MobileDrawerDismissContext.Provider>
+            </div>
+          )}
+        </>
+      )}
+
       <div className={bodyStyle}>
         {sidebarEl}
         {expandEl}
@@ -208,83 +286,151 @@ export function DocLayout({
       </div>
       {footer && <div className={footerStyle}>{footer}</div>}
 
-      {/* Mobile sidebar toggle + drawer */}
-      {hasSidebar && (
-        <AnimatePresence>
-          {!mobileSidebarOpen && (
-            <motion.button
-              key="mobile-toggle"
-              ref={mobileToggleRef}
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className={mobileToggleStyle}
-              aria-label="Open navigation"
-              aria-expanded={mobileSidebarOpen}
-              aria-haspopup="dialog"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Icon name="ellipsis" size="1.2em" />
-            </motion.button>
-          )}
-          {mobileSidebarOpen && (
-            <motion.div
-              key="mobile-backdrop"
-              className={backdropStyle}
-              onClick={() => setMobileSidebarOpen(false)}
-              aria-hidden="true"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
-          {mobileSidebarOpen && (
-            <motion.aside
-              key="mobile-drawer"
-              ref={drawerRef}
-              className={mobileDrawerStyle}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Navigation"
-              tabIndex={-1}
-              onClick={handleDrawerClick}
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            >
-              <button
-                ref={drawerCloseRef}
-                type="button"
-                onClick={() => setMobileSidebarOpen(false)}
-                className={mobileCloseStyle}
-                aria-label="Close navigation"
-              >
-                <Icon name="xmark" size="1.25rem" />
-              </button>
-              <MobileDrawerDismissContext.Provider value={dismissMobileDrawer}>
-                {sidebarContent}
-              </MobileDrawerDismissContext.Provider>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-      )}
-
-      <BackToTopButton hasSidebar={hasSidebar} />
+      <BackToTopButton />
     </div>
+  )
+}
+
+// useLayoutEffect warns during server rendering on React 18; effects don't run
+// there anyway.
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
+// Starts part-way visible, so a trail whose visible crumbs all changed never
+// reads as blank for its first frames.
+const CRUMB_ENTER: Keyframe[] = [{ opacity: 0.35 }, { opacity: 1 }]
+
+/**
+ * Animates a change to a bar's trail before it is painted (called from a
+ * layout effect): crumbs whose text differs from what this bar showed fade
+ * in; unchanged ones are left alone. A bar's first trail never animates — on
+ * navigation the trail swaps once, instantly, whichever bar takes over. Positions never animate — the trail updates as the reader
+ * scrolls (the section in view), and moving it each time reads as jitter.
+ * Web Animations only (no markup differences between server and client);
+ * skipped for reduced motion.
+ */
+function animateTrailChange(list: HTMLOListElement, previous: string[] | null): string[] {
+  const items = Array.from(list.children) as HTMLElement[]
+  const texts = items.map((item) => item.textContent?.replace(/^\s*\/\s*/, '').trim() ?? '')
+  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!reduce && typeof list.animate === 'function') {
+    items.forEach((item, index) => {
+      const changed = !!previous && previous[index] !== texts[index]
+      if (changed) {
+        // Restart rather than stack when changes arrive quickly.
+        item.getAnimations?.().forEach((running) => running.cancel())
+        item.animate(CRUMB_ENTER, { duration: 180, easing: 'ease-out' })
+      }
+    })
+  }
+  return texts
+}
+
+/**
+ * Breadcrumb trail for the mobile nav bar, after docs.github.com: full-text
+ * crumbs on one line that scroll horizontally when they overflow. It opens
+ * scrolled to the end, so the current location shows, and a chevron appears
+ * on each side with more to scroll (tapping it scrolls that way). The
+ * chevrons are pointer conveniences only: keyboard focus scrolls a link into
+ * view, and screen readers get the whole trail.
+ */
+function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
+  const listRef = useRef<HTMLOListElement | null>(null)
+  // What this bar last showed, to fade only crumbs that change in place.
+  const shownRef = useRef<string[] | null>(null)
+  const [more, setMore] = useState({ left: false, right: false })
+  // Text-only signature of the trail, so the effect re-runs when it changes
+  // rather than on every render's new array.
+  const trail = crumbs.map((crumb) => (typeof crumb === 'string' ? crumb : '·')).join('/')
+
+  // Pin to the end before the browser paints, so a changed trail never shows
+  // scrolled to its start for a frame before jumping to the current location.
+  useIsomorphicLayoutEffect(() => {
+    const list = listRef.current
+    if (!list) return undefined
+    // Stays pinned to the end (the current location) until the reader
+    // scrolls away from it, so late layout changes — web fonts, a section
+    // title arriving — don't leave the trail part-scrolled.
+    let pinned = true
+    const update = () => {
+      const max = list.scrollWidth - list.clientWidth
+      const left = list.scrollLeft > 1
+      const right = list.scrollLeft < max - 1
+      pinned = !right
+      setMore((prev) => (prev.left === left && prev.right === right ? prev : { left, right }))
+    }
+    const resize = () => {
+      if (pinned) list.scrollLeft = list.scrollWidth
+      update()
+    }
+    resize()
+    shownRef.current = animateTrailChange(list, shownRef.current)
+    list.addEventListener('scroll', update, { passive: true })
+    // Watch the crumbs as well as the list: content growing inside a
+    // fixed-width list doesn't resize the list itself.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+    for (const el of [list, ...Array.from(list.children)]) observer?.observe(el)
+    return () => {
+      list.removeEventListener('scroll', update)
+      observer?.disconnect()
+    }
+  }, [trail])
+
+  const scroll = (direction: 1 | -1) => {
+    const list = listRef.current
+    if (!list) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    list.scrollBy({ left: direction * list.clientWidth * 0.75, behavior: reduce ? 'auto' : 'smooth' })
+  }
+
+  return (
+    <nav aria-label="Breadcrumb" className={breadcrumbNavStyle}>
+      <ol ref={listRef} className={breadcrumbListStyle}>
+        {crumbs.map((crumb, index) => {
+          const isCurrent = index === crumbs.length - 1
+          return (
+            <li
+              key={index}
+              aria-current={isCurrent ? 'location' : undefined}
+              className={cx(breadcrumbItemStyle, isCurrent && breadcrumbCurrentStyle)}
+            >
+              {index > 0 && <span aria-hidden="true">/</span>}
+              {crumb}
+            </li>
+          )
+        })}
+      </ol>
+      {more.left && (
+        <button
+          type="button"
+          aria-hidden="true"
+          tabIndex={-1}
+          className={cx(breadcrumbScrollStyle, breadcrumbScrollLeftStyle)}
+          onClick={() => scroll(-1)}
+        >
+          <Icon name="chevron-left" size="1rem" />
+        </button>
+      )}
+      {more.right && (
+        <button
+          type="button"
+          aria-hidden="true"
+          tabIndex={-1}
+          className={cx(breadcrumbScrollStyle, breadcrumbScrollRightStyle)}
+          onClick={() => scroll(1)}
+        >
+          <Icon name="chevron-right" size="1rem" />
+        </button>
+      )}
+    </nav>
   )
 }
 
 /**
  * A fixed bottom-right "back to top" affordance that appears once the page has
  * scrolled down, and smoothly returns to the top on click. Tracks window scroll
- * (the sidebar layout scrolls the page). On mobile it stacks above the nav
- * toggle so the two don't overlap.
+ * (the sidebar layout scrolls the page).
  */
-function BackToTopButton({ hasSidebar }: { hasSidebar: boolean }) {
+function BackToTopButton() {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
@@ -307,7 +453,7 @@ function BackToTopButton({ hasSidebar }: { hasSidebar: boolean }) {
           key="omnispec-back-to-top"
           type="button"
           onClick={handleClick}
-          className={cx(backToTopStyle, hasSidebar && backToTopAboveNavStyle)}
+          className={backToTopStyle}
           aria-label="Back to top"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -503,22 +649,129 @@ const footerStyle = css({
   backgroundColor: 'var(--omnispec-bg-secondary)',
 })
 
-const mobileToggleStyle = css({
-  position: 'fixed',
-  bottom: '1.5rem',
-  right: '1.5rem',
-  width: '3.5rem',
-  height: '3.5rem',
-  borderRadius: '50%',
-  backgroundColor: 'var(--omnispec-color-primary, #1a1a2e)',
-  color: 'var(--omnispec-color-primary-text, #FFFFFF)',
-  border: 'none',
-  cursor: 'pointer',
+// Mobile-first: the bar shows by default and is hidden on desktop, where the
+// sidebar column takes over. Sticks under any host chrome offset. A host with
+// hide-on-scroll chrome can animate the offset (including a negative one that
+// slides the bar out with its header) by setting
+// --omnispec-offset-top-transition to the header's own duration and easing.
+const mobileNavStyle = css({
+  position: 'sticky',
+  // A host whose header hides on scroll can keep the bar stuck under the
+  // header (--omnispec-mobile-nav-top) and move it with a transform
+  // (--omnispec-mobile-nav-transform) on the header's timing, so both animate
+  // on the compositor and stay joined; otherwise it follows
+  // --omnispec-offset-top. The transform must be `none` at rest: any transform
+  // makes the bar the containing block of its position: fixed panel.
+  top: 'var(--omnispec-mobile-nav-top, var(--omnispec-offset-top, 0px))',
+  transform: 'var(--omnispec-mobile-nav-transform, none)',
+  transition: 'top var(--omnispec-offset-top-transition, 0s), transform var(--omnispec-offset-top-transition, 0s)',
+  zIndex: 999,
+  backgroundColor: 'var(--omnispec-bg-primary)',
+  boxShadow: '0 1px 0 var(--omnispec-border-color)',
+  [mq.desktop]: {
+    display: 'none',
+  },
+})
+
+const mobileBarStyle = css({
   display: 'flex',
   alignItems: 'center',
+  minHeight: '3rem',
+})
+
+const mobileToggleZoneStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  alignSelf: 'stretch',
+  padding: '0 0.25rem',
+  boxShadow: '1px 0 0 var(--omnispec-border-color)',
+})
+
+const mobileToggleStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.15)',
+  width: '2.25rem',
+  height: '2.25rem',
+  padding: 0,
+  // Same background as the bar in every state; open/closed is conveyed by the
+  // icon (and aria-expanded), not a filled button.
+  background: 'none',
+  border: 'none',
+  borderRadius: '0.375rem',
+  cursor: 'pointer',
+  color: 'var(--omnispec-fg-primary)',
+})
+
+const breadcrumbNavStyle = css({
+  position: 'relative',
+  display: 'flex',
+  alignSelf: 'stretch',
+  flex: 1,
+  minWidth: 0,
+})
+
+const breadcrumbListStyle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  margin: 0,
+  padding: '0 0.75rem',
+  listStyle: 'none',
+  alignSelf: 'stretch',
+  overflowX: 'auto',
+  whiteSpace: 'nowrap',
+  scrollbarWidth: 'none',
+  '&::-webkit-scrollbar': {
+    display: 'none',
+  },
+})
+
+const breadcrumbItemStyle = css({
+  display: 'flex',
+  flex: 'none',
+  gap: '0.5rem',
+  fontSize: 'var(--omnispec-font-size-sm)',
+  color: 'var(--omnispec-fg-muted)',
+})
+
+const breadcrumbCurrentStyle = css({
+  color: 'var(--omnispec-fg-primary)',
+  fontWeight: 600,
+})
+
+// Overlays the trail's edge (on the bar's background) rather than taking
+// layout space, so showing or hiding it never changes the scroll width.
+const breadcrumbScrollStyle = css({
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '1.75rem',
+  padding: 0,
+  border: 'none',
+  backgroundColor: 'var(--omnispec-bg-primary)',
+  color: 'var(--omnispec-fg-muted)',
+  cursor: 'pointer',
+})
+
+const breadcrumbScrollLeftStyle = css({ left: 0 })
+const breadcrumbScrollRightStyle = css({ right: 0 })
+
+const mobilePanelStyle = css({
+  position: 'fixed',
   zIndex: 999,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  backgroundColor: 'var(--omnispec-nav-bg, var(--omnispec-bg-primary, #fff))',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  padding: '1rem 1.25rem 0',
   [mq.desktop]: {
     display: 'none',
   },
@@ -539,65 +792,11 @@ const backToTopStyle = css({
   alignItems: 'center',
   justifyContent: 'center',
   boxShadow: '0 0.25rem 0.75rem rgba(0, 0, 0, 0.15)',
-  // Below the mobile nav toggle (999) and drawer (1001) so it never covers them.
+  // Below the mobile nav bar and panel (999) so it never covers them.
   zIndex: 998,
 })
 
-const backToTopAboveNavStyle = css({
-  // On mobile the sidebar nav toggle occupies the bottom-right corner; stack the
-  // back-to-top above it. On desktop there is no toggle, so it stays in the corner.
-  [mq.mobile]: {
-    bottom: '5.75rem',
-  },
-})
-
-const backdropStyle = css({
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.4)',
-  zIndex: 1000,
-})
-
-const mobileDrawerStyle = css({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  height: '100dvh',
-  width: '100%',
-  backgroundColor: 'var(--omnispec-nav-bg, var(--omnispec-bg-primary, #fff))',
-  zIndex: 1001,
-  overflowY: 'auto',
-  overscrollBehavior: 'contain',
-  padding: '1.5rem 1.25rem',
-  boxShadow: '0.5rem 0 2rem rgba(0, 0, 0, 0.15)',
-  scrollbarWidth: 'none',
-  '&::-webkit-scrollbar': {
-    display: 'none',
-  },
-})
-
-const mobileCloseStyle = css({
-  position: 'absolute',
-  top: '1rem',
-  right: '1rem',
-  zIndex: 1100,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '2.5rem',
-  height: '2.5rem',
-  borderRadius: '50%',
-  background: 'var(--omnispec-nav-bg, var(--omnispec-bg-primary, #fff))',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'var(--omnispec-fg-muted)',
-  '&:hover': {
-    color: 'var(--omnispec-fg-primary)',
-    backgroundColor: 'var(--omnispec-bg-secondary)',
-  },
-})
-
-const POWERED_BY_URL = 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=sidebar&utm_campaign=powered_by'
+const POWERED_BY_URL = 'https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=badge&utm_campaign=powered_by'
 const AB_LOGO_URI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CjxwYXRoIGQ9Ik04NyAwLjA2QzkzIDAuMDYgOTkgMC4wNiAxMDUgMC4wNkMxMDUuMjggMC4zNiAxMDUuNTYgMC42NyAxMDUuODMgMC45OEMxMDkuMDkgMC44OSAxMTguNDcgMy44MSAxMjAuMTcgMi41N0MxMjEuNjUgNS4wMSAxMzEgNi4zOSAxMzQuMSA4LjA4QzE0Mi44MiAxMi44MSAxNTEuNTQgMTcuMjMgMTU4Ljk5IDIzLjg0QzE2Ny44NSAzMS43MiAxNzYuNjIgNDIuMDMgMTgxLjYgNTMuMzZDMTgzLjMzIDU3LjI4IDE4NS43OCA2MS4xNCAxODYuNjMgNjUuMzNDMTg3LjA1IDY3LjM4IDE4Ny44NCA3MS4wNyAxODkuNDMgNzIuMTdDMTg4LjQ0IDczLjU4IDE4OS44NSA4MS4wMyAxOTEuNDMgODIuMTdDMTkwLjYxIDgzLjE2IDE5MC4zNCA4Ny43MyAxOTEuOTQgODguMzNDMTkxLjk0IDkzLjQ0IDE5MS45NCA5OC41NiAxOTEuOTQgMTAzLjY3QzE5MS42NCAxMDMuOTQgMTkxLjMzIDEwNC4yMiAxOTEuMDIgMTA0LjVDMTkxLjEzIDEwNy45NCAxODguMTIgMTE3LjkxIDE4OS40MyAxMTkuODNDMTg2LjU3IDEyMi4yOCAxODUuODUgMTMwLjUzIDE4My45MSAxMzQuMUMxODEuMDIgMTM5LjQgMTc4LjYyIDE0NS4yMSAxNzQuOTMgMTUwLjExQzE3My4zNSAxNTIuMjEgMTY4LjQ1IDE1Ny4wMiAxNjggMTU5LjE3QzE2NS4wNyAxNjAuNDMgMTYwLjEzIDE2Ny42NiAxNTYuOTYgMTY5LjgxQzE1NS4wMSAxNzEuMTQgMTUxLjM2IDE3Mi44OCAxNTAuMTcgMTc1QzE0Ny4xMiAxNzUuNjEgMTM5LjkyIDE4MS4wOSAxMzYuMzMgMTgyLjgxQzEzNC42MyAxODMuNjIgMTMyLjg0IDE4My42MSAxMzEuODMgMTg1LjQzQzEzMC4zOSAxODQuNTggMTI3LjI3IDE4Ni40MSAxMjUuMzMgMTg2Ljk3QzEyMC4zMSAxODguNDEgMTE0LjY1IDE5MC4yNiAxMDkuNDQgMTkwLjY0QzEwNy44NiAxOTAuNzYgMTAzLjQ5IDE5MC40MyAxMDMgMTkxLjk0Qzk4LjMzIDE5MS45NCA5My42NyAxOTEuOTQgODkgMTkxLjk0Qzg4LjUgMTkwLjQyIDg2LjI0IDE5MS4wOCA4NC44MyAxOTAuODNDODIuMzYgMTkwLjQgNzMuNjkgMTg4LjQgNzIuMTcgMTg5LjQzQzcxLjI0IDE4OC4wNyA2MS4zIDE4NC43NiA2MC4xNyAxODUuNDNDNTkuMTIgMTgzLjU3IDU2Ljk2IDE4My42NyA1NS4yNSAxODIuNjFDNTIuOSAxODEuMTQgNDMuNzQgMTc1LjM5IDQxLjgzIDE3NUM0MC44NyAxNzMuMyAzMS40NSAxNjYuNzMgMjkuMjkgMTY0LjYzQzIzLjE2IDE1OC42OSAxNi44IDE1MC41OCAxMi4zMyAxNDIuNTNDOS42MSAxMzcuNjUgNy40MiAxMzIuMzUgNS40NiAxMjcuMTRDNC41OSAxMjQuODMgNC42NCAxMjEuNjUgMi41NyAxMjAuMTdDMy42NSAxMTguNyAzLjA5IDExNi44NiAxLjU3IDExNS44M0MyLjI4IDExNC43OSAxLjM0IDEwNS40MiAwLjA2IDEwNUMwLjA2IDk5IDAuMDYgOTMgMC4wNiA4N0MxLjcgODYuNDcgMS4wOCA4Mi44NyAxLjMyIDgxLjMzQzIuMTggNzUuODEgMy45NSA3MC42IDUuMzEgNjUuMUM2LjQ2IDYwLjUxIDExLjMgNDkuODggMTQuMDcgNDYuMjNDMTUuNTYgNDQuMjcgMTguNSA0MS4yOCAxOSAzOC44M0MyMC4wMiAzOC4zMSAzMC43NSAyNS44MiAzMy4zMyAyMy41QzM0Ljg1IDIyLjE0IDM4LjA0IDIwLjg0IDM4LjgzIDE5QzQxLjU2IDE4LjQ1IDQ4LjkzIDEyLjU1IDUyLjI1IDEwLjgxQzYyLjU4IDUuNCA3NC41IDEuNjQgODYuMTcgMC45OEM4Ni40NCAwLjY3IDg2LjcyIDAuMzYgODcgMC4wNlpNOTguNSA0My43N0M5Ni43MyA0MC45MiA5MS4wMiAzMy44IDkwLjEgMzEuNzRDODkuMzUgMzAuMDYgOTAuNTQgMjcuNDcgODkuOTcgMjUuNTFDODguNjQgMjAuOSA4Mi41OSAxOS42MSA3OC45MiAyMi4xQzc0LjE0IDI1LjM0IDc1LjUgMzIuODMgODAuNjcgMzQuODJDODIuMzkgMzUuNDggODQuODggMzQuMzQgODYuMyAzNS4xOUM4OC42MSAzNi41NyA5MS4yMSA0MS4xMyA5Mi4zMyA0My41Qzg5Ljk1IDQ1LjI0IDg0LjIzIDQ1LjIyIDgxLjIxIDQ2LjA5Qzc3LjY2IDQ3LjExIDc0LjI1IDUwLjIyIDcwLjc5IDUwLjkxQzY1LjQyIDUxLjk3IDYwLjA3IDUxLjUzIDU0LjY4IDUzLjE4QzI5Ljk1IDYwLjc2IDE0Ljc3IDg4LjYgMjIuMjIgMTEzLjU4QzI1LjgzIDEyNS43MiAzNC40NSAxMzYuOCA0NS43IDE0Mi44MUM0OS4zOSAxNDQuNzggNTMuOTEgMTQ1LjQxIDU3LjQ4IDE0Ny4zM0M1OS4xNCAxNDguMjIgNTguOTUgMTUwLjg0IDYwLjYxIDE1MS44NkM2Mi41OCAxNTMuMDggNjkuNzkgMTUzLjMgNzIuNjkgMTU0LjE2Qzg5Ljc1IDE1OS4yMyA5NC44MyAxNjMuODMgMTEzLjEyIDE1Ni4yN0MxMTcuMiAxNTQuNTggMTIxLjQ2IDE1My4wOSAxMjUuODMgMTUyLjI2QzEyNy45OSAxNTEuODUgMTMwLjgxIDE1Mi42MSAxMzIuNjEgMTUxLjExQzEzMy45IDE1MC4wNCAxMzMuNzkgMTQ4LjUzIDEzNC40NCAxNDcuMTdDMTQ0Ljc0IDE0My4xMyAxNTMuNjQgMTM4Ljc5IDE2MC43IDEyOS44N0MxNzYuMjkgMTEwLjIgMTczLjkzIDc5Ljg1IDE1NC45MyA2My4yNUMxNDcuNzcgNTYuOTkgMTM4Ljk5IDUyLjY0IDEyOS41MiA1MS4yMUMxMjYuNTYgNTAuNzcgMTIzLjQgNTEuMjYgMTIwLjUgNTAuNzVDMTE3LjI2IDUwLjE4IDExMy44IDQ3LjMxIDExMC42IDQ2LjIxQzEwNi42MyA0NC44NSAxMDIuNTIgNDQuNzEgOTguNSA0My43N1pNODEuMjYgMjMuMTNDODcuNTQgMjEuMDYgOTEuMTUgMzAuMTIgODUuMjUgMzIuNzdDNzguOTcgMzUuNiA3NC44NiAyNS4yMyA4MS4yNiAyMy4xM1pNOTAuOSA1My4xNkMxMDguMjggNTMuMDYgMTI3LjYgNTAuMzMgMTQzLjYgNTguMjJDMTc0LjkzIDczLjY3IDE3Ni45OCAxMTguMDQgMTQ4LjkzIDEzNy43N0MxMzUuOTggMTQ2Ljg4IDEyMS4zNyAxNDYuMTUgMTA2LjE3IDE0Ni4xOUM4Mi42NyAxNDYuMjUgNTUuOCAxNTEuMTEgMzcuMTkgMTMzLjY1QzExLjQ2IDEwOS41MSAyMi42MSA2NS4yIDU2LjA1IDU1LjE5QzY3LjA4IDUxLjg5IDc5LjUyIDUzLjIzIDkwLjkgNTMuMTZaTTk1LjkzIDYxLjVDODAuOTYgNjEuODIgNjMuNjQgNTguOTQgNTAuMzMgNjcuMTdDMjYuNTMgODEuODggMjUuOTMgMTE4LjU2IDUwLjY0IDEzMi44NUM2MS4wMyAxMzguODYgNzIuMTcgMTM4LjA4IDgzLjgzIDEzOC4wNkM5Mi4yOCAxMzguMDQgMTAwLjcyIDEzNy45NyAxMDkuMTcgMTM3Ljk2QzEyMy4wOCAxMzcuOTYgMTM0Ljk5IDEzNy43MSAxNDYuMjEgMTI4LjcxQzE3MS4zMSAxMDguNTkgMTU5LjAxIDcwLjAyIDEyOS44NSA2Mi4yN0MxMjAuMDUgNTkuNjcgMTA2LjE1IDYxLjI3IDk1LjkzIDYxLjVaTTExNC44OCA3Mi40NEMxMTkuNzMgNzEuNDkgMTI1LjA1IDc0Ljg2IDEyNi44MiA3OS4zNEMxMjguMTggODIuOCAxMjcuNTUgODcuMjEgMTI3LjU4IDkwLjgzQzEyNy42OCAxMDAgMTMxLjc0IDEyMy44OCAxMTguMTcgMTI1QzEwMS40NSAxMjYuMzkgMTA1LjU0IDEwMy43IDEwNS40MiA5My4xN0MxMDUuMzcgODguNyAxMDQuNjEgODMuNTYgMTA2LjE0IDc5LjI3QzEwNy40NiA3NS41OCAxMTEuMTkgNzMuMTYgMTE0Ljg4IDcyLjQ0Wk03My41NiA3Mi43OUM5MC43NiA3MC4xNiA4Ni41OSA5NS42NSA4Ni42OCAxMDUuODNDODYuNzEgMTA5Ljk3IDg3LjI5IDExNC40NiA4NS45IDExOC40NEM4NC41NyAxMjIuMjcgODAuNDIgMTI1LjA0IDc2LjQ3IDEyNS4xOUM2MC4zNyAxMjUuOCA2NC40OSAxMDMuMjkgNjQuMzkgOTIuODNDNjQuMzUgODguNTMgNjMuNjkgODMuNyA2NS4xIDc5LjU3QzY2LjMyIDc2LjAxIDY5Ljk0IDczLjM1IDczLjU2IDcyLjc5WiIgZmlsbD0iI2Y4ZjhmOCIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiNmOGY4ZjgiIHN0cm9rZS13aWR0aD0iMC4yNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNOTguNSA0My43N0MxMDIuNTIgNDQuNzEgMTA2LjYzIDQ0Ljg1IDExMC42IDQ2LjIxQzExMy44IDQ3LjMxIDExNy4yNiA1MC4xOCAxMjAuNSA1MC43NUMxMjMuNCA1MS4yNiAxMjYuNTYgNTAuNzcgMTI5LjUyIDUxLjIxQzEzOC45OSA1Mi42NCAxNDcuNzcgNTYuOTkgMTU0LjkzIDYzLjI1QzE3My45MyA3OS44NSAxNzYuMjkgMTEwLjIgMTYwLjcgMTI5Ljg3QzE1My42NCAxMzguNzkgMTQ0Ljc0IDE0My4xMyAxMzQuNDQgMTQ3LjE3QzEzMy43OSAxNDguNTMgMTMzLjkgMTUwLjA0IDEzMi42MSAxNTEuMTFDMTMwLjgxIDE1Mi42MSAxMjcuOTkgMTUxLjg1IDEyNS44MyAxNTIuMjZDMTIxLjQ2IDE1My4wOSAxMTcuMiAxNTQuNTggMTEzLjEyIDE1Ni4yN0M5NC44MyAxNjMuODMgODkuNzUgMTU5LjIzIDcyLjY5IDE1NC4xNkM2OS43OSAxNTMuMyA2Mi41OCAxNTMuMDggNjAuNjEgMTUxLjg2QzU4Ljk1IDE1MC44NCA1OS4xNCAxNDguMjIgNTcuNDggMTQ3LjMzQzUzLjkxIDE0NS40MSA0OS4zOSAxNDQuNzggNDUuNyAxNDIuODFDMzQuNDUgMTM2LjggMjUuODMgMTI1LjcyIDIyLjIyIDExMy41OEMxNC43NyA4OC42IDI5Ljk1IDYwLjc2IDU0LjY4IDUzLjE4QzYwLjA3IDUxLjUzIDY1LjQyIDUxLjk3IDcwLjc5IDUwLjkxQzc0LjI1IDUwLjIyIDc3LjY2IDQ3LjExIDgxLjIxIDQ2LjA5Qzg0LjIzIDQ1LjIyIDg5Ljk1IDQ1LjI0IDkyLjMzIDQzLjVDOTEuMjEgNDEuMTMgODguNjEgMzYuNTcgODYuMyAzNS4xOUM4NC44OCAzNC4zNCA4Mi4zOSAzNS40OCA4MC42NyAzNC44MkM3NS41IDMyLjgzIDc0LjE0IDI1LjM0IDc4LjkyIDIyLjFDODIuNTkgMTkuNjEgODguNjQgMjAuOSA4OS45NyAyNS41MUM5MC41NCAyNy40NyA4OS4zNSAzMC4wNiA5MC4xIDMxLjc0QzkxLjAyIDMzLjggOTYuNzMgNDAuOTIgOTguNSA0My43N1pNODEuMjYgMjMuMTNDNzQuODYgMjUuMjMgNzguOTcgMzUuNiA4NS4yNSAzMi43N0M5MS4xNSAzMC4xMiA4Ny41NCAyMS4wNiA4MS4yNiAyMy4xM1pNOTAuOSA1My4xNkM3OS41MiA1My4yMyA2Ny4wOCA1MS44OSA1Ni4wNSA1NS4xOUMyMi42MSA2NS4yIDExLjQ2IDEwOS41MSAzNy4xOSAxMzMuNjVDNTUuOCAxNTEuMTEgODIuNjcgMTQ2LjI1IDEwNi4xNyAxNDYuMTlDMTIxLjM3IDE0Ni4xNSAxMzUuOTggMTQ2Ljg4IDE0OC45MyAxMzcuNzdDMTc2Ljk4IDExOC4wNCAxNzQuOTMgNzMuNjcgMTQzLjYgNTguMjJDMTI3LjYgNTAuMzMgMTA4LjI4IDUzLjA2IDkwLjkgNTMuMTZaTTk1LjkzIDYxLjVDMTA2LjE1IDYxLjI3IDEyMC4wNSA1OS42NyAxMjkuODUgNjIuMjdDMTU5LjAxIDcwLjAyIDE3MS4zMSAxMDguNTkgMTQ2LjIxIDEyOC43MUMxMzQuOTkgMTM3LjcxIDEyMy4wOCAxMzcuOTYgMTA5LjE3IDEzNy45NkMxMDAuNzIgMTM3Ljk3IDkyLjI4IDEzOC4wNCA4My44MyAxMzguMDZDNzIuMTcgMTM4LjA4IDYxLjAzIDEzOC44NiA1MC42NCAxMzIuODVDMjUuOTMgMTE4LjU2IDI2LjUzIDgxLjg4IDUwLjMzIDY3LjE3QzYzLjY0IDU4Ljk0IDgwLjk2IDYxLjgyIDk1LjkzIDYxLjVaTTExNC44OCA3Mi40NEMxMTEuMTkgNzMuMTYgMTA3LjQ2IDc1LjU4IDEwNi4xNCA3OS4yN0MxMDQuNjEgODMuNTYgMTA1LjM3IDg4LjcgMTA1LjQyIDkzLjE3QzEwNS41NCAxMDMuNyAxMDEuNDUgMTI2LjM5IDExOC4xNyAxMjVDMTMxLjc0IDEyMy44OCAxMjcuNjggMTAwIDEyNy41OCA5MC44M0MxMjcuNTUgODcuMjEgMTI4LjE4IDgyLjggMTI2LjgyIDc5LjM0QzEyNS4wNSA3NC44NiAxMTkuNzMgNzEuNDkgMTE0Ljg4IDcyLjQ0Wk03My41NiA3Mi43OUM2OS45NCA3My4zNSA2Ni4zMiA3Ni4wMSA2NS4xIDc5LjU3QzYzLjY5IDgzLjcgNjQuMzUgODguNTMgNjQuMzkgOTIuODNDNjQuNDkgMTAzLjI5IDYwLjM3IDEyNS44IDc2LjQ3IDEyNS4xOUM4MC40MiAxMjUuMDQgODQuNTcgMTIyLjI3IDg1LjkgMTE4LjQ0Qzg3LjI5IDExNC40NiA4Ni43MSAxMDkuOTcgODYuNjggMTA1LjgzQzg2LjU5IDk1LjY1IDkwLjc2IDcwLjE2IDczLjU2IDcyLjc5WiIgZmlsbD0iIzIyMWUxZiIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMyMjFlMWYiIHN0cm9rZS13aWR0aD0iMC4yNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4='
 
 function PoweredByBadge() {

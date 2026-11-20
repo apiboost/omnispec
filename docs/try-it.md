@@ -76,7 +76,7 @@ Content-Type: application/json
 |-------|------|-------------|
 | `url` | `string` | Fully resolved target URL (path params substituted, query params appended) |
 | `method` | `string` | HTTP method (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`) |
-| `headers` | `Record<string, string>` | Headers to forward to the target API (includes auth headers) |
+| `headers` | `Record<string, string>` | Headers to forward to the target API (includes auth headers, and a `Cookie` header for `in: cookie` API keys) |
 | `body` | `string \| null` | Request body (for POST/PUT/PATCH) |
 | `bodyEncoding` | `"utf-8" \| "base64"` | Body encoding format. `base64` is used for `multipart/form-data` uploads — the browser serializes the real multipart payload (boundary included) and base64-encodes it; the proxy must decode it back to raw bytes before forwarding. The built-in `createProxyRouter` handles this automatically |
 | `timeout` | `number` | Request timeout in milliseconds |
@@ -117,6 +117,10 @@ content type (`response.pdf`, `response.png`, ...).
 
 ### Example Proxy Implementation (Node.js / Express)
 
+A minimal sketch of the contract. It has **no SSRF protection** — prefer the
+built-in [`createProxyRouter`](./backend-integration.md#recommended-built-in-express-middleware),
+or add the checks listed under [Security Considerations](./backend-integration.md#security-considerations).
+
 ```js
 app.post('/api/proxy', async (req, res) => {
   const { url, method, headers, body, timeout } = req.body;
@@ -130,6 +134,7 @@ app.post('/api/proxy', async (req, res) => {
       headers,
       body: body || undefined,
       signal: controller.signal,
+      redirect: 'manual', // never follow redirects: return the 3xx to the browser
     });
 
     const responseBody = await response.text();
@@ -202,10 +207,13 @@ send, the fields are serialized as URL-encoded pairs. If the schema defines no
 properties, the editor falls back to the JSON textarea and converts the JSON
 object to URL-encoded pairs on send.
 
-> Note: when using proxy mode with your own Express app, ensure your JSON body
-> parser limit (`express.json({ limit })`) is large enough for base64-encoded
-> uploads (~4/3 of the file size), and set the router's `maxBodySize`
-> accordingly.
+> Note: in proxy mode, uploads travel base64-encoded (~4/3 of the file size).
+> The built-in `createProxyRouter` parses its own envelope with a limit sized
+> for `maxBodySize` (applied to the decoded bytes), so raise `maxBodySize` for
+> larger files. If your app mounts a global `express.json()` **before** the
+> proxy route, its `limit` (100 KB by default) applies first — mount the proxy
+> before it or raise that limit. See
+> [Request body size](./backend-integration.md#request-body-size-soap-envelopes-uploads).
 
 ## Prefilling from Examples
 
@@ -421,6 +429,34 @@ authorized state of schemes you aren't currently viewing (relevant when an
 operation requires more than one). A spec with a single scheme skips the tab
 bar and shows its form directly.
 
+## API key placement (`in`)
+
+An `apiKey` security scheme is sent where its OpenAPI `in` says, both in the
+request Try It sends and in every generated code sample:
+
+| `in` | How the key is sent |
+|------|---------------------|
+| `header` | As a request header named by `name` (e.g. `X-API-Key: ...`). |
+| `query` | Appended to the URL query string as `name=value`, URL-encoded, alongside any query parameters you filled in (a parameter of the same name you set explicitly wins). This is what Apigee's `VerifyAPIKey` policy expects when it reads `request.queryparam.apikey`. |
+| `cookie` | As a `Cookie: name=value` header. See the limitation below. |
+
+```yaml
+components:
+  securitySchemes:
+    apigeeKey:
+      type: apiKey
+      in: query
+      name: apikey
+```
+
+**Cookie credentials need a proxy.** Browsers forbid scripts from setting the
+`Cookie` header, so in [direct mode](#direct-mode-default) the browser silently
+drops it and the credential never reaches the API; the Try It panel shows a
+notice when that applies. In [proxy mode](#proxy-mode) the cookie travels as
+`headers.Cookie` in the JSON envelope and the built-in `createProxyRouter`
+forwards it to the target API. The generated code samples always include the
+`Cookie` header, so they work as-is outside the browser.
+
 ## Custom Headers
 
 Use the **+ Add header** button in the Try It panel to attach arbitrary
@@ -497,6 +533,19 @@ You can listen to Try It requests and responses:
 />
 ```
 
+`onTryItRequest` fires when **Send** is clicked, just before the request goes
+out. Its `TryItRequest` carries `method`, `url` (the selected server URL plus
+the path template, e.g. `https://api.example.com/pets/{id}`), `pathParams`,
+`queryParams`, `headers`, and the body. `onTryItResponse` fires once the
+response (direct or proxied) is received. Both are observe-only.
+
+:::warning
+The request payload includes the applied credentials exactly as they are sent:
+the `Authorization` header, API-key headers, an `in: query` API key in
+`queryParams`, and the `Cookie` header for `in: cookie` keys. Redact them
+before logging or forwarding the payload to analytics.
+:::
+
 ## Props Reference
 
 | Prop | Type | Default | Description |
@@ -522,7 +571,7 @@ Every operation automatically generates code snippets in 6 languages, displayed 
 
 Code samples automatically include:
 - The selected server URL with interpolated variables
-- Authentication headers from the Auth panel
+- Credentials from the Auth panel, placed per the scheme's `in` (header, query string, or `Cookie` header)
 - Path and query parameters from the parameter form
 - Request body from the editor or schema-generated defaults
 

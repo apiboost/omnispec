@@ -137,7 +137,7 @@ through the shadow boundary. The `detail` property carries the typed payload.
 | Event | `detail` type | When |
 | --- | --- | --- |
 | `spec-loaded` | `SpecLoadedInfo` (`{ title, version, type }`) | After the spec has been fetched and parsed. |
-| `try-it-request` | `TryItRequest` | When the user clicks "Try it" — payload of the outgoing request. |
+| `try-it-request` | `TryItRequest` | When the user clicks **Send** in the Try-It panel — payload of the outgoing request (includes applied credentials; redact before logging). |
 | `try-it-response` | `TryItResponse` | When the Try-It response is received. |
 
 ```ts

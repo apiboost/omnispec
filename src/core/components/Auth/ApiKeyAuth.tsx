@@ -109,6 +109,7 @@ export function ApiKeyAuth({ scheme, onApply, onRemove, applied, appliedValue }:
       schemeId: scheme.id,
       headerName,
       headerValue: value,
+      in: scheme.in ?? 'header',
       input: { value },
     })
   }

@@ -173,7 +173,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Apiboost OmniSpec™ is an open-source multi-spec rendering component developed and maintained by Apiboost. © ${new Date().getFullYear()} Apiboost. All Rights Reserved.`,
+      copyright: `Apiboost OmniSpec™ is an Apache-2.0 open-source renderer for OpenAPI and AsyncAPI documentation, developed and maintained by Apiboost. © ${new Date().getFullYear()} Apiboost. All Rights Reserved.`,
     },
     prism: {
       theme: prismThemes.github,

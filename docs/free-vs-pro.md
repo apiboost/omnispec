@@ -7,7 +7,7 @@ sidebar_position: 2
 
 `@apiboost/omnispec` — the free core — is a **complete, production-ready API documentation renderer**. It is published under the **Apache-2.0** license on the public npm registry, has no runtime license check, and is not a time-limited trial. If your APIs are described with OpenAPI or AsyncAPI, the free core renders them fully, including interactive Try-It, code samples, theming, and a framework-agnostic web component.
 
-**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** is a separate, proprietary package (`@apiboost/omnispec-pro`) that extends the free core with additional spec renderers, deeper white-labeling, premium vendor extensions, and interactive OAuth. Pro is a drop-in superset: it re-exports everything in Free and swaps in a Pro-wired renderer, so nothing you build on Free is thrown away when you upgrade.
+**[Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)** is a separate, proprietary edition that extends the free core with additional spec renderers, deeper white-labeling, premium vendor extensions, and interactive OAuth. Pro is a drop-in superset: it re-exports everything in Free and swaps in a Pro-wired renderer, so nothing you build on Free is thrown away when you upgrade.
 
 :::info
 The public documentation site fully documents everything the free core does. Pro capabilities are named and summarized here, but their configuration syntax and recipes live in the Pro documentation. Where a page mentions a Pro feature, it also states what the free core does instead.
@@ -15,15 +15,15 @@ The public documentation site fully documents everything the free core does. Pro
 
 ## At a glance
 
-| Dimension | Free (`@apiboost/omnispec`) | Pro (`@apiboost/omnispec-pro`) |
+| Dimension | Free (`@apiboost/omnispec`) | Pro |
 |---|---|---|
 | **License** | Apache-2.0 (open source) | Proprietary (commercial) |
-| **Registry** | Public npm | GitHub Packages (license-validated) |
+| **Registry** | Public npm | Licensed access via [apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro) (KeyGen-validated) |
 | **Renderers** | OpenAPI 2.0 / 3.0 / 3.1, AsyncAPI 2.x / 3.x | + GraphQL (SDL + introspection), SOAP / WSDL, gRPC / Protobuf |
 | **Try-It** | Yes — direct (browser) and proxied | Inherited from Free |
 | **Authentication** | API key, Basic, Bearer, OAuth2 with **manual token paste** | + Interactive OAuth: Authorization Code + PKCE "Get Token", OpenID Connect, the `oauth` prop |
 | **Code samples** | 6 languages (cURL, JavaScript, Python, Go, Java, C#), customizable with `x-codeSamples` | Inherited from Free |
-| **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 70+ design tokens |
+| **Theming** | `theme.base` (`light` / `dark` / `auto`) + raw `--omnispec-*` CSS-variable overrides on `.omnispec-root` | + `theme.overrides` — structured white-labeling across 80+ design tokens |
 | **Vendor extensions** | `x-logo`, `x-codeSamples`, `x-tagGroups`, `x-displayName`, `x-badges`, `x-internal`, `x-enumDescriptions` | + `x-flowVariables`, `x-tokenEndpointAuthMethod` (interactive-OAuth Try-It extensions) |
 | **Schema rendering** | Tree view with cross-links | + `schemaStyle` `'table'` / `'card'` layouts |
 | **Try-It proxy** | Express middleware (`@apiboost/omnispec/server`) with SSRF guard, rate limiting, allow-listing | Inherited from Free |
@@ -50,4 +50,10 @@ Reach for [Apiboost OmniSpec Pro](https://apiboost.com/omnispec?utm_source=omnis
 - Give consumers **one-click OAuth** (Authorization Code + PKCE) or **OpenID Connect** discovery in the Try-It panel instead of pasting tokens manually.
 - Get **commercial support** with response-time commitments.
 
-Upgrading is a package swap: import `OmniSpecRenderer` from `@apiboost/omnispec-pro` instead of `@apiboost/omnispec`, and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
+Upgrading keeps the same component API: swap in Pro's pre-wired `OmniSpecRenderer` and every free feature keeps working. Learn more at **[apiboost.com](https://apiboost.com/omnispec?utm_source=omnispec&utm_medium=docs&utm_campaign=pro)**.
+
+:::tip[Building a full developer portal?]
+
+OmniSpec is the API reference renderer inside the [Apiboost developer portal](https://www.apiboost.com/?utm_source=omnispec&utm_medium=docs_callout&utm_campaign=portal&utm_content=free_vs_pro), which adds the rest of a portal around it: API catalog, developer apps and credentials, SSO and analytics, on Apigee and Azure API Management. Moving off an Apigee Drupal portal? Apiboost imports your existing developers, apps and keys.
+
+:::

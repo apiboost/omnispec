@@ -32,15 +32,34 @@ Content only, no sidebar. Useful for embedding in tight spaces:
 
 The sidebar is sticky and scrolls independently from the main content.
 
-### Mobile Drawer
+### Mobile Navigation
 
-On mobile viewports the sidebar becomes a full-screen drawer opened from a
-floating toggle button. The drawer dismisses itself when the user navigates:
-selecting a navigation item (an operation, channel, or custom link) or
-clicking any same-tab link inside the drawer — including links you provide
-via the `sidebarHeader`/`sidebarFooter` slots — closes it. Group headers only
-expand/collapse their children and keep the drawer open, as do links with
-`target="_blank"`.
+Below the desktop breakpoint (1024px) the sidebar column is replaced by a
+sticky navigation bar at the top of the renderer, following the pattern used
+by most documentation sites:
+
+- A **sidebar toggle** on the left, and a **breadcrumb trail** — the spec
+  title followed by the section currently in view (or the selected operation
+  in segmented mode). The trail scrolls horizontally when it is too long and
+  always keeps the current location visible.
+- The toggle expands the sidebar content (spec navigation plus anything in the
+  `sidebarHeader`/`sidebarFooter` slots) as a full-width panel filling the
+  viewport below the bar, scrolled to the active item. The same toggle
+  collapses it.
+
+The panel is a disclosure, not a modal: there is no backdrop. It also closes
+when the user presses <kbd>Escape</kbd> (focus returns to the toggle), moves
+keyboard focus outside the bar and panel, or navigates — selecting a
+navigation item (an operation, channel, or custom link) or clicking any
+same-tab link inside the panel, including links you provide via the slots.
+Group headers only expand/collapse their children and keep the panel open, as
+do links with `target="_blank"`.
+
+The bar sticks below `--omnispec-offset-top`, so a host page with its own
+sticky header only needs to set that variable (see
+[Theming → Layout](./theming.md#layout)). If the header hides on scroll,
+set `--omnispec-offset-top-transition` to its duration and easing so the bar
+moves with it (a negative offset slides the bar out with the header).
 
 ## Navigation Mode
 
@@ -110,7 +129,7 @@ The left column shows parameters and response schemas using a chained-list displ
 
 Display mode and navigation mode are independent — reference mode works with both grouped and segmented navigation.
 
-**AsyncAPI in reference mode:** `<AsyncApiSpec>` (and `<OmniSpecRenderer>` on an AsyncAPI document) honors `displayMode="reference"` too. The main column shows the channel/operation detail; the right **Samples** column shows the message payload schema and examples. AsyncAPI protocols (MQTT, Kafka, …) can't be exercised from a browser, so there is no Try-It tab for AsyncAPI operations.
+**AsyncAPI in reference mode:** `<AsyncApiSpec>` (and `<OmniSpecRenderer>` on an AsyncAPI document) honors `displayMode="reference"` too. The main column shows the channel/operation detail; the right **Samples** column shows the message payload schema and examples. AsyncAPI protocols (MQTT, Kafka, …) can't be exercised from a browser, so there is no Try-It tab for AsyncAPI operations. See the [AsyncAPI guide](./asyncapi.md) for the full AsyncAPI feature set (2.x and 3.x, channels, messages, request-reply, tag grouping).
 
 Both display modes render OAS 3.0 callbacks as expandable sections within each operation. Named examples (when multiple are defined) display a dropdown selector.
 

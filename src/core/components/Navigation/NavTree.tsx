@@ -28,6 +28,20 @@ export interface NavItem {
   className?: string
 }
 
+/**
+ * Finds the label of the item with the given id anywhere in the tree — used
+ * to name the current location (e.g. in DocLayout's mobile breadcrumbs).
+ */
+export function findNavLabel(items: NavItem[], id?: string): string | undefined {
+  if (!id) return undefined
+  for (const item of items) {
+    if (item.id === id) return item.label
+    const nested = item.children ? findNavLabel(item.children, id) : undefined
+    if (nested) return nested
+  }
+  return undefined
+}
+
 interface NavTreeProps {
   items: NavItem[]
   activeId?: string
@@ -37,7 +51,9 @@ interface NavTreeProps {
 
 export function NavTree({ items, activeId, onSelect, parentToggleOnly }: NavTreeProps) {
   return (
-    <nav className={`omnispec-nav-tree ${rootStyle}`}>
+    // Named so it is distinguishable from other navigation landmarks on the
+    // page (e.g. DocLayout's mobile breadcrumbs, or a host portal's nav).
+    <nav aria-label="API navigation" className={`omnispec-nav-tree ${rootStyle}`}>
       {items.map((item) => (
         <NavTreeItem
           key={item.id}
@@ -89,10 +105,10 @@ function NavTreeItem({ item, activeId, onSelect, depth, parentToggleOnly }: NavT
       }
     }
     /*
-     * Inside DocLayout's full-screen mobile drawer, a navigation must also
-     * close the drawer — otherwise it keeps covering the content the user
+     * Inside DocLayout's full-screen mobile nav panel, a navigation must also
+     * close the panel — otherwise it keeps covering the content the user
      * just navigated to. Group items are exempt: their tap expands children
-     * for a follow-up pick, so the drawer stays open.
+     * for a follow-up pick, so the panel stays open.
      */
     const dismissAfterNavigate = () => {
       if (!hasChildren) {
@@ -136,6 +152,7 @@ function NavTreeItem({ item, activeId, onSelect, depth, parentToggleOnly }: NavT
         // Collapsible group toggles expose their expanded state to assistive
         // tech; leaf items (no children) are plain actions with no state.
         aria-expanded={hasChildren ? expanded : undefined}
+        aria-current={isActive ? 'location' : undefined}
         className={cx(
           css({
             ...itemBaseStyles,

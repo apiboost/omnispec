@@ -21,7 +21,10 @@ import { MethodBar } from '@core/components/common/MethodBar'
 import { BindingsSection } from './BindingsSection'
 import { SecurityRequirementBadges } from './SecurityRequirementBadges'
 import { ExternalDocsLink } from '@asyncapi/components/ExternalDocsLink'
+import { TagChips } from '@asyncapi/components/TagChips'
 import { MessagePayload } from './MessagePayload'
+import { actionLabels, actionColors, channelActionBadge } from '@asyncapi/components/channel-actions'
+import { ReplyMeta } from '@asyncapi/components/ReplyMeta'
 
 interface ChannelDetailProps {
   channel: AsyncApiChannel
@@ -33,26 +36,19 @@ interface ChannelDetailProps {
    * tag name (e.g. to filter the spec by tag). When absent, chips render static.
    */
   onTagClick?: (tagName: string) => void
+  /** The active tag filter, forwarded to tag chips for their `aria-pressed` state. */
+  activeTag?: string | null
+  /** Resolves a channel name to an in-page href so a reply can link to its channel. */
+  channelHref?: (channelName: string) => string | undefined
+  /** Navigates to a channel's card by name (expands + scrolls, even on a same-hash click). */
+  onChannelNavigate?: (channelName: string) => void
 }
 
-const actionLabels: Record<string, string> = {
-  publish: 'PUB',
-  subscribe: 'SUB',
-  send: 'SEND',
-  receive: 'RECV',
-}
-
-const actionColors: Record<string, string> = {
-  publish: 'var(--omnispec-color-publish)',
-  subscribe: 'var(--omnispec-color-subscribe)',
-  send: 'var(--omnispec-color-publish)',
-  receive: 'var(--omnispec-color-subscribe)',
-}
-
-export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick }: ChannelDetailProps) {
-  const primaryAction = channel.operations[0]?.action
-  const primaryLabel = actionLabels[primaryAction] ?? primaryAction?.toUpperCase() ?? ''
-  const primaryColor = actionColors[primaryAction] ?? 'var(--omnispec-fg-muted)'
+export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagClick, activeTag, channelHref, onChannelNavigate }: ChannelDetailProps) {
+  // Surface every distinct action the channel carries (a 2.x channel can declare
+  // both publish and subscribe), not just the first operation's — the header
+  // otherwise mislabels a pub+sub channel as publish-only.
+  const headerBadge = channelActionBadge(channel)
 
   return (
     <ExpandableCard
@@ -63,7 +59,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
       expandGeneration={expandGeneration}
     >
       {/* Method bar — matches OpenAPI MethodBar pattern */}
-      <MethodBar label={primaryLabel} path={channel.address} color={primaryColor} />
+      <MethodBar label={headerBadge.label} path={channel.address} color={headerBadge.color} />
 
       {/* Body content */}
       <div className={bodyStyle}>
@@ -71,6 +67,11 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
           <div className={sectionStyle}>
             <MarkdownRenderer content={channel.description} />
           </div>
+        )}
+
+        {/* Channel's own tags (2.x and 3.x) — chips, each with its docs link */}
+        {channel.tags && channel.tags.length > 0 && (
+          <TagChips tags={channel.tags} onTagClick={onTagClick} activeTag={activeTag} />
         )}
 
         {/* Channel-level external documentation (3.x) */}
@@ -127,36 +128,24 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
         {channel.operations.map((op, idx) => (
           <div key={idx} id={id ? `${id}-op-${idx}` : undefined} className={operationStyle}>
             <div className={opHeaderStyle}>
-              <span
-                className={cx(actionBadgeBase, css({
-                  backgroundColor: actionColors[op.action] ?? 'var(--omnispec-fg-muted)',
-                }))}
-              >
-                {actionLabels[op.action] ?? op.action.toUpperCase()}
+              <span className={opNameLineStyle}>
+                <span
+                  className={cx(actionBadgeBase, css({
+                    backgroundColor: actionColors[op.action] ?? 'var(--omnispec-fg-muted)',
+                  }))}
+                >
+                  {actionLabels[op.action] ?? op.action.toUpperCase()}
+                </span>
+                {op.operationId && <span className={opIdStyle}>{op.operationId}</span>}
+                {op.title && <span className={opTitleStyle}>{op.title}</span>}
               </span>
-              {op.operationId && <span className={opIdStyle}>{op.operationId}</span>}
-              {op.title && <span className={opTitleStyle}>{op.title}</span>}
+              {/* Summary stacks under the name line (flexBasis 100%) so it isn't
+                  crushed beside the operation name on narrow viewports (finding 5). */}
               {op.summary && <span className={opSummaryStyle}>{op.summary}</span>}
             </div>
 
             {op.tags && op.tags.length > 0 && (
-              <div className={tagChipsStyle}>
-                {op.tags.map((tag) =>
-                  onTagClick ? (
-                    <button
-                      key={tag.name}
-                      type="button"
-                      className={tagChipButtonStyle}
-                      title={tag.description}
-                      onClick={() => onTagClick(tag.name)}
-                    >
-                      {tag.name}
-                    </button>
-                  ) : (
-                    <span key={tag.name} className={tagChipStyle} title={tag.description}>{tag.name}</span>
-                  ),
-                )}
-              </div>
+              <TagChips tags={op.tags} onTagClick={onTagClick} activeTag={activeTag} />
             )}
 
             {op.description && (
@@ -181,23 +170,7 @@ export function ChannelDetail({ channel, id, expandAll, expandGeneration, onTagC
             {op.reply && (op.reply.messages.length > 0 || op.reply.address || op.reply.channelName) && (
               <div className={replyStyle}>
                 <h4 className={replyTitleStyle}>Reply</h4>
-                {op.reply.channelName && (
-                  <div className={replyMetaRowStyle}>
-                    <span className={replyMetaLabelStyle}>channel</span>
-                    <code className={replyMetaValueStyle}>{op.reply.channelName}</code>
-                  </div>
-                )}
-                {op.reply.address && (op.reply.address.location || op.reply.address.description) && (
-                  <div className={replyMetaRowStyle}>
-                    <span className={replyMetaLabelStyle}>address</span>
-                    {op.reply.address.location && (
-                      <code className={replyMetaValueStyle}>{op.reply.address.location}</code>
-                    )}
-                    {op.reply.address.description && (
-                      <span className={replyMetaDescStyle}>{op.reply.address.description}</span>
-                    )}
-                  </div>
-                )}
+                <ReplyMeta reply={op.reply} channelHref={channelHref} onChannelNavigate={onChannelNavigate} />
                 {op.reply.messages.map((replyMsg, i) => (
                   <MessageView key={i} message={replyMsg} idx={`${idx}-reply-${i}`} />
                 ))}
@@ -359,8 +332,18 @@ const operationStyle = css({
 const opHeaderStyle = css({
   display: 'flex',
   alignItems: 'center',
-  gap: '0.5rem',
+  flexWrap: 'wrap',
+  gap: '0.25rem 0.5rem',
   marginBottom: '0.5rem',
+})
+
+// The action badge + operationId + title share one line; the summary (below)
+// stacks under them so it keeps its full width on narrow screens.
+const opNameLineStyle = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '0.5rem',
 })
 
 const actionBadgeBase = css({
@@ -388,6 +371,7 @@ const opTitleStyle = css({
 })
 
 const opSummaryStyle = css({
+  flexBasis: '100%',
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-secondary)',
 })
@@ -494,63 +478,4 @@ const replyTitleStyle = css({
   fontWeight: 700,
   color: 'var(--omnispec-fg-primary)',
   letterSpacing: '0.02em',
-})
-
-const replyMetaRowStyle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  flexWrap: 'wrap',
-  marginBottom: '0.5rem',
-})
-
-const replyMetaLabelStyle = css({
-  fontSize: 'var(--omnispec-font-size-xs)',
-  fontWeight: 700,
-  color: 'var(--omnispec-fg-primary)',
-  fontFamily: 'var(--omnispec-font-mono)',
-})
-
-const replyMetaValueStyle = css({
-  fontFamily: 'var(--omnispec-font-mono)',
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-code)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.375rem',
-  borderRadius: '0.1875rem',
-})
-
-const replyMetaDescStyle = css({
-  fontSize: 'var(--omnispec-font-size-xs)',
-  color: 'var(--omnispec-fg-secondary)',
-})
-
-const tagChipsStyle = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '0.25rem',
-  marginBottom: '0.5rem',
-})
-
-const tagChipStyle = css({
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  color: 'var(--omnispec-fg-secondary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.5rem',
-  borderRadius: '0.625rem',
-})
-
-const tagChipButtonStyle = css({
-  fontSize: 'var(--omnispec-font-size-xxs)',
-  fontFamily: 'var(--omnispec-font-mono)',
-  color: 'var(--omnispec-fg-secondary)',
-  backgroundColor: 'var(--omnispec-bg-tertiary)',
-  padding: '1px 0.5rem',
-  borderRadius: '0.625rem',
-  border: 'none',
-  cursor: 'pointer',
-  '&:hover': {
-    color: 'var(--omnispec-fg-primary)',
-  },
 })

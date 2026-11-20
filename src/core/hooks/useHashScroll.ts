@@ -20,8 +20,11 @@ export function onExpandRequest(id: string, callback: () => void): () => void {
 }
 
 export function requestExpand(id: string) {
+  // `id` may come from the URL hash. `expandListeners` only ever holds callbacks
+  // we register, so this invokes the matching one when present; the `typeof`
+  // check keeps that explicit and quiets static analysis of the hash → call flow.
   const listener = expandListeners.get(id)
-  if (listener) listener()
+  if (typeof listener === 'function') listener()
 }
 
 const SMOOTH_THRESHOLD = 50
@@ -52,6 +55,23 @@ export function useHashScroll(operationCount = 0) {
     }, 200)
 
     return () => clearInterval(interval)
+  }, [scrollBehavior])
+
+  // In-page anchor links (e.g. a reply's channel link) change the hash after
+  // mount; expand the target card and scroll to it, matching `navigateTo`. The
+  // mount effect above only runs once, so without this a bare `#id` link would
+  // neither expand a collapsed target nor scroll.
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      if (!hash) return
+      requestExpand(hash)
+      requestAnimationFrame(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: scrollBehavior, block: 'start' })
+      })
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
   }, [scrollBehavior])
 
   const navigateTo = useCallback((id: string) => {

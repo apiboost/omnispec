@@ -12,7 +12,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup, fireEvent, waitFor, within } from '@testing-library/react'
 import { DocLayout } from '@core/components/Layout/DocLayout'
 
-function renderWithOpenDrawer(sidebarHeader?: React.ReactNode) {
+function renderWithOpenPanel(sidebarHeader?: React.ReactNode) {
   const utils = render(
     <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>} sidebarHeader={sidebarHeader}>
       <div>content</div>
@@ -50,23 +50,22 @@ describe('DocLayout sidebar column', () => {
   })
 })
 
-describe('DocLayout mobile drawer', () => {
-  it('closes when a same-tab link inside the drawer is clicked', async () => {
-    const { getByRole, queryByRole } = renderWithOpenDrawer(
+describe('DocLayout mobile nav panel', () => {
+  it('closes when a same-tab link inside the panel is clicked', async () => {
+    const { getByRole, queryByRole } = renderWithOpenPanel(
       <a href="/product/foo" onClick={(e) => e.preventDefault()}>
         Back to product
       </a>,
     )
-    const drawer = getByRole('dialog', { name: 'Navigation' })
-    expect(drawer).toBeTruthy()
-    fireEvent.click(within(drawer).getByRole('link', { name: 'Back to product' }))
+    const panel = getByRole('region', { name: 'Navigation' })
+    fireEvent.click(within(panel).getByRole('link', { name: 'Back to product' }))
     await waitFor(() =>
-      expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
+      expect(queryByRole('region', { name: 'Navigation' })).toBeNull(),
     )
   })
 
-  it('stays open when a _blank link inside the drawer is clicked', () => {
-    const { getByRole } = renderWithOpenDrawer(
+  it('stays open when a _blank link inside the panel is clicked', () => {
+    const { getByRole } = renderWithOpenPanel(
       <a
         href="https://example.com"
         target="_blank"
@@ -76,60 +75,89 @@ describe('DocLayout mobile drawer', () => {
         External
       </a>,
     )
-    const drawer = getByRole('dialog', { name: 'Navigation' })
-    fireEvent.click(within(drawer).getByRole('link', { name: 'External' }))
-    expect(getByRole('dialog', { name: 'Navigation' })).toBeTruthy()
+    const panel = getByRole('region', { name: 'Navigation' })
+    fireEvent.click(within(panel).getByRole('link', { name: 'External' }))
+    expect(getByRole('region', { name: 'Navigation' })).toBeTruthy()
   })
 
-  it('closes via the explicit close button', async () => {
-    const { getByRole, queryByRole } = renderWithOpenDrawer()
-    fireEvent.click(getByRole('button', { name: 'Close navigation' }))
-    await waitFor(() =>
-      expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
-    )
-  })
-
-  it('exposes aria-expanded on the Open navigation button reflecting drawer state', async () => {
+  it('toggles open and closed from the same button, reflecting aria-expanded', () => {
     const { getByRole, queryByRole } = render(
       <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>}>
         <div>content</div>
       </DocLayout>,
     )
-    const openBtn = getByRole('button', { name: 'Open navigation' })
-    expect(openBtn).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(openBtn)
-    // Drawer is open; its dialog exists.
-    expect(getByRole('dialog', { name: 'Navigation' })).toBeTruthy()
-    // Close it and the toggle reappears reporting collapsed.
-    fireEvent.click(getByRole('button', { name: 'Close navigation' }))
-    await waitFor(() =>
-      expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
-    )
-    expect(getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false')
+    const toggle = getByRole('button', { name: 'Open navigation' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(toggle)
+    expect(getByRole('region', { name: 'Navigation' })).toBeTruthy()
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAccessibleName('Close navigation')
+
+    fireEvent.click(toggle)
+    expect(queryByRole('region', { name: 'Navigation' })).toBeNull()
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('moves focus into the drawer when it opens and restores it to the toggle on close', async () => {
+  it('closes on Escape and returns focus to the toggle', async () => {
+    const { getByRole, queryByRole } = renderWithOpenPanel()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() =>
+      expect(queryByRole('region', { name: 'Navigation' })).toBeNull(),
+    )
+    expect(document.activeElement).toBe(getByRole('button', { name: 'Open navigation' }))
+  })
+
+  it('closes when focus moves outside the bar and panel', async () => {
     const { getByRole, queryByRole } = render(
       <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>}>
+        <button type="button">in content</button>
+      </DocLayout>,
+    )
+    const toggle = getByRole('button', { name: 'Open navigation' })
+    fireEvent.click(toggle)
+    fireEvent.blur(toggle, { relatedTarget: getByRole('button', { name: 'in content' }) })
+    await waitFor(() =>
+      expect(queryByRole('region', { name: 'Navigation' })).toBeNull(),
+    )
+  })
+
+  it('locks page scroll only while open', () => {
+    const { getByRole } = renderWithOpenPanel()
+    expect(document.body.style.overflow).toBe('hidden')
+    fireEvent.click(getByRole('button', { name: 'Close navigation' }))
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('renders the breadcrumb trail, dropping empty and repeated entries', () => {
+    const { getByRole } = render(
+      <DocLayout
+        layout="sidebar"
+        sidebar={<nav>spec nav</nav>}
+        breadcrumbs={['Pet Store', undefined, 'Pets', 'Pets']}
+      >
         <div>content</div>
       </DocLayout>,
     )
-    const openBtn = getByRole('button', { name: 'Open navigation' })
-    openBtn.focus()
-    fireEvent.click(openBtn)
+    const trail = getByRole('navigation', { name: 'Breadcrumb' })
+    const items = within(trail).getAllByRole('listitem')
+    expect(items.map((item) => item.textContent)).toEqual(['Pet Store', '/Pets'])
+    expect(items[1]).toHaveAttribute('aria-current', 'location')
+  })
 
-    const drawer = getByRole('dialog', { name: 'Navigation' })
-    // Focus moved off the page behind and into the drawer.
-    await waitFor(() => expect(drawer.contains(document.activeElement)).toBe(true))
-
-    fireEvent.click(getByRole('button', { name: 'Close navigation' }))
-    await waitFor(() =>
-      expect(queryByRole('dialog', { name: 'Navigation' })).toBeNull(),
+  it('renders host-provided element crumbs (e.g. router links) before text crumbs', () => {
+    const { getByRole } = render(
+      <DocLayout
+        layout="sidebar"
+        sidebar={<nav>spec nav</nav>}
+        breadcrumbs={[<a key="p" href="/product/pets">Pets product</a>, 'Pet Store']}
+      >
+        <div>content</div>
+      </DocLayout>,
     )
-    // Focus returns to the toggle that opened the drawer.
-    await waitFor(() =>
-      expect(document.activeElement).toBe(getByRole('button', { name: 'Open navigation' })),
-    )
+    const trail = getByRole('navigation', { name: 'Breadcrumb' })
+    expect(within(trail).getByRole('link', { name: 'Pets product' })).toHaveAttribute('href', '/product/pets')
+    expect(within(trail).getAllByRole('listitem')).toHaveLength(2)
   })
 })
 
@@ -174,5 +202,24 @@ describe('DocLayout back-to-top', () => {
 
     fireEvent.click(getByRole('button', { name: 'Back to top' }))
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }))
+  })
+})
+
+describe('DocLayout mobile nav a11y', () => {
+  it('links the toggle to the panel via aria-controls', () => {
+    const { getByRole } = render(
+      <DocLayout layout="sidebar" sidebar={<nav>spec nav</nav>}>
+        <div>content</div>
+      </DocLayout>,
+    )
+
+    const trigger = getByRole('button', { name: 'Open navigation' })
+    const controls = trigger.getAttribute('aria-controls')
+    expect(controls).toBeTruthy()
+
+    fireEvent.click(trigger)
+
+    const panel = getByRole('region', { name: 'Navigation' })
+    expect(panel.getAttribute('id')).toBe(controls)
   })
 })

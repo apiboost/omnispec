@@ -54,6 +54,8 @@ const externalPatterns = [
 	/^@emotion\//,
 	/^express($|\/)/,
 	/^express-rate-limit$/,
+	// Node built-ins used by the server-only proxy (src/server/).
+	/^node:/,
 ]
 
 const isExternal = (id: string) =>
