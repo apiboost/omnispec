@@ -302,6 +302,7 @@ Override the referenced tokens (`--omnispec-color-primary`, `--omnispec-input-*`
 | Token | Default | Description |
 |-------|---------|-------------|
 | `--omnispec-offset-top` | `0px` | Global offset for sticky elements (sidebar, Try-It panel). Set this to the height of your external sticky header so the renderer clears it. |
+| `--omnispec-offset-top-transition` | `0s` | Duration and easing (e.g. `200ms ease`) for changes to the mobile nav bar's offset. Set it to match a hide-on-scroll header so the bar moves with it; a negative offset slides the bar out of view. |
 
 This is a **CSS-only variable** — it is not part of the `theme.overrides` system. Set it via a CSS rule targeting `.omnispec-root`:
 

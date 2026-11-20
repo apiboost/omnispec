@@ -599,10 +599,14 @@ const footerStyle = css({
 })
 
 // Mobile-first: the bar shows by default and is hidden on desktop, where the
-// sidebar column takes over. Sticks under any host chrome offset.
+// sidebar column takes over. Sticks under any host chrome offset. A host with
+// hide-on-scroll chrome can animate the offset (including a negative one that
+// slides the bar out with its header) by setting
+// --omnispec-offset-top-transition to the header's own duration and easing.
 const mobileNavStyle = css({
   position: 'sticky',
   top: 'var(--omnispec-offset-top, 0px)',
+  transition: 'top var(--omnispec-offset-top-transition, 0s)',
   zIndex: 999,
   backgroundColor: 'var(--omnispec-bg-primary)',
   boxShadow: '0 1px 0 var(--omnispec-border-color)',

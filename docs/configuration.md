@@ -57,7 +57,9 @@ do links with `target="_blank"`.
 
 The bar sticks below `--omnispec-offset-top`, so a host page with its own
 sticky header only needs to set that variable (see
-[Theming → Layout](./theming.md#layout)).
+[Theming → Layout](./theming.md#layout)). If the header hides on scroll,
+set `--omnispec-offset-top-transition` to its duration and easing so the bar
+moves with it (a negative offset slides the bar out with the header).
 
 ## Navigation Mode
 
