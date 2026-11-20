@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, useId } from 'react'
 import type { FocusEvent, MouseEvent, ReactNode } from 'react'
 import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
@@ -279,6 +279,10 @@ export function DocLayout({
   )
 }
 
+// useLayoutEffect warns during server rendering on React 18; effects don't run
+// there anyway.
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
 /**
  * Breadcrumb trail for the mobile nav bar, after docs.github.com: full-text
  * crumbs on one line that scroll horizontally when they overflow. It opens
@@ -294,7 +298,9 @@ function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
   // rather than on every render's new array.
   const trail = crumbs.map((crumb) => (typeof crumb === 'string' ? crumb : '·')).join('/')
 
-  useEffect(() => {
+  // Pin to the end before the browser paints, so a changed trail never shows
+  // scrolled to its start for a frame before jumping to the current location.
+  useIsomorphicLayoutEffect(() => {
     const list = listRef.current
     if (!list) return undefined
     // Stays pinned to the end (the current location) until the reader
