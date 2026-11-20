@@ -39,12 +39,25 @@ export function OmniSpecRenderer({ specType, spec, theme, docsUrl, upgradeUrl, p
   const detected = useSpecDetector(rawContent, specType)
   const proRenderers = useMemo(() => pro?.renderers ?? new Map(), [pro?.renderers])
 
+  // Loading (fetching the spec, then the renderer chunk) uses the same themed
+  // layout shell as the status screens below, so host theme overrides apply
+  // (no default light flash) and the host's sidebar slots and the mobile nav
+  // bar are already in place.
+  const loadingScreen = (
+    <SpecStatusScreen
+      theme={theme}
+      layout={props.layout}
+      sidebarPosition={props.sidebarPosition}
+      slots={props.slots}
+      sidebarNav={props.sidebarNav}
+      premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
+    >
+      <LoadingScreen />
+    </SpecStatusScreen>
+  )
+
   if (state.status === 'loading') {
-    return (
-      <ThemeProvider theme={theme}>
-        <LoadingScreen />
-      </ThemeProvider>
-    )
+    return loadingScreen
   }
 
   // Non-fatal spec problems (failed load, unrecognized content) render in the
@@ -96,13 +109,7 @@ export function OmniSpecRenderer({ specType, spec, theme, docsUrl, upgradeUrl, p
         </ThemeProvider>
       )}
     >
-      <Suspense
-        fallback={
-          <ThemeProvider theme={theme}>
-            <LoadingScreen />
-          </ThemeProvider>
-        }
-      >
+      <Suspense fallback={loadingScreen}>
         <SpecRenderer
           type={detected.type}
           props={specProps}

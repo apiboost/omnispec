@@ -37,4 +37,25 @@ describe('SpecStatusScreen', () => {
     expect(getByText('Failed to load specification')).toBeInTheDocument()
     expect(queryByRole('button', { name: 'Open navigation' })).toBeNull()
   })
+
+  it('applies host theme overrides when premium theming is enabled', () => {
+    // Regression: ThemeProvider reads premiumThemingEnabled from config, so it
+    // must sit inside the ConfigProvider or the overrides are silently dropped
+    // (loading/error states fell back to the default light theme).
+    const theme = { base: 'light' as const, overrides: { '--omnispec-bg-primary': 'rebeccapurple' } }
+    const { container, rerender } = render(
+      <SpecStatusScreen theme={theme} premiumThemingEnabled>
+        <ErrorMessage title="Failed to load specification" />
+      </SpecStatusScreen>,
+    )
+    const tokenCss = () => Array.from(container.querySelectorAll('style')).map((el) => el.textContent).join('')
+    expect(tokenCss()).toContain('rebeccapurple')
+
+    rerender(
+      <SpecStatusScreen theme={theme}>
+        <ErrorMessage title="Failed to load specification" />
+      </SpecStatusScreen>,
+    )
+    expect(tokenCss()).not.toContain('rebeccapurple')
+  })
 })

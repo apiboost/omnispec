@@ -357,13 +357,22 @@ export function AsyncApiSpec({
   const navSectionIds = useMemo(() => flattenNavItemIds(navItems), [navItems])
   const activeSection = useScrollSpy(navSectionIds)
 
+  // Loading renders in the same themed layout shell as the error state, so
+  // host theme overrides apply (no default light flash) and the sidebar, its
+  // host slots and the mobile nav bar are in place before the spec arrives.
   if (state.status === 'loading') {
     return (
-      <ThemeProvider theme={theme}>
-        <div className={`omnispec-asyncapi ${className ?? ''}`}>
-          <LoadingScreen />
-        </div>
-      </ThemeProvider>
+      <SpecStatusScreen
+        theme={theme}
+        layout={layout}
+        sidebarPosition={sidebarPosition}
+        slots={slots}
+        sidebarNav={sidebarNav}
+        premiumThemingEnabled={pro?.premiumThemingEnabled ?? false}
+        className={`omnispec-asyncapi ${className ?? ''}`}
+      >
+        <LoadingScreen />
+      </SpecStatusScreen>
     )
   }
 
