@@ -149,4 +149,12 @@ export interface SlotOverrides {
    * client-side navigation.
    */
   breadcrumbs?: ReactNode[]
+  /**
+   * Trail to show in the mobile navigation bar while the spec is loading,
+   * instead of `breadcrumbs` (which the loaded view extends with the spec title
+   * and the active section). A host navigating between references can pass
+   * the trail that was on screen, so the bar changes once — to the new
+   * complete trail — rather than shrinking to the host entries first.
+   */
+  loadingBreadcrumbs?: ReactNode[]
 }

@@ -54,3 +54,17 @@ describe('AsyncApiSpec sidebar grouping mode', () => {
     expect(document.getElementById('channel-order/placed-op-0')).not.toBeNull()
   })
 })
+
+describe('AsyncApiSpec host chrome', () => {
+  it('renders the host contentHeader slot (e.g. the portal breadcrumbs)', async () => {
+    render(
+      <AsyncApiSpec
+        spec={spec}
+        theme={{ base: 'light' }}
+        slots={{ contentHeader: <div>host content header</div> }}
+      />,
+    )
+    await screen.findByRole('navigation', { name: 'API navigation' })
+    expect(screen.getByText('host content header')).toBeInTheDocument()
+  })
+})

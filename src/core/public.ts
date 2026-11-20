@@ -51,6 +51,7 @@ export {
 } from './components/SchemaViewer/schema-style'
 export type { SchemaStyle } from './components/SchemaViewer/schema-style'
 export { SpecStatusScreen } from './components/Layout/SpecStatusScreen'
+export { loadingSlots } from './components/Layout/loadingSlots'
 export {
   PresentationContainer,
   // Legacy shells (Pro renderers) — migrating onto the slot kit below.

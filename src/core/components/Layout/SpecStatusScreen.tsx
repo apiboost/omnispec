@@ -55,8 +55,11 @@ export function SpecStatusScreen({
   const sidebar = buildSidebar(sidebarNav, undefined)
 
   return (
-    <ThemeProvider theme={theme}>
-      <ConfigProvider config={{ layout, sidebarPosition, slots, premiumThemingEnabled }}>
+    // ConfigProvider must wrap ThemeProvider: the theme reads
+    // premiumThemingEnabled from config to decide whether to apply the host's
+    // theme overrides (inverted, status screens fell back to the default theme).
+    <ConfigProvider config={{ layout, sidebarPosition, slots, premiumThemingEnabled }}>
+      <ThemeProvider theme={theme}>
         <div className={cx('omnispec-spec-status', className)}>
           <DocLayout
             layout={layout}
@@ -72,7 +75,7 @@ export function SpecStatusScreen({
             {children}
           </DocLayout>
         </div>
-      </ConfigProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </ConfigProvider>
   )
 }
