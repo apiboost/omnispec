@@ -280,14 +280,60 @@ export function DocLayout({
 }
 
 /**
- * Breadcrumb trail for the mobile nav bar. Always fits on one line: when it
- * overflows, the leading crumbs truncate with an ellipsis before the current
- * location does, so the reader sees both where they are and the path to it.
+ * Breadcrumb trail for the mobile nav bar, after docs.github.com: full-text
+ * crumbs on one line that scroll horizontally when they overflow. It opens
+ * scrolled to the end, so the current location shows, and a chevron appears
+ * on each side with more to scroll (tapping it scrolls that way). The
+ * chevrons are pointer conveniences only: keyboard focus scrolls a link into
+ * view, and screen readers get the whole trail.
  */
 function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
+  const listRef = useRef<HTMLOListElement | null>(null)
+  const [more, setMore] = useState({ left: false, right: false })
+  // Text-only signature of the trail, so the effect re-runs when it changes
+  // rather than on every render's new array.
+  const trail = crumbs.map((crumb) => (typeof crumb === 'string' ? crumb : '·')).join('/')
+
+  useEffect(() => {
+    const list = listRef.current
+    if (!list) return undefined
+    // Stays pinned to the end (the current location) until the reader
+    // scrolls away from it, so late layout changes — web fonts, a section
+    // title arriving — don't leave the trail part-scrolled.
+    let pinned = true
+    const update = () => {
+      const max = list.scrollWidth - list.clientWidth
+      const left = list.scrollLeft > 1
+      const right = list.scrollLeft < max - 1
+      pinned = !right
+      setMore((prev) => (prev.left === left && prev.right === right ? prev : { left, right }))
+    }
+    const resize = () => {
+      if (pinned) list.scrollLeft = list.scrollWidth
+      update()
+    }
+    resize()
+    list.addEventListener('scroll', update, { passive: true })
+    // Watch the crumbs as well as the list: content growing inside a
+    // fixed-width list doesn't resize the list itself.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+    for (const el of [list, ...Array.from(list.children)]) observer?.observe(el)
+    return () => {
+      list.removeEventListener('scroll', update)
+      observer?.disconnect()
+    }
+  }, [trail])
+
+  const scroll = (direction: 1 | -1) => {
+    const list = listRef.current
+    if (!list) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    list.scrollBy({ left: direction * list.clientWidth * 0.75, behavior: reduce ? 'auto' : 'smooth' })
+  }
+
   return (
     <nav aria-label="Breadcrumb" className={breadcrumbNavStyle}>
-      <ol className={breadcrumbListStyle}>
+      <ol ref={listRef} className={breadcrumbListStyle}>
         {crumbs.map((crumb, index) => {
           const isCurrent = index === crumbs.length - 1
           return (
@@ -297,16 +343,33 @@ function MobileBreadcrumbs({ crumbs }: { crumbs: ReactNode[] }) {
               className={cx(breadcrumbItemStyle, isCurrent && breadcrumbCurrentStyle)}
             >
               {index > 0 && <span aria-hidden="true">/</span>}
-              <span
-                className={breadcrumbLabelStyle}
-                title={typeof crumb === 'string' ? crumb : undefined}
-              >
-                {crumb}
-              </span>
+              {crumb}
             </li>
           )
         })}
       </ol>
+      {more.left && (
+        <button
+          type="button"
+          aria-hidden="true"
+          tabIndex={-1}
+          className={cx(breadcrumbScrollStyle, breadcrumbScrollLeftStyle)}
+          onClick={() => scroll(-1)}
+        >
+          <Icon name="chevron-left" size="1rem" />
+        </button>
+      )}
+      {more.right && (
+        <button
+          type="button"
+          aria-hidden="true"
+          tabIndex={-1}
+          className={cx(breadcrumbScrollStyle, breadcrumbScrollRightStyle)}
+          onClick={() => scroll(1)}
+        >
+          <Icon name="chevron-right" size="1rem" />
+        </button>
+      )}
     </nav>
   )
 }
@@ -579,6 +642,9 @@ const mobileToggleStyle = css({
 })
 
 const breadcrumbNavStyle = css({
+  position: 'relative',
+  display: 'flex',
+  alignSelf: 'stretch',
   flex: 1,
   minWidth: 0,
 })
@@ -590,32 +656,47 @@ const breadcrumbListStyle = css({
   margin: 0,
   padding: '0 0.75rem',
   listStyle: 'none',
-  overflow: 'hidden',
+  alignSelf: 'stretch',
+  overflowX: 'auto',
   whiteSpace: 'nowrap',
+  scrollbarWidth: 'none',
+  '&::-webkit-scrollbar': {
+    display: 'none',
+  },
 })
 
 const breadcrumbItemStyle = css({
   display: 'flex',
-  flex: '0 1 auto',
+  flex: 'none',
   gap: '0.5rem',
-  minWidth: 0,
   fontSize: 'var(--omnispec-font-size-sm)',
   color: 'var(--omnispec-fg-muted)',
 })
 
-// The current location shrinks last and keeps up to 60% of the bar.
 const breadcrumbCurrentStyle = css({
-  flexShrink: 0,
-  maxWidth: '60%',
   color: 'var(--omnispec-fg-primary)',
   fontWeight: 600,
 })
 
-const breadcrumbLabelStyle = css({
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+// Overlays the trail's edge (on the bar's background) rather than taking
+// layout space, so showing or hiding it never changes the scroll width.
+const breadcrumbScrollStyle = css({
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '1.75rem',
+  padding: 0,
+  border: 'none',
+  backgroundColor: 'var(--omnispec-bg-primary)',
+  color: 'var(--omnispec-fg-muted)',
+  cursor: 'pointer',
 })
+
+const breadcrumbScrollLeftStyle = css({ left: 0 })
+const breadcrumbScrollRightStyle = css({ right: 0 })
 
 const mobilePanelStyle = css({
   position: 'fixed',
