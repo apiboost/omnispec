@@ -80,6 +80,34 @@ describe('useScrollSpy', () => {
     act(() => ioCallback([entry('op-a', false)], {} as IntersectionObserver))
     expect(result.current).toBe('op-b')
   })
+
+  it('clears the active section once the reader scrolls back above the first one', () => {
+    ;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = MockIntersectionObserver
+    for (const id of ['op-a', 'op-b']) {
+      const el = document.createElement('div')
+      el.id = id
+      document.body.appendChild(el)
+    }
+    const band = { top: 0, bottom: 160 } as DOMRectReadOnly
+    const at = (id: string, top: number, isIntersecting: boolean) => {
+      const target = document.getElementById(id)!
+      target.getBoundingClientRect = () => ({ top }) as DOMRect
+      return { isIntersecting, target, rootBounds: band } as unknown as IntersectionObserverEntry
+    }
+
+    const { result } = renderHook(() => useScrollSpy(['op-a', 'op-b']))
+
+    act(() => ioCallback([at('op-a', -400, false), at('op-b', 40, true)], {} as IntersectionObserver))
+    expect(result.current).toBe('op-b')
+
+    // Between sections mid-page: the last active id is kept.
+    act(() => ioCallback([at('op-b', -20, false)], {} as IntersectionObserver))
+    expect(result.current).toBe('op-b')
+
+    // Back at the top: the first section now starts below the band.
+    act(() => ioCallback([at('op-a', 600, false), at('op-b', 900, false)], {} as IntersectionObserver))
+    expect(result.current).toBeUndefined()
+  })
 })
 
 describe('useScrollSpy element replacement', () => {
