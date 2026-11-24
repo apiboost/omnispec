@@ -61,7 +61,8 @@ function measureDefaultRootMargin(): string {
  * mobile nav bar, re-measured on scroll and resize (the bar's offset follows
  * the host header as it hides and shows); pass `rootMargin` to fix the band
  * instead. The active id is the **topmost** (earliest in `ids`) element in that
- * band; when the scroll position is between sections the last active id is kept.
+ * band; when the scroll position is between sections the last active id is kept,
+ * and above the first section it is cleared (`undefined`).
  *
  * Section elements can be replaced after the first paint (e.g. a parent
  * re-mounting the content), which would leave the observer watching detached
@@ -109,7 +110,20 @@ export function useScrollSpy(ids: string[], rootMargin?: string): string | undef
           else visible.delete(entry.target.id)
         }
         const next = ids.find((id) => visible.has(id))
-        if (next) setActiveId(next)
+        if (next) {
+          setActiveId(next)
+          return
+        }
+        // Nothing in the band. Mid-page that is a gap between sections, so the
+        // last active id stands; but once the first section starts below the
+        // band the reader is back above every section (the spec intro), and a
+        // stale id would leave the breadcrumb and highlight on a section that
+        // is no longer on screen.
+        const bandBottom = entries.find((e) => e.rootBounds)?.rootBounds?.bottom
+        const first = ids.map((id) => observed.get(id)).find(Boolean)
+        if (first && bandBottom !== undefined && first.getBoundingClientRect().top >= bandBottom) {
+          setActiveId(undefined)
+        }
       },
       { rootMargin: margin, threshold: 0 },
     )
