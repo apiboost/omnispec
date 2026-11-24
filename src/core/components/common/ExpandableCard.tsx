@@ -8,7 +8,7 @@
  * See LICENSE.md and LICENSING.md in the project root for license information.
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { css, cx } from '@core/styles/css'
 import { mq } from '@core/styles/breakpoints'
@@ -32,6 +32,21 @@ export interface ExpandableCardProps {
   expandAll?: boolean
   expandGeneration?: number
   children: ReactNode
+}
+
+/**
+ * Adds a line-break opportunity after each `/` so long paths and channel
+ * addresses wrap at segment boundaries before breaking inside a segment.
+ */
+function withPathBreaks(title: string): ReactNode {
+  const parts = title.split('/')
+  if (parts.length === 1) return title
+  return parts.map((part, i) => (
+    <Fragment key={i}>
+      {part}
+      {i < parts.length - 1 && <>/<wbr /></>}
+    </Fragment>
+  ))
 }
 
 export const ExpandableCard = memo(function ExpandableCard({
@@ -110,7 +125,7 @@ export const ExpandableCard = memo(function ExpandableCard({
         {badges?.filter((b) => b.position === 'before').map((b) => (
           <span key={b.name} className={xBadgeStyle} style={{ backgroundColor: b.color ?? 'var(--omnispec-bg-tertiary)', color: b.color ? '#fff' : 'var(--omnispec-fg-secondary)' }}>{b.name}</span>
         ))}
-        <span className={titleStyle}>{title}</span>
+        <span className={titleStyle}>{withPathBreaks(title)}</span>
         {badges?.filter((b) => b.position !== 'before').map((b) => (
           <span key={b.name} className={xBadgeStyle} style={{ backgroundColor: b.color ?? 'var(--omnispec-bg-tertiary)', color: b.color ? '#fff' : 'var(--omnispec-fg-secondary)' }}>{b.name}</span>
         ))}
@@ -180,8 +195,11 @@ const titleStyle = css({
   minWidth: 0,
   color: 'var(--omnispec-fg-primary)',
   fontSize: 'var(--omnispec-font-size-md)',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
+  // Titles are often long paths or channel addresses with no spaces. Wrap
+  // them (at a `/` where possible, see withPathBreaks) so the full name stays
+  // readable and never runs under the right label or past the card on narrow
+  // screens.
+  overflowWrap: 'anywhere',
 })
 
 const xBadgeStyle = css({
