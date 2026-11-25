@@ -86,6 +86,15 @@ export interface BaseSpecProps {
   /** Origins allowed for external $ref resolution. Same-origin is always allowed. */
   externalRefOrigins?: string[]
   /**
+   * Prefix for the URL query params OmniSpec writes to reflect shareable view
+   * state (currently the AsyncAPI tag filter, written as `<prefix>tag`).
+   * Defaults to `'omnispec-'` so these params never collide with a host page's
+   * own query string — e.g. a Drupal portal that uses `?tag=` for its own
+   * taxonomy filter. Set to `''` when OmniSpec owns the page URL and you want
+   * clean params like `?tag=`.
+   */
+  urlParamPrefix?: string
+  /**
    * Force a single server URL at render time, overriding any `servers` declared
    * in the spec. Use this to point Try-It and code samples at a specific gateway
    * domain (e.g. an Azure APIM instance) without editing the spec. Takes

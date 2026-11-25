@@ -90,6 +90,28 @@ describe('AsyncApiSpec filter UI', () => {
     expect(screen.queryByText('Filtered by tag:')).toBeNull()
   })
 
+  it('uses a custom URL param name when urlParamPrefix is set', async () => {
+    render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} urlParamPrefix="" />)
+
+    const chip = await screen.findByRole('button', { name: 'orders' })
+    fireEvent.click(chip)
+
+    // With an empty prefix the shareable param is a clean `?tag=`, and the
+    // namespaced default is not written.
+    await waitFor(() => {
+      expect(new URLSearchParams(window.location.search).get('tag')).toBe('orders')
+    })
+    expect(new URLSearchParams(window.location.search).get('omnispec-tag')).toBeNull()
+  })
+
+  it('applies a custom-prefixed tag supplied in the URL on load', async () => {
+    window.history.replaceState({}, '', '/?tag=orders')
+    render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} urlParamPrefix="" />)
+
+    expect(await screen.findByText('Filtered by tag:')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Clear tag filter: orders/i })).toBeInTheDocument()
+  })
+
   it('marks the active tag chip with aria-pressed for screen readers', async () => {
     render(<AsyncApiSpec spec={spec} defaultExpandOperations theme={{ base: 'light' }} />)
 
