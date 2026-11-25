@@ -56,9 +56,14 @@ export function AsyncApiSpec({
   schemaStyle,
   pro,
   externalRefOrigins,
+  urlParamPrefix = 'omnispec-',
   onSpecLoaded,
   className,
 }: BaseSpecProps) {
+  // The query param that carries the shareable tag filter. Namespaced by
+  // `urlParamPrefix` (default `omnispec-`) so it can't collide with a host
+  // page's own `?tag=`; set the prefix to `''` for a clean `?tag=`.
+  const tagParam = `${urlParamPrefix}tag`
   const resolvedSchemaStyle = resolveSchemaStyle(schemaStyle, pro?.advancedSchemaStyles ?? false)
   // Match OpenApiSpec: `reference` switches to the three-panel layout; anything
   // else (including unset) stays compact single-column.
@@ -91,10 +96,10 @@ export function AsyncApiSpec({
     setActiveTagFilter((prev) => {
       const next = prev === tagName ? null : tagName
       setSearchQuery(next ?? '')
-      writeTagParam(next)
+      writeTagParam(tagParam, next)
       return next
     })
-  }, [])
+  }, [tagParam])
 
   // Typing in the filter box is an independent search — it supersedes (and
   // clears) any active tag filter so the indicator never lies about why the
@@ -102,18 +107,19 @@ export function AsyncApiSpec({
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query)
     setActiveTagFilter(null)
-    writeTagParam(null)
-  }, [])
+    writeTagParam(tagParam, null)
+  }, [tagParam])
 
   const clearTagFilter = useCallback(() => {
     setActiveTagFilter(null)
     setSearchQuery('')
-    writeTagParam(null)
-  }, [])
+    writeTagParam(tagParam, null)
+  }, [tagParam])
 
   // The tag names the spec actually declares (document tags + channel/operation
   // tags). A tag supplied in the URL is only honored if it's one of these, so an
-  // unrelated host-page `?omnispec-tag` value can't trigger a blind search.
+  // stray host-page value in the (possibly shared) tag param can't trigger a
+  // blind search.
   const availableTags = useMemo(() => {
     const names = new Set<string>()
     for (const tag of parsedSpec?.tags ?? []) names.add(tag.name)
@@ -131,12 +137,12 @@ export function AsyncApiSpec({
   useEffect(() => {
     if (didInitFromUrl.current || !parsedSpec) return
     didInitFromUrl.current = true
-    const urlTag = readTagParam()
+    const urlTag = readTagParam(tagParam)
     if (urlTag && availableTags.has(urlTag)) {
       setActiveTagFilter(urlTag)
       setSearchQuery(urlTag)
     }
-  }, [parsedSpec, availableTags])
+  }, [parsedSpec, availableTags, tagParam])
 
   useMemo(() => {
     if (parsedSpec && onSpecLoaded) {
@@ -595,24 +601,23 @@ function ChannelCard({
   )
 }
 
-// The tag filter is mirrored to a namespaced query param so it can be shared or
-// bookmarked without colliding with a host page's own `?tag=` (common in Drupal
-// and other CMS hosts).
-const TAG_PARAM = 'omnispec-tag'
+// The tag filter is mirrored to a query param (named by `urlParamPrefix` + `tag`,
+// default `omnispec-tag`) so it can be shared or bookmarked without colliding
+// with a host page's own `?tag=` (common in Drupal and other CMS hosts).
 
 /** Read the active-tag filter from the URL query string, SSR-safe. */
-function readTagParam(): string | null {
+function readTagParam(param: string): string | null {
   if (typeof window === 'undefined') return null
-  return new URLSearchParams(window.location.search).get(TAG_PARAM)
+  return new URLSearchParams(window.location.search).get(param)
 }
 
 /** Write (or, when `tag` is null, remove) the tag filter in the URL, SSR-safe. */
-function writeTagParam(tag: string | null): void {
+function writeTagParam(param: string, tag: string | null): void {
   if (typeof window === 'undefined') return
   const params = new URLSearchParams(window.location.search)
-  if (params.get(TAG_PARAM) === (tag ?? null)) return
-  if (tag) params.set(TAG_PARAM, tag)
-  else params.delete(TAG_PARAM)
+  if (params.get(param) === (tag ?? null)) return
+  if (tag) params.set(param, tag)
+  else params.delete(param)
   const query = params.toString()
   window.history.replaceState(
     window.history.state,
